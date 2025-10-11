@@ -3,13 +3,15 @@ import TooltipWrapper from "./tooltip-wrapper";
 import { useTab } from "../hooks/use-tab";
 import TabIcon from "./tab-icon";
 import { useProfile } from "../hooks/use-profile";
-import { GithubLogoIcon } from "@phosphor-icons/react";
+import { GithubLogoIcon, SignOutIcon } from "@phosphor-icons/react";
+import { useAuth } from "../hooks/use-auth";
 
 export default function TabIcons() {
   const {
     profile: { avatarUrl },
   } = useProfile();
   const { selectedTab, selectTab, topTabs } = useTab();
+  const { logout } = useAuth();
 
   return (
     <section className="flex flex-col justify-between items-center w-full h-full bg-black/85 border-r-[1px] border-gray-300/20">
@@ -47,6 +49,9 @@ export default function TabIcons() {
           >
             <GithubLogoIcon className="size-5" weight="fill" />
           </a>
+        </TooltipWrapper>
+        <TooltipWrapper tab="logout" onClick={logout}>
+          <SignOutIcon className="size-5 text-white" weight="bold" />
         </TooltipWrapper>
         <TooltipWrapper
           selected={selectedTab === "settings"}
