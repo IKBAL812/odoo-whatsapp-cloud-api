@@ -1,0 +1,7 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_whatsapp_backend_user,whatsapp.backend user,model_whatsapp_backend,whatsapp_cloud_api_backend.group_whatsapp_backend_user,1,0,0,0
+access_whatsapp_backend_manager,whatsapp.backend manager,model_whatsapp_backend,whatsapp_cloud_api_backend.group_whatsapp_backend_manager,1,1,1,1
+access_whatsapp_message_user,whatsapp.message user,model_whatsapp_message,whatsapp_cloud_api_backend.group_whatsapp_backend_user,1,0,0,0
+access_whatsapp_message_manager,whatsapp.message manager,model_whatsapp_message,whatsapp_cloud_api_backend.group_whatsapp_backend_manager,1,1,1,1
+access_whatsapp_thread_user,whatsapp.thread user,model_whatsapp_thread,whatsapp_cloud_api_backend.group_whatsapp_backend_user,1,0,0,0
+access_whatsapp_thread_manager,whatsapp.thread manager,model_whatsapp_thread,whatsapp_cloud_api_backend.group_whatsapp_backend_manager,1,1,1,1

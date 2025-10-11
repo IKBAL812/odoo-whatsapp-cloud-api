@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_whatsapp_message_tree" model="ir.ui.view">
+        <field name="name">whatsapp.message.tree</field>
+        <field name="model">whatsapp.message</field>
+        <field name="arch" type="xml">
+            <tree string="WhatsApp Messages" default_order="create_date desc">
+                <field name="create_date" />
+                <field name="direction" />
+                <field name="backend_id" />
+                <field name="thread_id" />
+                <field name="partner_id" />
+                <field name="phone_number" />
+                <field name="status" />
+                <field name="attachment_id" />
+                <field name="message_type" />
+                <field name="message_id" />
+                <field name="body" />
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_whatsapp_message_form" model="ir.ui.view">
+        <field name="name">whatsapp.message.form</field>
+        <field name="model">whatsapp.message</field>
+        <field name="arch" type="xml">
+            <form string="WhatsApp Message">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="backend_id" />
+                            <field name="thread_id" readonly="1" />
+                            <field name="direction" />
+                            <field name="status" />
+                        </group>
+                        <group>
+                            <field name="message_type" />
+                            <field name="message_id" />
+                            <field name="conversation_id" />
+                            <field name="phone_number" />
+                            <field name="partner_id" />
+                            <field name="attachment_id" />
+                        </group>
+                    </group>
+                    <group>
+                        <field name="body" nolabel="1" />
+                    </group>
+                    <notebook>
+                        <page name="payload" string="Payload">
+                            <field name="payload" />
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_whatsapp_message_search" model="ir.ui.view">
+        <field name="name">whatsapp.message.search</field>
+        <field name="model">whatsapp.message</field>
+        <field name="arch" type="xml">
+            <search string="WhatsApp Messages">
+                <field name="message_id" />
+                <field name="phone_number" />
+                <field name="partner_id" />
+                <filter name="direction_incoming" string="Incoming" domain="[('direction', '=', 'incoming')]" />
+                <filter name="direction_outgoing" string="Outgoing" domain="[('direction', '=', 'outgoing')]" />
+                <filter name="status_failed" string="Failed" domain="[('status', '=', 'failed')]" />
+            </search>
+        </field>
+    </record>
+
+    <record id="action_whatsapp_message" model="ir.actions.act_window">
+        <field name="name">WhatsApp Messages</field>
+        <field name="res_model">whatsapp.message</field>
+        <field name="view_mode">tree,form</field>
+        <field name="view_id" ref="whatsapp_cloud_api_backend.view_whatsapp_message_tree" />
+        <field name="search_view_id" ref="whatsapp_cloud_api_backend.view_whatsapp_message_search" />
+        <field name="context">{}</field>
+        <field name="domain">[]</field>
+        <field name="groups_id" eval="[(4, ref('whatsapp_cloud_api_backend.group_whatsapp_backend_user')), (4, ref('whatsapp_cloud_api_backend.group_whatsapp_backend_manager'))]" />
+    </record>
+
+    <menuitem
+        id="menu_whatsapp_message"
+        name="Messages"
+        parent="whatsapp_cloud_api_backend.menu_whatsapp_backend_root"
+        action="action_whatsapp_message"
+        sequence="20"
+        groups="whatsapp_cloud_api_backend.group_whatsapp_backend_user,whatsapp_cloud_api_backend.group_whatsapp_backend_manager"
+    />
+</odoo>
