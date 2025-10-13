@@ -1,4 +1,5 @@
 import { createContext, PropsWithChildren, useEffect, useState } from "react";
+import { useAuth } from "../hooks/use-auth";
 
 export type Contact = {
   id: string;
@@ -27,6 +28,7 @@ export const ContactsContext = createContext<ContactsContextType | undefined>(
 );
 
 export default function ContactsProvider({ children }: PropsWithChildren) {
+  const { backendUsers } = useAuth();
   const [contacts, setContacts] = useState<Contacts>({
     contacts: [],
     dictionary: [["", []]],
@@ -59,31 +61,30 @@ export default function ContactsProvider({ children }: PropsWithChildren) {
   };
 
   useEffect(() => {
-    const fetchContacts = async () => {
-      setContacts((prev) => ({ ...prev, isLoading: true }));
-      const response = await fetch("/api/mock/contacts");
-      const data = await response.json();
-      const dictionary = generateDictionary(data);
+    const data: Contact[] = backendUsers.map((user) => ({
+      id: String(user.id),
+      displayName: user.name,
+      contactAvatar: user.imageUrl ?? "",
+      statusMessage: "",
+    }));
+    const dictionary = generateDictionary(data);
 
-      setContacts((prev) => ({
-        ...prev,
-        contacts: data,
-        filteredContacts: data,
-        dictionary,
-        isLoading: false,
-      }));
-    };
-
-    fetchContacts();
-  }, []);
+    setContacts((prev) => ({
+      ...prev,
+      contacts: data,
+      filteredContacts: data,
+      dictionary,
+      isLoading: false,
+    }));
+  }, [backendUsers]);
 
   useEffect(() => {
     setContacts((prev) => {
       const contacts = prev.contacts;
       const search = prev.search;
-      const filteredContacts = contacts.filter((contact: Contact) =>
-        contact.displayName.includes(search)
-      );
+    const filteredContacts = contacts.filter((contact: Contact) =>
+      contact.displayName.toLowerCase().includes(search.toLowerCase())
+    );
       const dictionary = generateDictionary(filteredContacts);
 
       return {
@@ -114,7 +115,7 @@ export default function ContactsProvider({ children }: PropsWithChildren) {
     const contactIndex = contacts.contacts.findIndex(
       (contact: Contact) => contact.id === id
     );
-    if (contactIndex) {
+    if (contactIndex !== -1) {
       const updatedContacts = [...contacts.contacts];
       updatedContacts[contactIndex].typing = typing;
       setContacts((prev) => ({

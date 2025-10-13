@@ -6,7 +6,8 @@ export default function Profile({
   children,
   size,
   url,
-}: PropsWithChildren<{ size?: string; url?: string }>) {
+  alt = "profile",
+}: PropsWithChildren<{ size?: string; url?: string; alt?: string }>) {
   const sizeClass =
     {
       6: "w-6 h-6",
@@ -28,7 +29,7 @@ export default function Profile({
             className={sizeClass}
             height={20}
             width={20}
-            alt="profile"
+            alt={alt}
           />
         </div>
       );

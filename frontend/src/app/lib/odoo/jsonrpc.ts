@@ -172,6 +172,17 @@ export class OdooClient {
     };
   }
 
+  createSession(
+    sessionId: string,
+    userContext: Record<string, unknown> = {}
+  ) {
+    return new OdooSessionClient({
+      baseURL: this.baseURL,
+      sessionId,
+      userContext,
+    });
+  }
+
   private post(path: string, body: unknown): Promise<Response> {
     return fetch(`${this.baseURL}${path}`, {
       method: "POST",
@@ -198,7 +209,7 @@ export class OdooSessionClient {
   constructor(options: SessionClientOptions) {
     this.baseURL = options.baseURL;
     this.sessionCookie = `session_id=${options.sessionId};`;
-    this.userContext = options.userContext;
+    this.userContext = options.userContext ?? {};
   }
 
   async readGroup<T>(

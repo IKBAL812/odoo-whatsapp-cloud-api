@@ -2,12 +2,14 @@
 
 import { FormEvent, useState } from "react";
 import { useAuth } from "@/app/hooks/use-auth";
+import { useTranslations } from "@/app/context/translation-provider";
 
 export default function LoginForm() {
   const { login, isAuthenticating } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const { t } = useTranslations();
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -17,7 +19,7 @@ export default function LoginForm() {
       await login(username.trim(), password);
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Unable to sign in right now";
+        err instanceof Error ? err.message : t("auth.submitError");
       setError(message);
     }
   };
@@ -35,7 +37,7 @@ export default function LoginForm() {
     >
       <div className="flex flex-col gap-2">
         <label className="text-sm font-medium text-white/70" htmlFor="username">
-          Username
+          {t("auth.username")}
         </label>
         <input
           id="username"
@@ -45,12 +47,12 @@ export default function LoginForm() {
           value={username}
           onChange={(event) => setUsername(event.target.value)}
           className="rounded-lg w-full p-3 outline-none bg-white/10 text-white placeholder-white/50 border border-white/10 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/40 transition"
-          placeholder="Enter your Odoo username"
+          placeholder={t("auth.username")}
         />
       </div>
       <div className="flex flex-col gap-2">
         <label className="text-sm font-medium text-white/70" htmlFor="password">
-          Password
+          {t("auth.password")}
         </label>
         <input
           id="password"
@@ -60,7 +62,7 @@ export default function LoginForm() {
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           className="rounded-lg w-full p-3 outline-none bg-white/10 text-white placeholder-white/50 border border-white/10 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/40 transition"
-          placeholder="Enter your Odoo password"
+          placeholder={t("auth.password")}
         />
       </div>
       {error && (
@@ -73,7 +75,7 @@ export default function LoginForm() {
         className="rounded-lg p-3 bg-emerald-600 text-white font-semibold hover:bg-emerald-500 transition disabled:opacity-60 disabled:cursor-not-allowed"
         disabled={isSubmitDisabled}
       >
-        {isAuthenticating ? "Signing in..." : "Sign in"}
+        {isAuthenticating ? t("auth.submitting") : t("auth.submit")}
       </button>
     </form>
   );

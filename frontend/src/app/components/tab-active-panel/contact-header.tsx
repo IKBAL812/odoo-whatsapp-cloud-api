@@ -7,20 +7,24 @@ import {
   DotsThreeVerticalIcon,
   MagnifyingGlassIcon,
   UsersThreeIcon,
-  VideoCameraIcon,
 } from "@phosphor-icons/react";
 import TooltipWrapper from "../tooltip-wrapper";
+import { useTranslations } from "@/app/context/translation-provider";
 
 export default function ContactHeader() {
   const {
     profile: { id },
   } = useProfile();
-  const { contact, group } = useCurrentChat();
+  const { contact, group, threadName } = useCurrentChat();
+  const { t } = useTranslations();
 
   const renderContactStatus = () => {
+    if (!contact) {
+      return null;
+    }
     return (
       <p className="text-xs text-white/50">
-        {contact?.typing ? "typing" : "online"}
+        {contact?.typing ? t("chat.statusTyping") : t("chat.statusOnline")}
       </p>
     );
   };
@@ -29,10 +33,7 @@ export default function ContactHeader() {
     return (
       <section className="flex justify-end items-center gap-2">
         <TooltipWrapper showTooltip={false}>
-          <div className="flex justify-between items-center gap-1">
-            <VideoCameraIcon className="text-white size-5" weight="bold" />
-            <CaretDownIcon className="text-white size-5" weight="bold" />
-          </div>
+          <CaretDownIcon className="text-white size-5" weight="bold" />
         </TooltipWrapper>
         <TooltipWrapper showTooltip={false}>
           <MagnifyingGlassIcon className="text-white size-5" weight="bold" />
@@ -48,7 +49,9 @@ export default function ContactHeader() {
     const renderGroupContactNames = (): string => {
       return Object.values(group.contacts)
         .map((groupContact?: Contact) =>
-          groupContact?.id === id ? "You" : groupContact?.displayName
+          groupContact?.id === id
+            ? t("common.you")
+            : groupContact?.displayName
         )
         .join(", ");
     };
@@ -76,7 +79,9 @@ export default function ContactHeader() {
         <div className="flex gap-4 justify-start items-center">
           <Profile size="10" url={contact?.contactAvatar} />
           <div className="flex flex-col">
-            <p className="text-white">{contact?.displayName}</p>
+            <p className="text-white">
+              {contact?.displayName ?? threadName ?? t("chatList.title")}
+            </p>
             {renderContactStatus()}
           </div>
         </div>

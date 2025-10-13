@@ -6,7 +6,5 @@ export const formatTime = (timestamp: number) => {
 };
 
 export const getTimestamp = () => {
-  const date = new Date();
-  const now = dayjs(date).unix();
-  return now;
+  return Date.now();
 };

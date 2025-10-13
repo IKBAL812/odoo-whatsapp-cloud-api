@@ -1,0 +1,66 @@
+{
+  "app": {
+    "loadingWorkspace": "Çalışma alanınız hazırlanıyor...",
+    "selectChatPrompt": "Mesajları görmek için bir sohbet seçin"
+  },
+  "auth": {
+    "title": "WhatsApp Odoo Bağlayıcısı",
+    "subtitle": "Mesajlaşmaya başlamak için Odoo bilgilerinizi kullanarak giriş yapın.",
+    "username": "Kullanıcı adı",
+    "password": "Şifre",
+    "submit": "Giriş yap",
+    "submitting": "Giriş yapılıyor...",
+    "submitError": "Şu anda giriş yapılamıyor"
+  },
+  "chat": {
+    "filters": {
+      "all": "Tümü",
+      "unread": "Okunmamış",
+      "favorites": "Favoriler",
+      "groups": "Gruplar"
+    },
+    "searchPlaceholder": "Ara veya yeni sohbet başlat",
+    "loading": "Yükleniyor...",
+    "typing": "yazıyor...",
+    "statusTyping": "yazıyor",
+    "statusOnline": "çevrimiçi",
+    "dayToday": "Bugün",
+    "dayYesterday": "Dün"
+  },
+  "chatInput": {
+    "placeholder": "Mesaj yazın",
+    "send": "Gönder",
+    "sending": "Gönderiliyor...",
+    "sendError": "Mesaj gönderilemedi"
+  },
+  "chatList": {
+    "title": "Sohbetler",
+    "newChat": "Yeni sohbet",
+    "newGroup": "Yeni grup",
+    "newContact": "Yeni kişi",
+    "newCommunity": "Yeni topluluk",
+    "searchPlaceholder": "Ara veya yeni sohbet başlat",
+    "emptyProfileSubtitle": "Kendinize mesaj gönderin"
+  },
+  "navigation": {
+    "chats": "Sohbetler",
+    "settings": "Ayarlar",
+    "profile": "Profil",
+    "github": "Github",
+    "logout": "Çıkış",
+    "language": "Dil"
+  },
+  "newChat": {
+    "title": "Yeni sohbet",
+    "searchPlaceholder": "İsim ya da numara ara",
+    "contactsHeader": "Uygulamadaki kişiler",
+    "selfLabel": "(Sen)"
+  },
+  "common": {
+    "today": "Bugün",
+    "yesterday": "Dün",
+    "dateFormat": "{{date}}",
+    "comingSoon": "Yakında...",
+    "you": "Sen"
+  }
+}

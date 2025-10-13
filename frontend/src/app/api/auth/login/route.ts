@@ -53,15 +53,29 @@ export async function POST(request: Request) {
   });
 
   try {
-    const { sessionId, result } = await odooClient.authenticate({
+    const { sessionId, result, session } = await odooClient.authenticate({
       database: process.env.ODOO_JSONRPC_DATABASE as string,
       username,
       password,
     });
 
+    let backend = null;
+    try {
+      backend = await session.call(
+        "whatsapp.backend",
+        "initialize_web",
+        [[]],
+        {},
+        false
+      );
+    } catch (initError) {
+      console.error("Failed to initialize WhatsApp backend", initError);
+    }
+
     return NextResponse.json({
       sessionId,
       user: result,
+      backend,
     });
   } catch (error) {
     const err = error as Error & {

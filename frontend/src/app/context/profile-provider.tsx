@@ -1,4 +1,5 @@
 import { createContext, PropsWithChildren, useEffect, useState } from "react";
+import { useAuth } from "../hooks/use-auth";
 
 export type Profile = {
   id: string;
@@ -16,6 +17,7 @@ export const ProfileContext = createContext<
 >(undefined);
 
 export default function ProfileProvider({ children }: PropsWithChildren) {
+  const { user, backendUsers, backendUserId } = useAuth();
   const [profile, setProfile] = useState<{
     profile: Profile;
     isLoading: boolean;
@@ -30,19 +32,21 @@ export default function ProfileProvider({ children }: PropsWithChildren) {
   });
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      setProfile((prev) => ({ ...prev, isLoading: true }));
-      const response = await fetch("/api/mock/profile");
-      const data = await response.json();
-      setProfile((prev) => ({
-        ...prev,
-        profile: data,
-        isLoading: false,
-      }));
-    };
+    const backendUser = backendUsers.find(
+      (item) => item.id === backendUserId
+    );
 
-    fetchProfile();
-  }, []);
+    setProfile({
+      profile: {
+        id: String(backendUser?.id ?? user?.uid ?? ""),
+        name:
+          backendUser?.name ?? (user as { name?: string })?.name ?? "User",
+        blueTickEnabled: false,
+        avatarUrl: backendUser?.imageUrl ?? "",
+      },
+      isLoading: false,
+    });
+  }, [backendUsers, backendUserId, user]);
 
   return (
     <ProfileContext.Provider value={{ ...profile }}>

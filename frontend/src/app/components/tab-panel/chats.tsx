@@ -1,51 +1,42 @@
-import {
-  ChatDotsIcon,
-  DotsThreeVerticalIcon,
-  UsersThreeIcon,
-} from "@phosphor-icons/react";
+import { DotsThreeVerticalIcon, UsersThreeIcon } from "@phosphor-icons/react";
 import TooltipWrapper from "../tooltip-wrapper";
-import { useNewChat } from "@/app/hooks/use-new-chat";
 import { useChats } from "@/app/hooks/use-chats";
 import { Chat, Filters, Message } from "@/app/context/chats-provider";
 import Profile from "../profile";
 import { useContacts } from "@/app/hooks/use-contacts";
 import { useCurrentChat } from "@/app/hooks/use-current-chat";
+import dayjs from "dayjs";
 import { formatTime } from "@/app/utils";
+import { useTranslations } from "@/app/context/translation-provider";
 import MessageStatusIcon from "../message-status-icon";
 
 export default function Chats({ selectedTab }: { selectedTab: string }) {
-  const { openNewChatWindow, isNewChatWindowOpen } = useNewChat();
   const {
     filter,
     updateFilter,
+    search,
+    updateSearch,
     chats: { filtered, isLoading },
   } = useChats();
-  const { getContact, setIsContactTyping } = useContacts();
-  const { loadCurrentChat, contact, addNewMessage } = useCurrentChat();
+  const { getContact } = useContacts();
+  const { loadCurrentChat, contact } = useCurrentChat();
+  const { t } = useTranslations();
 
-  const handleTyping = () => {
-    if (contact) {
-      setIsContactTyping(contact.id, true);
+  const getMetaMessage = (chat: Chat, message?: Message): string => {
+    if (!message) {
+      return chat.lastMessagePreview ?? "";
     }
-  };
 
-  const handleOnline = () => {
-    if (contact) {
-      setIsContactTyping(contact.id, false);
-    }
-  };
-
-  const getMetaMessage = (
-    chat: Chat,
-    { message, contactId }: Message
-  ): string => {
     if (chat.group) {
-      return `${getContact(contactId)?.displayName}: ${message}`;
+      const groupContact = getContact(message.contactId);
+      return `${groupContact?.displayName ?? "Unknown"}: ${message.message}`;
     }
-    if (contact?.typing && contact.id === contactId) {
-      return "typing...";
+
+    if (contact?.typing && contact.id === message.contactId) {
+      return t("chat.typing");
     }
-    return message;
+
+    return message.message;
   };
 
   const renderChat = (chat: Chat) => {
@@ -54,14 +45,38 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
     );
     const name =
       typeof chat.contactId === "string"
-        ? currentContact?.displayName
-        : chat.groupName;
-    const lastMessage = chat.messages[chat.messages.length - 1];
+        ? currentContact?.displayName ?? chat.threadName ?? "Unknown"
+        : chat.groupName ?? chat.threadName ?? "Unknown";
+    const lastMessage =
+      chat.messages.length > 0
+        ? chat.messages[chat.messages.length - 1]
+        : undefined;
+    const messagePreview = getMetaMessage(chat, lastMessage);
+    const lastMessageTimestamp =
+      lastMessage?.timestamp ?? chat.lastMessageAt ?? null;
+    const formattedDate = lastMessageTimestamp
+      ? dayjs(lastMessageTimestamp).isSame(dayjs(), "day")
+        ? formatTime(lastMessageTimestamp)
+        : t("common.dateFormat", {
+            date: dayjs(lastMessageTimestamp).format("MMM D, YYYY"),
+          })
+      : "";
+    const isSentFromUser = lastMessage?.isSentFromUser ?? false;
 
     return (
       <button
+        key={chat.id}
         onClick={() =>
-          loadCurrentChat({ chatId: chat.id, page: 0, messages: chat.messages })
+          loadCurrentChat({
+            chatId: chat.id,
+            page: 0,
+            messages: [],
+            contact: null,
+            group: null,
+            threadName: chat.threadName ?? chat.groupName ?? null,
+            phoneNumber: chat.phoneNumber ?? null,
+            backendId: chat.backendId ?? null,
+          })
         }
         className={`outline-none grid grid-cols-6 w-full gap-4 p-2.5 hover:bg-white/10 rounded-xl cursor-pointer ${
           typeof chat.contactId === "string" && chat.contactId === contact?.id
@@ -71,7 +86,11 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
       >
         <div className="col-span-1">
           {!chat.group ? (
-            <Profile size="12" url={currentContact?.contactAvatar} />
+            <Profile
+              size="12"
+              url={currentContact?.contactAvatar}
+              alt={name}
+            />
           ) : (
             <Profile size="12">
               <div className="h-full w-full flex justify-center items-center bg-white/50">
@@ -81,36 +100,38 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
           )}
         </div>
         <div className="col-span-3 flex flex-col justify-center items-start w-full">
-          <p className="text-white">{name}</p>
+          <p className="text-white truncate">{name}</p>
           <div className="flex justify-start items-center gap-1 w-full">
-            <MessageStatusIcon message={lastMessage} />
-            {contact?.typing && contact.id === lastMessage.contactId ? (
-              <p className="text-emerald-500 text-sm">
-                {getMetaMessage(chat, lastMessage)}
-              </p>
-            ) : (
-              <p
-                className={`text-sm ${
-                  chat.read || lastMessage.isSentFromUser
-                    ? "text-white/55"
-                    : "text-white font-semibold"
-                } whitespace-nowrap truncate text-ellipsis overflow-hidden`}
-              >
-                {getMetaMessage(chat, lastMessage)}
-              </p>
-            )}
+            {lastMessage && <MessageStatusIcon message={lastMessage} />}
+            <p
+              className={`text-sm ${
+                chat.read || isSentFromUser
+                  ? "text-white/55"
+                  : "text-white font-semibold"
+              } whitespace-nowrap truncate text-ellipsis overflow-hidden ${
+                contact?.typing && lastMessage
+                  ? "text-emerald-500 font-medium"
+                  : ""
+              }`}
+            >
+              {contact?.typing && lastMessage
+                ? getMetaMessage(chat, lastMessage)
+                : messagePreview}
+            </p>
           </div>
         </div>
         <div className="col-span-2 flex flex-col justify-center items-end">
-          <p
-            className={`text-xs font-semibold ${
-              chat.read || lastMessage.isSentFromUser
-                ? "text-white/55"
-                : "text-emerald-400"
-            }`}
-          >
-            {formatTime(lastMessage.timestamp)}
-          </p>
+          {lastMessageTimestamp && (
+            <p
+              className={`text-xs font-semibold ${
+                chat.read || isSentFromUser
+                  ? "text-white/55"
+                  : "text-emerald-400"
+              }`}
+            >
+              {formattedDate}
+            </p>
+          )}
         </div>
       </button>
     );
@@ -120,7 +141,7 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
     if (isLoading) {
       return (
         <div className="w-full h-full flex justify-center items-center text-white/50">
-          Loading...
+          {t("chat.loading")}
         </div>
       );
     }
@@ -129,27 +150,21 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
   };
 
   return (
-    <section className="w-full h-full flex flex-col gap-3 p-4 relative">
+    <section className="w-full h-full min-h-0 flex flex-col gap-3 p-4 relative">
       <section className="w-full flex justify-between items-center">
         <p className="text-white text-2xl font-semibold capitalize">
-          {selectedTab}
+          {t(`navigation.${selectedTab}`)}
         </p>
-        <section className="flex justify-between items-center gap-2">
-          <TooltipWrapper showTooltip={false} onClick={openNewChatWindow}>
-            <ChatDotsIcon className="text-white size-6" weight="bold" />
-          </TooltipWrapper>
-          <TooltipWrapper showTooltip={false}>
-            <DotsThreeVerticalIcon
-              className="text-white size-6"
-              weight="bold"
-            />
-          </TooltipWrapper>
-        </section>
+        <TooltipWrapper showTooltip={false}>
+          <DotsThreeVerticalIcon className="text-white size-6" weight="bold" />
+        </TooltipWrapper>
       </section>
       <section className="w-full flex flex-col gap-1">
         <input
           className="rounded-full w-full p-2 px-4 outline-none bg-white/10 hover:ring-[1px] hover:ring-gray-600 focus:ring-2 focus:ring-green-500 ring-0 ring-transparent focus:bg-transparent placeholder-gray-400 focus:placeholder-gray-400 text-white"
-          placeholder="Search or start a new chat"
+          placeholder={t("chatList.searchPlaceholder")}
+          value={search}
+          onChange={(event) => updateSearch(event.target.value)}
         />
         <div className="flex justify-start items-center text-white gap-2 mt-2">
           {Object.values(Filters).map((f: string) => (
@@ -162,36 +177,14 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
               } text-sm p-1 px-3 border-[1px] rounded-full cursor-pointer capitalize`}
               onClick={() => updateFilter(f)}
             >
-              {f}
+              {t(`chat.filters.${f}`)}
             </button>
           ))}
         </div>
       </section>
-      <section className="w-full overflow-y-scroll flex flex-col gap-1">
+      <section className="w-full flex-1 min-h-0 overflow-y-auto flex flex-col gap-1">
         {renderChats()}
       </section>
-      {!isNewChatWindowOpen && (
-        <section className="absolute flex justify-start items-center gap-2 z-40 bottom-4 left-4">
-          <button
-            className="rounded-full p-1 px-3 bg-emerald-700 text-white text-xs cursor-pointer"
-            onClick={handleTyping}
-          >
-            Typing
-          </button>
-          <button
-            className="rounded-full p-1 px-3 bg-emerald-700 text-white text-xs cursor-pointer"
-            onClick={handleOnline}
-          >
-            Online
-          </button>
-          <button
-            className="rounded-full p-1 px-3 bg-emerald-700 text-white text-xs cursor-pointer"
-            onClick={addNewMessage}
-          >
-            New Message
-          </button>
-        </section>
-      )}
     </section>
   );
 }

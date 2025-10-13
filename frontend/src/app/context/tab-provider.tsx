@@ -1,6 +1,6 @@
 import { createContext, PropsWithChildren, useState } from "react";
 
-const TOP_TABS = ["chats", "status", "channels", "communities"];
+const TOP_TABS = ["chats"];
 
 export const TabContext = createContext<
   | undefined

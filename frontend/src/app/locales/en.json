@@ -1,0 +1,66 @@
+{
+  "app": {
+    "loadingWorkspace": "Preparing your workspace...",
+    "selectChatPrompt": "Please select a chat to see messages"
+  },
+  "auth": {
+    "title": "WhatsApp Odoo Connector",
+    "subtitle": "Sign in with your Odoo credentials to start messaging.",
+    "username": "Username",
+    "password": "Password",
+    "submit": "Sign in",
+    "submitting": "Signing in...",
+    "submitError": "Unable to sign in right now"
+  },
+  "chat": {
+    "filters": {
+      "all": "All",
+      "unread": "Unread",
+      "favorites": "Favorites",
+      "groups": "Groups"
+    },
+    "searchPlaceholder": "Search or start a new chat",
+    "loading": "Loading...",
+    "typing": "typing...",
+    "statusTyping": "typing",
+    "statusOnline": "online",
+    "dayToday": "Today",
+    "dayYesterday": "Yesterday"
+  },
+  "chatInput": {
+    "placeholder": "Type a message",
+    "send": "Send",
+    "sending": "Sending...",
+    "sendError": "Failed to send the message"
+  },
+  "chatList": {
+    "title": "Chats",
+    "newChat": "New Chat",
+    "newGroup": "New Group",
+    "newContact": "New Contact",
+    "newCommunity": "New Community",
+    "searchPlaceholder": "Search or start a new chat",
+    "emptyProfileSubtitle": "Message yourself"
+  },
+  "navigation": {
+    "chats": "Chats",
+    "settings": "Settings",
+    "profile": "Profile",
+    "github": "Github",
+    "logout": "Logout",
+    "language": "Language"
+  },
+  "newChat": {
+    "title": "New Chat",
+    "searchPlaceholder": "Search for name or number",
+    "contactsHeader": "Contacts on App",
+    "selfLabel": "(You)"
+  },
+  "common": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "dateFormat": "{{date}}",
+    "comingSoon": "Coming soon...",
+    "you": "You"
+  }
+}

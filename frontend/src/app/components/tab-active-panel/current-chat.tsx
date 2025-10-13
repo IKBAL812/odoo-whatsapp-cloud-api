@@ -1,17 +1,85 @@
+import dayjs from "dayjs";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Message } from "@/app/context/chats-provider";
 import { useCurrentChat } from "@/app/hooks/use-current-chat";
 import Reaction from "../message/reaction";
 import ContactHeader from "./contact-header";
 import ChatMessage from "./chat-message";
 import MessageReactions from "./message-reactions";
+import { useTranslations } from "@/app/context/translation-provider";
 
 export default function CurrentChat() {
-  const { chatId, messages, isLoading } = useCurrentChat();
+  const { chatId, messages, isLoading, sendMessage, isSending } =
+    useCurrentChat();
+  const [messageText, setMessageText] = useState("");
+  const [sendError, setSendError] = useState<string | null>(null);
+  const { t } = useTranslations();
+
+  useEffect(() => {
+    setMessageText("");
+    setSendError(null);
+  }, [chatId]);
+
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
+  }, [messages.length, isLoading]);
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const trimmed = messageText.trim();
+    if (trimmed.length === 0) {
+      return;
+    }
+
+    try {
+      await sendMessage(trimmed);
+      setMessageText("");
+      setSendError(null);
+    } catch (error) {
+      const err = error as Error;
+      setSendError(err.message || t("chatInput.sendError"));
+    }
+  };
+
+  const annotatedMessages = useMemo(() => {
+    const items: Array<
+      | { type: "label"; day: dayjs.Dayjs; key: string }
+      | { type: "message"; message: Message; index: number }
+    > = [];
+    let lastLabelKey: string | null = null;
+
+    messages.forEach((message, index) => {
+      const day = dayjs(message.timestamp).startOf("day");
+      const labelKey = day.toISOString();
+      if (labelKey !== lastLabelKey) {
+        items.push({ type: "label", day, key: labelKey });
+        lastLabelKey = labelKey;
+      }
+      items.push({ type: "message", message, index });
+    });
+
+    return items;
+  }, [messages]);
+
+  const formatDayLabel = (day: dayjs.Dayjs) => {
+    if (day.isSame(dayjs(), "day")) {
+      return t("chat.dayToday");
+    }
+    if (day.isSame(dayjs().subtract(1, "day"), "day")) {
+      return t("chat.dayYesterday");
+    }
+    return day.format("MMMM D, YYYY");
+  };
 
   if (!chatId) {
     return (
       <section className="w-full h-full text-white flex justify-center items-center">
-        Please select a chat to see messages
+        {t("app.selectChatPrompt")}
       </section>
     );
   }
@@ -36,54 +104,93 @@ export default function CurrentChat() {
   return (
     <section className="w-full h-full flex flex-col">
       <ContactHeader />
-      <div className="h-[100%] w-full flex flex-col justify-end items-center relative">
-        <div className="absolute background-custom h-full w-full"></div>
+      <div className="relative flex-1 min-h-0 w-full flex flex-col">
+        <div className="absolute inset-0 background-custom pointer-events-none"></div>
 
-        <section className="p-4 pb-0 w-full max-h-[710px] flex flex-col justify-end items-center relative overflow-y-scroll">
-          <div className="w-full flex justify-center items-center">
-            <div className="rounded-full overflow-hidden bg-black z-20 w-fit">
-              <p className="bg-white/20 text-white/55 h-full w-full text-xs p-1 px-2">
-                Today
-              </p>
+        <div
+          ref={scrollContainerRef}
+          className="relative flex-1 min-h-0 w-full overflow-y-auto"
+        >
+          <div className="min-h-full flex flex-col justify-end">
+            <div className="p-4 flex flex-col gap-2">
+              {isLoading && <div className="text-white">{t("chat.loading")}</div>}
+              {annotatedMessages.map((item) => {
+                if (item.type === "label") {
+                  return (
+                    <div
+                      key={`label-${item.key}`}
+                      className="w-full flex justify-center items-center"
+                    >
+                      <div className="rounded-full overflow-hidden bg-black z-20 w-fit">
+                        <p className="bg-white/20 text-white/55 h-full w-full text-xs p-1 px-2">
+                          {formatDayLabel(item.day)}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                }
+
+                const { message, index } = item;
+
+                return (
+                  <div
+                    className={`w-full flex items-center ${
+                      message.isSentFromUser ? "justify-end" : "justify-start"
+                    }`}
+                    key={message.id ?? `message-${index}`}
+                  >
+                    <div
+                      className={`flex justify-between gap-2 items-center ${getMessageSpacing(
+                        index,
+                        message.reactions?.length
+                      )} relative`}
+                    >
+                      {message.isSentFromUser && (
+                        <Reaction isSentFromUser={true} />
+                      )}
+                      <ChatMessage message={message} />
+                      {!message.isSentFromUser && <Reaction isSentFromUser={false} />}
+                      {message.reactions?.length && (
+                        <MessageReactions
+                          reactions={message.reactions}
+                          isSentFromUser={message.isSentFromUser}
+                        />
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
-          {isLoading && <div className="text-white">Loading...</div>}
-          {messages.map((message: Message, index: number) => (
-            <div
-              className={`w-full flex items-center ${
-                message.isSentFromUser ? "justify-end" : "justify-start"
-              }`}
-              key={index}
-            >
-              <div
-                className={`flex justify-between gap-2 items-center ${getMessageSpacing(
-                  index,
-                  message.reactions?.length
-                )} relative`}
-              >
-                {message.isSentFromUser && <Reaction isSentFromUser={true} />}
-                <ChatMessage message={message} />
-                {!message.isSentFromUser && <Reaction isSentFromUser={false} />}
-                {message.reactions?.length && (
-                  <MessageReactions
-                    reactions={message.reactions}
-                    isSentFromUser={message.isSentFromUser}
-                  />
-                )}
-              </div>
-            </div>
-          ))}
-        </section>
+        </div>
 
-        <section className="w-full z-50 h-auto p-4">
-          <div className="bg-black rounded-full overflow-hidden">
-            <div className="bg-white/15 rounded-full">
+        <section className="w-full z-50 p-4">
+          <form onSubmit={handleSubmit} className="bg-black rounded-full">
+            <div className="bg-white/15 rounded-full flex items-center gap-2">
               <input
-                className="w-full outline-none p-3 px-4 text-white placeholder-white/60 caret-green-400 text-sm rounded-full"
-                placeholder="Type a message"
+                className="flex-1 outline-none p-3 px-4 text-white placeholder-white/60 caret-green-400 text-sm bg-transparent"
+                placeholder={t("chatInput.placeholder")}
+                value={messageText}
+                onChange={(event) => {
+                  if (sendError) {
+                    setSendError(null);
+                  }
+                  setMessageText(event.target.value);
+                }}
+                disabled={isSending}
               />
+              <button
+                type="submit"
+                disabled={isSending || messageText.trim().length === 0}
+                className="text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed transition rounded-full px-4 py-2 mr-2"
+              >
+                {isSending ? t("chatInput.sending") : t("chatInput.send")}
+              </button>
             </div>
-          </div>
+          </form>
+          {sendError && (
+            <p className="text-xs text-red-400 mt-2 px-2">{sendError}</p>
+          )}
         </section>
       </div>
     </section>
