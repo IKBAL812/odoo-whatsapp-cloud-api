@@ -20,7 +20,7 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
   } = useChats();
   const { getContact } = useContacts();
   const { loadCurrentChat, contact } = useCurrentChat();
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
 
   const getMetaMessage = (chat: Chat, message?: Message): string => {
     if (!message) {
@@ -58,7 +58,7 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
       lastMessage?.timestamp ?? chat.lastMessageAt ?? null;
     const formattedDate = lastMessageTimestamp
       ? dayjs(lastMessageTimestamp).isSame(dayjs(), "day")
-        ? formatTime(lastMessageTimestamp)
+        ? formatTime(lastMessageTimestamp, locale)
         : t("common.dateFormat", {
             date: dayjs(lastMessageTimestamp).format("MMM D, YYYY"),
           })

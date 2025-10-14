@@ -10,6 +10,7 @@ import {
 import { useAuth } from "../hooks/use-auth";
 import { useContacts } from "../hooks/use-contacts";
 import { useSSE } from "../hooks/use-sse";
+import { useConnection } from "./connection-provider";
 
 export enum Filters {
   ALL = "all",
@@ -88,6 +89,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
   });
   const { sessionId, backendId: authBackendId } = useAuth();
   const { contacts: contactEntries } = useContacts();
+  const { reportApiError, reportConnectionRestored } = useConnection();
   const isFetchingRef = useRef(false);
 
   
@@ -146,9 +148,11 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
       onThreadsUpdate: handleThreadsUpdate,
       onError: (error) => {
         console.error("SSE Error:", error);
+        reportApiError(error);
       },
       onReconnect: () => {
         console.log("SSE Reconnected for threads");
+        reportConnectionRestored();
       },
       onHeartbeat: (timestamp) => {
         console.log("Thread SSE heartbeat:", timestamp);

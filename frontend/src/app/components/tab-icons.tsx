@@ -44,13 +44,6 @@ export default function TabIcons() {
           <SignOutIcon className="size-5 text-white" weight="bold" />
         </TooltipWrapper>
         <TooltipWrapper
-          selected={selectedTab === "settings"}
-          onClick={() => selectTab("settings")}
-          tab={t("navigation.settings")}
-        >
-          <TabIcon tab="settings" />
-        </TooltipWrapper>
-        <TooltipWrapper
           tab={t("navigation.profile")}
           onClick={() => selectTab("profile")}
         >

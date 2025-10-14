@@ -12,6 +12,8 @@ import AuthProvider from "./context/auth-provider";
 import { useAuth } from "./hooks/use-auth";
 import LoginScreen from "./components/auth/login-screen";
 import { TranslationProvider, useTranslations } from "./context/translation-provider";
+import ConnectionProvider from "./context/connection-provider";
+import ConnectionOverlay from "./components/connection-overlay";
 
 function AppShell() {
   return (
@@ -25,6 +27,7 @@ function AppShell() {
                 <TabPanel />
                 <TabActivePanel />
               </section>
+              <ConnectionOverlay />
             </CurrentChatProvider>
           </ChatsProvider>
         </ContactsProvider>
@@ -56,7 +59,9 @@ export default function Home() {
   return (
     <TranslationProvider>
       <AuthProvider>
-        <AuthenticatedApp />
+        <ConnectionProvider>
+          <AuthenticatedApp />
+        </ConnectionProvider>
       </AuthProvider>
     </TranslationProvider>
   );

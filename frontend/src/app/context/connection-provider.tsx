@@ -1,0 +1,75 @@
+"use client";
+
+import { createContext, useContext, useState, useCallback, PropsWithChildren } from "react";
+
+type ConnectionStatus = "connected" | "disconnected" | "session-expired";
+
+type ConnectionContextType = {
+  connectionStatus: ConnectionStatus;
+  setConnectionStatus: (status: ConnectionStatus) => void;
+  reportApiError: (error: any) => void;
+  reportSessionExpiry: () => void;
+  reportConnectionRestored: () => void;
+};
+
+const ConnectionContext = createContext<ConnectionContextType | undefined>(undefined);
+
+export const useConnection = () => {
+  const context = useContext(ConnectionContext);
+  if (!context) {
+    throw new Error("useConnection must be used within a ConnectionProvider");
+  }
+  return context;
+};
+
+export default function ConnectionProvider({ children }: PropsWithChildren) {
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("connected");
+
+  const reportApiError = useCallback((error: any) => {
+    // Check if it's a network error or connection refused
+    if (error instanceof TypeError && error.message.includes("fetch")) {
+      setConnectionStatus("disconnected");
+      return;
+    }
+    
+    // Check for ECONNREFUSED specifically
+    if (error?.cause?.code === 'ECONNREFUSED') {
+      setConnectionStatus("disconnected");
+      return;
+    }
+
+    // Check if it's a 401/403 error (session expired)
+    if (error?.status === 401 || error?.status === 403) {
+      setConnectionStatus("session-expired");
+      return;
+    }
+
+    // Check if it's a server error that indicates connection issues
+    if (error?.status >= 500) {
+      setConnectionStatus("disconnected");
+      return;
+    }
+  }, []);
+
+  const reportSessionExpiry = useCallback(() => {
+    setConnectionStatus("session-expired");
+  }, []);
+
+  const reportConnectionRestored = useCallback(() => {
+    setConnectionStatus("connected");
+  }, []);
+
+  return (
+    <ConnectionContext.Provider
+      value={{
+        connectionStatus,
+        setConnectionStatus,
+        reportApiError,
+        reportSessionExpiry,
+        reportConnectionRestored,
+      }}
+    >
+      {children}
+    </ConnectionContext.Provider>
+  );
+}

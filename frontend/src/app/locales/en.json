@@ -64,5 +64,18 @@
     "dateFormat": "{{date}}",
     "comingSoon": "Coming soon...",
     "you": "You"
+  },
+  "connection": {
+    "disconnected": {
+      "title": "Connection Lost",
+      "message": "Unable to connect to the server. Please check your internet connection."
+    },
+    "sessionExpired": {
+      "title": "Session Expired",
+      "message": "Your session has expired. Please log in again."
+    },
+    "retry": "Retry",
+    "login": "Log In",
+    "checking": "Checking connection..."
   }
 }

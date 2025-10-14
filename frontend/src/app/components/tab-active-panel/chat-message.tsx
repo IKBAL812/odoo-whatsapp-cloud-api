@@ -29,7 +29,7 @@ export default function ChatMessage({ message }: ChatMessageProps) {
   const { getContact } = useContacts();
   const { group } = useCurrentChat();
   const { backendUsersById, backendUserId } = useAuth();
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
 
   const senderUser = message.isSentFromUser
     ? backendUsersById[message.userId ?? backendUserId ?? -1]
@@ -74,7 +74,7 @@ export default function ChatMessage({ message }: ChatMessageProps) {
               <div className="flex justify-between items-end gap-2">
                 <p className="text-white text-sm">{message.message}</p>
                 <p className="text-white/80 text-xs">
-                  {formatTime(message.timestamp)}
+                  {formatTime(message.timestamp, locale)}
                 </p>
                 {message.isSentFromUser && (
                   <MessageStatusIcon message={message} isInMessage />
@@ -118,7 +118,7 @@ export default function ChatMessage({ message }: ChatMessageProps) {
                 {message.message}
               </p>
               <p className="text-white/80 text-xs">
-                {formatTime(message.timestamp)}
+                {formatTime(message.timestamp, locale)}
               </p>
               {message.isSentFromUser && (
                 <MessageStatusIcon message={message} isInMessage />

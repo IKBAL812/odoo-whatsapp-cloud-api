@@ -12,6 +12,7 @@ import { useContacts } from "../hooks/use-contacts";
 import { Contact } from "./contacts-provider";
 import { useAuth } from "../hooks/use-auth";
 import { useSSE } from "../hooks/use-sse";
+import { useConnection } from "./connection-provider";
 
 export type CurrentChatContacts = {
   [contactId: string]: Contact | undefined;
@@ -140,6 +141,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
   } = useChats();
   const { contacts } = useContacts();
   const { sessionId, backendId: authBackendId, backendUserId } = useAuth();
+  const { reportApiError, reportConnectionRestored } = useConnection();
 
   const chatId = currentChat.chatId;
   
@@ -271,6 +273,11 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
       onMessagesUpdate: handleMessagesUpdate,
       onError: (error) => {
         console.error("SSE Error:", error);
+        reportApiError(error);
+      },
+      onReconnect: () => {
+        console.log("SSE Reconnected for messages");
+        reportConnectionRestored();
       },
     },
     {
@@ -342,10 +349,12 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
           const message =
             errorBody?.error ??
             `Failed to fetch messages (${response.status})`;
+          reportApiError({ status: response.status, message });
           throw new Error(message);
         }
 
         const data = await response.json();
+        reportConnectionRestored(); // Connection is good
         const records: OdooMessageRecord[] = Array.isArray(data?.messages)
           ? data.messages.reverse() // Backend returns newest first, reverse for chat display
           : [];
@@ -497,6 +506,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
           return;
         }
         console.error("Failed to fetch messages", error);
+        reportApiError(error);
         if (replace) {
           setCurrentChat((prev) =>
             prev.chatId === chatId
@@ -512,7 +522,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
         }
       }
     },
-    [chatId, sessionId]
+    [chatId, sessionId, reportApiError, reportConnectionRestored]
   );
 
   useEffect(() => {
@@ -699,10 +709,12 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
             typeof data?.error === "string"
               ? data.error
               : "Failed to send the message";
+          reportApiError({ status: response.status, message });
           throw new Error(message);
         }
 
         const result = data?.result ?? {};
+        reportConnectionRestored(); // Connection is good
         const messageId =
           typeof result?.message_id === "number"
             ? result.message_id
@@ -760,6 +772,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
         updateThreadPreview(activeChatId, trimmed, timestamp);
       } catch (error) {
         const err = error as Error;
+        reportApiError(error);
         setCurrentChat((prev) => {
           if (prev.chatId !== activeChatId) {
             return prev;
@@ -784,7 +797,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
         throw err;
       }
     },
-    [sessionId, currentChat, backendUserId, authBackendId, fetchMessages, updateThreadPreview]
+    [sessionId, currentChat, backendUserId, authBackendId, fetchMessages, updateThreadPreview, reportApiError, reportConnectionRestored]
   );
 
   const startReply = useCallback((message: Message) => {

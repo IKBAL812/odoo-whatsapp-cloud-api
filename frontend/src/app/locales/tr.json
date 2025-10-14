@@ -64,5 +64,18 @@
     "dateFormat": "{{date}}",
     "comingSoon": "Yakında...",
     "you": "Sen"
+  },
+  "connection": {
+    "disconnected": {
+      "title": "Bağlantı Kesildi",
+      "message": "Sunucuya bağlanılamıyor. Lütfen internet bağlantınızı kontrol edin."
+    },
+    "sessionExpired": {
+      "title": "Oturum Süresi Doldu",
+      "message": "Oturumunuzun süresi doldu. Lütfen tekrar giriş yapın."
+    },
+    "retry": "Tekrar Dene",
+    "login": "Giriş Yap",
+    "checking": "Bağlantı kontrol ediliyor..."
   }
 }

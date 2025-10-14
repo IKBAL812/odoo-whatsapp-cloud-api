@@ -2,7 +2,6 @@ import { useTab } from "@/app/hooks/use-tab";
 import { GearSixIcon } from "@phosphor-icons/react";
 import CurrentChat from "./current-chat";
 import { useTranslations } from "@/app/context/translation-provider";
-import LanguageSelector from "../language-selector";
 
 export default function TabActivePanel() {
   const { selectedTab } = useTab();
@@ -22,7 +21,6 @@ export default function TabActivePanel() {
       <p className="text-white text-3xl capitalize">
         {t(`navigation.${selectedTab}`)}
       </p>
-      <LanguageSelector />
     </section>
   );
 }

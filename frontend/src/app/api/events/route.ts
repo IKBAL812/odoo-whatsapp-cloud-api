@@ -110,6 +110,7 @@ export async function GET(request: NextRequest) {
   let lastMessagesCheck = formatOdooDateTime(startTime);
   let lastHeartbeat = Date.now();
   let consecutiveErrors = 0;
+  let intervalId: NodeJS.Timeout;
 
   const encoder = new TextEncoder();
 
@@ -168,6 +169,15 @@ export async function GET(request: NextRequest) {
           } catch (error) {
             console.error("Error checking threads:", error);
             consecutiveErrors++;
+            
+            // If connection refused or network error, stop checking to avoid spamming logs
+            const err = error as any;
+            if (err?.cause?.code === 'ECONNREFUSED' || err?.message?.includes('fetch failed')) {
+              console.error("Backend connection refused, stopping SSE updates");
+              clearInterval(intervalId);
+              controller.close();
+              return;
+            }
           }
 
           // Check for new messages (only if threadId specified)
@@ -216,6 +226,15 @@ export async function GET(request: NextRequest) {
             } catch (error) {
               console.error("Error checking messages:", error);
               consecutiveErrors++;
+              
+              // If connection refused or network error, stop checking to avoid spamming logs
+              const err = error as any;
+              if (err?.cause?.code === 'ECONNREFUSED' || err?.message?.includes('fetch failed')) {
+                console.error("Backend connection refused, stopping SSE updates");
+                clearInterval(intervalId);
+                controller.close();
+                return;
+              }
             }
           }
 
@@ -241,7 +260,7 @@ export async function GET(request: NextRequest) {
       checkForUpdates();
 
       // Set up interval
-      const intervalId = setInterval(checkForUpdates, CHECK_INTERVAL_MS);
+      intervalId = setInterval(checkForUpdates, CHECK_INTERVAL_MS);
 
       // Cleanup on connection close
       const cleanup = () => {
