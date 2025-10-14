@@ -15,9 +15,10 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
     filter,
     updateFilter,
     chats: { filtered, isLoading },
+    markChatAsRead,
   } = useChats();
   const { getContact } = useContacts();
-  const { loadCurrentChat, contact } = useCurrentChat();
+  const { loadCurrentChat, contact, chatId: currentChatId } = useCurrentChat();
   const { t, locale } = useTranslations();
 
   const getMetaMessage = (chat: Chat, message?: Message): string => {
@@ -66,18 +67,22 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
     return (
       <button
         key={chat.id}
-        onClick={() =>
-          loadCurrentChat({
-            chatId: chat.id,
-            page: 0,
-            messages: [],
-            contact: null,
-            group: null,
-            threadName: chat.threadName ?? chat.groupName ?? null,
-            phoneNumber: chat.phoneNumber ?? null,
-            backendId: chat.backendId ?? null,
-          })
-        }
+        onClick={() => {
+          markChatAsRead(chat.id);
+          // Only load chat if it's not already the current chat
+          if (chat.id !== currentChatId) {
+            loadCurrentChat({
+              chatId: chat.id,
+              page: 0,
+              messages: [],
+              contact: null,
+              group: null,
+              threadName: chat.threadName ?? chat.groupName ?? null,
+              phoneNumber: chat.phoneNumber ?? null,
+              backendId: chat.backendId ?? null,
+            });
+          }
+        }}
         className={`outline-none grid grid-cols-6 w-full gap-4 p-2.5 hover:bg-white/10 rounded-xl cursor-pointer ${
           typeof chat.contactId === "string" && chat.contactId === contact?.id
             ? "bg-white/10"

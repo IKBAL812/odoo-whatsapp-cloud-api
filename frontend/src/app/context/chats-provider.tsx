@@ -3,12 +3,10 @@ import {
   PropsWithChildren,
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react";
 import { useAuth } from "../hooks/use-auth";
-import { useContacts } from "../hooks/use-contacts";
 import { useSSE } from "../hooks/use-sse";
 import { useConnection } from "./connection-provider";
 
@@ -24,6 +22,17 @@ export type ReactionType = {
   count: number;
 };
 
+export type AttachmentType = 'image' | 'video' | 'audio' | 'document';
+
+export type Attachment = {
+  id: number;
+  name: string;
+  mimetype: string;
+  url: string;
+  file_size: number;
+  type?: AttachmentType;
+};
+
 export type Message = {
   id?: string;
   contactId: string;
@@ -37,6 +46,7 @@ export type Message = {
   error?: string;
   userId?: number | null;
   whatsappId?: string | null;
+  attachment?: Attachment;
   replyTo?: {
     messageId: string;
     message: string;
@@ -74,6 +84,7 @@ export const ChatsContext = createContext<
       updateFilter: (filter: string) => void;
       chats: Chats;
       updateThreadPreview: (chatId: string, preview: string, timestamp: number) => void;
+      markChatAsRead: (chatId: string) => void;
     }
 >(undefined);
 
@@ -85,7 +96,6 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
     isLoading: false,
   });
   const { sessionId, backendId: authBackendId } = useAuth();
-  const { contacts: contactEntries } = useContacts();
   const { reportApiError, reportConnectionRestored } = useConnection();
   const isFetchingRef = useRef(false);
 
@@ -116,14 +126,21 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
         
         if (existingChat) {
           // Update existing chat, preserving important data like messages
+          const newTimestamp = thread.last_message_date 
+            ? new Date(thread.last_message_date).getTime() 
+            : existingChat.lastMessageAt;
+          
+          // Only mark as unread if there's actually a new message (timestamp changed)
+          const hasNewMessage = newTimestamp && newTimestamp > (existingChat.lastMessageAt || 0);
+          
+          console.log(`Thread ${threadId}: existing timestamp=${existingChat.lastMessageAt}, new timestamp=${newTimestamp}, hasNewMessage=${hasNewMessage}, currentRead=${existingChat.read}`);
+          
           existingChatsMap.set(threadId, {
             ...existingChat,
             lastMessagePreview: thread.last_message_preview || existingChat.lastMessagePreview,
-            lastMessageAt: thread.last_message_date 
-              ? new Date(thread.last_message_date).getTime() 
-              : existingChat.lastMessageAt,
+            lastMessageAt: newTimestamp,
             threadName: thread.name || existingChat.threadName,
-            read: false, // Mark as unread since there's a new message
+            read: hasNewMessage ? false : existingChat.read,
           });
         } else {
           // Add new chat
@@ -190,13 +207,6 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
     }
   );
 
-  const contactNameLookup = useMemo(() => {
-    const map = new Map<string, string>();
-    contactEntries.forEach((contact) => {
-      map.set(contact.id, contact.displayName.toLowerCase());
-    });
-    return map;
-  }, [contactEntries]);
 
   const applyFilter = useCallback(
     (completeChats: Chat[]) => {
@@ -247,6 +257,25 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
       return {
         ...prev,
         complete: sortedComplete,
+        filtered: filteredChats,
+      };
+    });
+  }, [applyFilter]);
+
+  const markChatAsRead = useCallback((chatId: string) => {
+    setChats((prev) => {
+      const updatedComplete = prev.complete.map((chat) => {
+        if (chat.id === chatId) {
+          return { ...chat, read: true };
+        }
+        return chat;
+      });
+
+      const filteredChats = applyFilter(updatedComplete);
+
+      return {
+        ...prev,
+        complete: updatedComplete,
         filtered: filteredChats,
       };
     });
@@ -394,7 +423,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
 
   return (
     <ChatsContext.Provider
-      value={{ chats, filter, updateFilter, updateThreadPreview }}
+      value={{ chats, filter, updateFilter, updateThreadPreview, markChatAsRead }}
     >
       {children}
     </ChatsContext.Provider>

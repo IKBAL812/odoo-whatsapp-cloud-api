@@ -6,6 +6,7 @@ import { useContacts } from "@/app/hooks/use-contacts";
 import { formatTime } from "@/app/utils";
 import { useAuth } from "@/app/hooks/use-auth";
 import { useTranslations } from "@/app/context/translation-provider";
+import AttachmentDisplay from "../message/attachment";
 
 const getRandomContactColor = (): string => {
   const colors = [
@@ -71,15 +72,35 @@ export default function ChatMessage({ message }: ChatMessageProps) {
                 </p>
               )}
               {renderReplyPreview()}
-              <div className="flex justify-between items-end gap-2">
-                <p className="text-white text-sm">{message.message}</p>
-                <p className="text-white/80 text-xs">
-                  {formatTime(message.timestamp, locale)}
-                </p>
-                {message.isSentFromUser && (
-                  <MessageStatusIcon message={message} isInMessage />
-                )}
-              </div>
+              {message.attachment && (
+                <div className="mb-2">
+                  <AttachmentDisplay
+                    attachment={message.attachment}
+                    messageId={message.id}
+                  />
+                </div>
+              )}
+              {message.message && (
+                <div className="flex justify-between items-end gap-2">
+                  <p className="text-white text-sm">{message.message}</p>
+                  <p className="text-white/80 text-xs">
+                    {formatTime(message.timestamp, locale)}
+                  </p>
+                  {message.isSentFromUser && (
+                    <MessageStatusIcon message={message} isInMessage />
+                  )}
+                </div>
+              )}
+              {!message.message && (
+                <div className="flex items-center gap-2 mt-1">
+                  <p className="text-white/80 text-xs">
+                    {formatTime(message.timestamp, locale)}
+                  </p>
+                  {message.isSentFromUser && (
+                    <MessageStatusIcon message={message} isInMessage />
+                  )}
+                </div>
+              )}
             </div>
           </div>
           {message.isSentFromUser && outgoingAvatar && (
@@ -113,17 +134,37 @@ export default function ChatMessage({ message }: ChatMessageProps) {
             }`}
           >
             {renderReplyPreview()}
-            <div className="flex items-end gap-2">
-              <p className="text-white text-sm max-w-xs break-words">
-                {message.message}
-              </p>
-              <p className="text-white/80 text-xs">
-                {formatTime(message.timestamp, locale)}
-              </p>
-              {message.isSentFromUser && (
-                <MessageStatusIcon message={message} isInMessage />
-              )}
-            </div>
+            {message.attachment && (
+              <div className="mb-2">
+                <AttachmentDisplay
+                  attachment={message.attachment}
+                  messageId={message.id}
+                />
+              </div>
+            )}
+            {message.message && (
+              <div className="flex items-end gap-2">
+                <p className="text-white text-sm max-w-xs break-words">
+                  {message.message}
+                </p>
+                <p className="text-white/80 text-xs">
+                  {formatTime(message.timestamp, locale)}
+                </p>
+                {message.isSentFromUser && (
+                  <MessageStatusIcon message={message} isInMessage />
+                )}
+              </div>
+            )}
+            {!message.message && (
+              <div className="flex items-center gap-2 mt-1">
+                <p className="text-white/80 text-xs">
+                  {formatTime(message.timestamp, locale)}
+                </p>
+                {message.isSentFromUser && (
+                  <MessageStatusIcon message={message} isInMessage />
+                )}
+              </div>
+            )}
           </div>
         </div>
         {message.isSentFromUser && outgoingAvatar && (

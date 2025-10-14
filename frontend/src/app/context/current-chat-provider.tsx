@@ -52,7 +52,7 @@ export const CurrentChatContext = createContext<undefined | CurrentChat>(
 type OdooMessageRecord = {
   id: number;
   create_date: string;
-  body: string | null;
+  body: string | null | false;
   status: string | null;
   message_id: string | null;
   direction: "incoming" | "outgoing" | string;
@@ -60,6 +60,13 @@ type OdooMessageRecord = {
   create_uid: [number, string];
   replied_message_id?: false | [number, string] | null;
   timestamp: number;
+  attachment?: {
+    id: number;
+    name: string;
+    mimetype: string;
+    url: string;
+    file_size: number;
+  };
 };
 
 type MessageWithReplyReference = Message & {
@@ -156,9 +163,8 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
       const timestamp = record.timestamp * 1000; // Convert seconds to milliseconds
       const direction = record.direction ?? "incoming";
       const status = (record.status ?? "").toLowerCase();
-      const messageText =
-        record.body ?? (record.attachment_id ? "Attachment received" : "");
-      
+      const messageText = record.body || "";
+
       const deliveredStatuses = ["delivered", "read"];
       const sentStatuses = ["sent", ...deliveredStatuses];
       const userIdValue =
@@ -171,7 +177,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
         ? record.replied_message_id
         : null;
       const replyMessageId = replyTuple?.[0] ? String(replyTuple[0]) : null;
-      
+
       return {
         id: record.id.toString(),
         contactId: threadId,
@@ -184,6 +190,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
         userId: userIdValue ?? null,
         whatsappId,
         replyMessageId,
+        attachment: record.attachment,
       };
     });
 
@@ -363,9 +370,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
           const timestamp = record.timestamp * 1000; // Convert seconds to milliseconds
           const direction = record.direction ?? "incoming";
           const status = (record.status ?? "").toLowerCase();
-          const messageText =
-            record.body ??
-            (record.attachment_id ? "Attachment received" : "");
+          const messageText = record.body || "";
 
           const deliveredStatuses = ["delivered", "read"];
           const sentStatuses = ["sent", ...deliveredStatuses];
@@ -393,6 +398,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
             userId: userIdValue ?? null,
             whatsappId,
             replyMessageId,
+            attachment: record.attachment,
           };
         });
 
