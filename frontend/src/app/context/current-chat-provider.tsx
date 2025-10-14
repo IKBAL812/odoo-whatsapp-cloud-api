@@ -170,7 +170,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
 
       const searchParams = new URLSearchParams({
         threadId: chatId,
-        limit: "3000",
+        limit: "30",
       });
 
       const effectiveLastId =
