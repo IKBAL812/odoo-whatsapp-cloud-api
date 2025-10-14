@@ -11,7 +11,8 @@ import {
   Image as ImageIcon
 } from "@phosphor-icons/react";
 import { useAuth } from "@/app/hooks/use-auth";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 
 type AttachmentDisplayProps = {
   attachment: Attachment;
@@ -57,27 +58,53 @@ export default function AttachmentDisplay({ attachment, messageId }: AttachmentD
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
 
   const attachmentType = attachment.type ?? getAttachmentType(attachment.mimetype);
 
-  // Construct download URL with session
-  const downloadUrl = `${attachment.url}?session_id=${sessionId}`;
+  useEffect(() => {
+    // Set portal root to document.body for full-screen overlay
+    if (typeof document !== 'undefined') {
+      setPortalRoot(document.body);
+    }
+  }, []);
+
+  // Proxy through Next.js API to avoid CORS issues
+  const downloadUrl = `/api/attachments/download?url=${encodeURIComponent(attachment.url)}&session_id=${sessionId}`;
 
   const handleDownload = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      const response = await fetch(downloadUrl);
+      // Fetch through Next.js proxy
+      const response = await fetch(downloadUrl, {
+        method: 'GET',
+        headers: {
+          'x-session-id': sessionId || '',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Download failed: ${response.status}`);
+      }
+
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = attachment.name;
+      a.style.display = 'none';
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+
+      // Cleanup
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }, 100);
     } catch (error) {
       console.error('Failed to download attachment:', error);
+      alert(`Failed to download file: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -126,34 +153,36 @@ export default function AttachmentDisplay({ attachment, messageId }: AttachmentD
           )}
         </div>
 
-        {/* Lightbox */}
-        {isLightboxOpen && (
+        {/* Lightbox - Portal to body for full-screen coverage */}
+        {isLightboxOpen && portalRoot && createPortal(
           <div
-            className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/95 flex items-center justify-center p-4"
+            style={{ zIndex: 9999 }}
             onClick={() => setIsLightboxOpen(false)}
           >
-            <div className="relative max-w-7xl max-h-full">
+            <div className="relative w-full h-full flex items-center justify-center">
               <img
                 src={downloadUrl}
                 alt={attachment.name}
-                className="max-w-full max-h-[90vh] object-contain"
+                className="max-w-full max-h-full object-contain"
                 onClick={(e) => e.stopPropagation()}
               />
               <button
                 onClick={() => setIsLightboxOpen(false)}
-                className="absolute top-4 right-4 bg-black/60 text-white px-4 py-2 rounded-lg hover:bg-black/80"
+                className="absolute top-4 right-4 bg-black/70 text-white px-4 py-2 rounded-lg hover:bg-black/90 transition-colors"
               >
                 Close
               </button>
               <button
                 onClick={handleDownload}
-                className="absolute bottom-4 right-4 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 flex items-center gap-2"
+                className="absolute bottom-4 right-4 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 flex items-center gap-2 transition-colors"
               >
                 <DownloadSimple className="size-5" weight="bold" />
                 Download
               </button>
             </div>
-          </div>
+          </div>,
+          portalRoot
         )}
       </>
     );

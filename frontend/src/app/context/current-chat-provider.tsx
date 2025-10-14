@@ -151,7 +151,8 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
   const { reportApiError, reportConnectionRestored } = useConnection();
 
   const chatId = currentChat.chatId;
-  
+  const pendingPreviewUpdateRef = useRef<{ threadId: string; message: string; timestamp: number } | null>(null);
+
   // SSE message handler for real-time message updates
   const handleMessagesUpdate = useCallback((messages: unknown[], threadId: string) => {
     if (threadId !== chatId) {
@@ -261,10 +262,14 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
       const updatedMessages = Array.from(updatedMessagesMap.values())
         .sort((a, b) => a.timestamp - b.timestamp); // Still need sorting when merging SSE messages
 
-      // Update thread preview with the latest message
+      // Store the preview update to be executed in useEffect
       if (updatedMessages.length > 0) {
         const latestMessage = updatedMessages[updatedMessages.length - 1];
-        updateThreadPreview(threadId, latestMessage.message, latestMessage.timestamp);
+        pendingPreviewUpdateRef.current = {
+          threadId,
+          message: latestMessage.message,
+          timestamp: latestMessage.timestamp
+        };
       }
 
       return {
@@ -272,7 +277,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
         messages: updatedMessages,
       };
     });
-  }, [chatId, updateThreadPreview]);
+  }, [chatId]);
 
   // Initialize SSE for current chat messages
   useSSE(
@@ -292,6 +297,15 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
       enabled: !!sessionId && !!chatId,
     }
   );
+
+  // Handle pending preview updates outside of render
+  useEffect(() => {
+    if (pendingPreviewUpdateRef.current) {
+      const { threadId, message, timestamp } = pendingPreviewUpdateRef.current;
+      updateThreadPreview(threadId, message, timestamp);
+      pendingPreviewUpdateRef.current = null;
+    }
+  }, [currentChat.messages, updateThreadPreview]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
