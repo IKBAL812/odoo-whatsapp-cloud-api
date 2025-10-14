@@ -25,13 +25,15 @@
     "statusTyping": "yazıyor",
     "statusOnline": "çevrimiçi",
     "dayToday": "Bugün",
-    "dayYesterday": "Dün"
+    "dayYesterday": "Dün",
+    "reply": "Yanıtla"
   },
   "chatInput": {
     "placeholder": "Mesaj yazın",
     "send": "Gönder",
     "sending": "Gönderiliyor...",
-    "sendError": "Mesaj gönderilemedi"
+    "sendError": "Mesaj gönderilemedi",
+    "replyingTo": "{{name}} kişisine yanıt veriliyor"
   },
   "chatList": {
     "title": "Sohbetler",

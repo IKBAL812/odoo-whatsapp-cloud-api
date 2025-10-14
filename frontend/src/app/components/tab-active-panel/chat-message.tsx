@@ -5,6 +5,7 @@ import Profile from "../profile";
 import { useContacts } from "@/app/hooks/use-contacts";
 import { formatTime } from "@/app/utils";
 import { useAuth } from "@/app/hooks/use-auth";
+import { useTranslations } from "@/app/context/translation-provider";
 
 const getRandomContactColor = (): string => {
   const colors = [
@@ -20,24 +21,45 @@ const getRandomContactColor = (): string => {
   return colors[random];
 };
 
-export default function ChatMessage({ message }: { message: Message }) {
+type ChatMessageProps = {
+  message: Message;
+};
+
+export default function ChatMessage({ message }: ChatMessageProps) {
   const { getContact } = useContacts();
   const { group } = useCurrentChat();
   const { backendUsersById, backendUserId } = useAuth();
+  const { t } = useTranslations();
 
   const senderUser = message.isSentFromUser
     ? backendUsersById[message.userId ?? backendUserId ?? -1]
     : undefined;
   const outgoingAvatar = senderUser?.imageUrl ?? null;
 
+  const renderReplyPreview = () => {
+    if (!message.replyTo) {
+      return null;
+    }
+    const name = message.replyTo.senderIsUser
+      ? t("common.you")
+      : getContact(message.replyTo.contactId)?.displayName ?? t("common.you");
+    return (
+      <div className="bg-black/40 border-l-2 border-emerald-500 px-2 py-1 rounded text-white/70 text-xs w-full mb-1">
+        <p className="font-semibold truncate">{name}</p>
+        <p className="truncate">{message.replyTo.message}</p>
+      </div>
+    );
+  };
+
   if (group) {
+    const contact = getContact(message.contactId);
     return (
       <div className="flex flex-col gap-1">
         <div className="flex items-start gap-2 w-max">
           {!message.isSentFromUser && (
-            <Profile url={getContact(message.contactId)?.contactAvatar} />
+            <Profile url={contact?.contactAvatar} alt={contact?.displayName} />
           )}
-          <div className="rounded-lg overflow-hidden bg-black z-20">
+          <div className="group rounded-lg overflow-hidden bg-black z-20 relative">
             <div
               className={`flex flex-col justify-center items-start px-2 p-1.5 gap-1 ${
                 message.isSentFromUser ? "bg-emerald-900" : "bg-white/20"
@@ -45,9 +67,10 @@ export default function ChatMessage({ message }: { message: Message }) {
             >
               {!message.isSentFromUser && (
                 <p className={`text-xs font-semibold ${getRandomContactColor()}`}>
-                  {group.contacts[message.contactId]?.displayName}
+                  {contact?.displayName ?? message.contactId}
                 </p>
               )}
+              {renderReplyPreview()}
               <div className="flex justify-between items-end gap-2">
                 <p className="text-white text-sm">{message.message}</p>
                 <p className="text-white/80 text-xs">
@@ -75,6 +98,7 @@ export default function ChatMessage({ message }: { message: Message }) {
       </div>
     );
   }
+
   return (
     <div className="flex flex-col gap-1">
       <div
@@ -82,19 +106,24 @@ export default function ChatMessage({ message }: { message: Message }) {
           message.isSentFromUser ? "justify-end" : "justify-start"
         } items-end gap-2`}
       >
-        <div className="rounded-lg bg-black z-10 overflow-hidden w-max">
+        <div className="group rounded-lg bg-black z-10 overflow-hidden w-max relative">
           <div
-            className={`flex justify-between items-end px-2 p-1.5 gap-2 ${
+            className={`flex flex-col justify-between items-end px-2 p-1.5 gap-2 ${
               message.isSentFromUser ? "bg-emerald-900" : "bg-white/20"
             }`}
           >
-            <p className="text-white text-sm">{message.message}</p>
-            <p className="text-white/80 text-xs">
-              {formatTime(message.timestamp)}
-            </p>
-            {message.isSentFromUser && (
-              <MessageStatusIcon message={message} isInMessage />
-            )}
+            {renderReplyPreview()}
+            <div className="flex items-end gap-2">
+              <p className="text-white text-sm max-w-xs break-words">
+                {message.message}
+              </p>
+              <p className="text-white/80 text-xs">
+                {formatTime(message.timestamp)}
+              </p>
+              {message.isSentFromUser && (
+                <MessageStatusIcon message={message} isInMessage />
+              )}
+            </div>
           </div>
         </div>
         {message.isSentFromUser && outgoingAvatar && (

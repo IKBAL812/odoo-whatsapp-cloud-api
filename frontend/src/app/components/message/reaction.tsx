@@ -1,5 +1,9 @@
-import { PlusCircleIcon, SmileyIcon } from "@phosphor-icons/react";
-import { useState } from "react";
+import {
+  ArrowBendUpLeftIcon,
+  PlusCircleIcon,
+  SmileyIcon,
+} from "@phosphor-icons/react";
+import { MouseEvent, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 
 const item = {
@@ -9,11 +13,12 @@ const item = {
 
 const reactions = ["👍🏼", "❤️", "😂", "😮", "🥲", "🙏🏻"];
 
-export default function Reaction({
-  isSentFromUser,
-}: {
+type ReactionProps = {
   isSentFromUser: boolean;
-}) {
+  onReply?: () => void;
+};
+
+export default function Reaction({ isSentFromUser, onReply }: ReactionProps) {
   const [showReactionEmoji, setShowReactionEmoji] = useState(false);
   const [reactionMenuOpen, setReactionMenuOpen] = useState(false);
 
@@ -27,6 +32,11 @@ export default function Reaction({
 
   const handleEmojiClick = () => {
     setReactionMenuOpen((prev) => !prev);
+  };
+
+  const handleReplyClick = (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    onReply?.();
   };
 
   const renderReactionMenu = () => {
@@ -83,12 +93,21 @@ export default function Reaction({
 
   return (
     <div
-      className={`relative flex flex-col justify-center items-center ${
+      className={`relative flex flex-col justify-center items-center gap-2 ${
         showReactionEmoji ? "opacity-100" : "opacity-0"
       }`}
       onMouseOver={handleMouseOver}
       onMouseLeave={handleMouseLeave}
     >
+      {onReply && (
+        <button
+          type="button"
+          className="text-white/40 hover:text-white transition"
+          onClick={handleReplyClick}
+        >
+          <ArrowBendUpLeftIcon className="size-4" weight="bold" />
+        </button>
+      )}
       {reactionMenuOpen && renderReactionMenu()}
       <SmileyIcon
         weight="regular"

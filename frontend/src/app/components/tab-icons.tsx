@@ -33,7 +33,7 @@ export default function TabIcons() {
         <hr className="px-4 w-full border-[1px] border-gray-500/65" />
         <TooltipWrapper tab={t("navigation.github")}>
           <a
-            href="https://github.com/altinkaya-opensource/odoo-whatsapp-connector"
+            href="https://github.com/altinkaya-opensource/odoo-whatsapp-cloud-api"
             target="_blank"
             className="bg-gray-200 p-1 rounded-full"
           >

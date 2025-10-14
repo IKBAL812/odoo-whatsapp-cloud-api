@@ -19,6 +19,8 @@ type OdooMessageRecord = {
   status: string | null;
   direction: "incoming" | "outgoing" | string;
   attachment_id: false | [number, string] | null;
+  message_id?: string | null;
+  replied_message_id?: false | [number, string] | null;
 };
 
 export async function GET(request: NextRequest) {
@@ -121,6 +123,7 @@ export async function GET(request: NextRequest) {
           "attachment_id",
           "create_uid",
           "message_id",
+          "replied_message_id",
         ],
       }
     );
@@ -178,11 +181,12 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { threadId, phoneNumber, message, backendId } = payload as {
+  const { threadId, phoneNumber, message, backendId, replyToMessageId } = payload as {
     threadId?: number | string;
     phoneNumber?: string;
     message?: string;
     backendId?: number;
+    replyToMessageId?: string;
   };
 
   const parsedThreadId =
@@ -207,6 +211,8 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
+
+  const trimmedMessage = message.trim();
 
   const resolvedBackendId =
     typeof backendId === "number"
@@ -235,13 +241,21 @@ export async function POST(request: NextRequest) {
   const sessionClient = odooClient.createSession(sessionId);
 
   try {
-    const result = await sessionClient.call(
-      "whatsapp.backend",
-      "send_text_message",
-      [resolvedBackendId, phoneNumber, message],
-      {},
-      false
-    );
+    const result = await (replyToMessageId
+      ? sessionClient.call(
+          "whatsapp.backend",
+          "send_reply_message",
+          [resolvedBackendId, phoneNumber, trimmedMessage, replyToMessageId],
+          {},
+          false
+        )
+      : sessionClient.call(
+          "whatsapp.backend",
+          "send_text_message",
+          [resolvedBackendId, phoneNumber, trimmedMessage],
+          {},
+          false
+        ));
 
     return NextResponse.json({
       result,

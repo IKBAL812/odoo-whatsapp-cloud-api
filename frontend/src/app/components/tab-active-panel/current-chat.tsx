@@ -7,13 +7,24 @@ import ContactHeader from "./contact-header";
 import ChatMessage from "./chat-message";
 import MessageReactions from "./message-reactions";
 import { useTranslations } from "@/app/context/translation-provider";
+import { useContacts } from "@/app/hooks/use-contacts";
+import { XCircleIcon } from "@phosphor-icons/react";
 
 export default function CurrentChat() {
-  const { chatId, messages, isLoading, sendMessage, isSending } =
-    useCurrentChat();
+  const {
+    chatId,
+    messages,
+    isLoading,
+    sendMessage,
+    isSending,
+    replyTo,
+    cancelReply,
+    startReply,
+  } = useCurrentChat();
   const [messageText, setMessageText] = useState("");
   const [sendError, setSendError] = useState<string | null>(null);
   const { t } = useTranslations();
+  const { contacts } = useContacts();
 
   useEffect(() => {
     setMessageText("");
@@ -145,11 +156,27 @@ export default function CurrentChat() {
                         message.reactions?.length
                       )} relative`}
                     >
-                      {message.isSentFromUser && (
-                        <Reaction isSentFromUser={true} />
-                      )}
-                      <ChatMessage message={message} />
-                      {!message.isSentFromUser && <Reaction isSentFromUser={false} />}
+                {message.isSentFromUser && (
+                  <Reaction
+                    isSentFromUser={true}
+                    onReply={
+                      message.whatsappId
+                        ? () => startReply(message)
+                        : undefined
+                    }
+                  />
+                )}
+                <ChatMessage message={message} />
+                {!message.isSentFromUser && (
+                  <Reaction
+                    isSentFromUser={false}
+                    onReply={
+                      message.whatsappId
+                        ? () => startReply(message)
+                        : undefined
+                    }
+                  />
+                )}
                       {message.reactions?.length && (
                         <MessageReactions
                           reactions={message.reactions}
@@ -165,6 +192,30 @@ export default function CurrentChat() {
         </div>
 
         <section className="w-full z-50 p-4">
+          {replyTo && (
+            <div className="bg-white/5 border-l-2 border-emerald-500 px-3 py-2 rounded-lg mb-2 flex justify-between items-start gap-3">
+              <div className="flex flex-col">
+                <p className="text-xs text-emerald-200 font-semibold">
+                  {t("chatInput.replyingTo", {
+                    name: replyTo.isSentFromUser
+                      ? t("common.you")
+                      : contacts.find((c) => c.id === replyTo.contactId)
+                          ?.displayName ?? "",
+                  })}
+                </p>
+                <p className="text-xs text-white/70 max-w-xs truncate">
+                  {replyTo.message}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="text-white/60 hover:text-white"
+                onClick={cancelReply}
+              >
+                <XCircleIcon className="size-4" weight="bold" />
+              </button>
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="bg-black rounded-full">
             <div className="bg-white/15 rounded-full flex items-center gap-2">
               <input

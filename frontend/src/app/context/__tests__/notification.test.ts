@@ -11,6 +11,7 @@ const baseMessage = (overrides: Partial<Message> = {}): Message => ({
   message: "Hello",
   timestamp: Date.now(),
   isSentFromUser: false,
+  whatsappId: "wamid-123",
   ...overrides,
 });
 

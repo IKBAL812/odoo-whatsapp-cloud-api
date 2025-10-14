@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
       "whatsapp.thread",
       [],
       {
-        limit: 30,
+        limit: 3000,
         select: [
           "name",
           "last_message_date",

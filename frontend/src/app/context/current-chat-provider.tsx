@@ -4,7 +4,6 @@ import {
   PropsWithChildren,
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react";
@@ -36,11 +35,14 @@ export type CurrentChatData = {
   phoneNumber: string | null;
   backendId: number | null;
   isSending: boolean;
+  replyTo: Message | null;
 };
 
 export type CurrentChat = CurrentChatData & {
   loadCurrentChat: (chat: Partial<CurrentChatData>) => void;
   sendMessage: (content: string) => Promise<void>;
+  startReply: (message: Message) => void;
+  cancelReply: () => void;
 };
 
 export const CurrentChatContext = createContext<undefined | CurrentChat>(
@@ -58,6 +60,25 @@ type OdooMessageRecord = {
   direction: "incoming" | "outgoing" | string;
   attachment_id: false | [number, string] | null;
   create_uid: [number, string];
+  replied_message_id?: false | [number, string] | null;
+};
+
+type MessageWithReplyReference = Message & {
+  replyMessageId?: string | null;
+};
+
+const toReplyMetadata = (
+  message: Message
+): NonNullable<Message["replyTo"]> | null => {
+  if (!message.whatsappId) {
+    return null;
+  }
+  return {
+    messageId: message.whatsappId,
+    message: message.message,
+    contactId: message.contactId,
+    senderIsUser: message.isSentFromUser,
+  };
 };
 
 const extractDigits = (value?: string | null) => {
@@ -107,6 +128,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
     phoneNumber: null,
     backendId: null,
     isSending: false,
+    replyTo: null,
   });
   const latestMessageTimestampRef = useRef<number | null>(null);
   const latestMessageIdRef = useRef<number | null>(null);
@@ -148,7 +170,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
 
       const searchParams = new URLSearchParams({
         threadId: chatId,
-        limit: "30",
+        limit: "3000",
       });
 
       const effectiveLastId =
@@ -193,7 +215,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
           ? data.messages
           : [];
 
-        const mappedMessages: Message[] = records.map((record) => {
+        const rawMessages: MessageWithReplyReference[] = records.map((record) => {
           const timestamp = record.create_date
             ? dayjs(record.create_date).valueOf()
             : Date.now();
@@ -209,6 +231,14 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
             Array.isArray(record.create_uid) && record.create_uid.length > 0
               ? record.create_uid[0]
               : null;
+          const whatsappId =
+            typeof record.message_id === "string" ? record.message_id : null;
+          const replyTuple = Array.isArray(record.replied_message_id)
+            ? record.replied_message_id
+            : null;
+          const replyMessageId = replyTuple?.[0]
+            ? String(replyTuple[0])
+            : null;
           return {
             id: record.id.toString(),
             contactId: chatId,
@@ -219,6 +249,8 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
             delivered: deliveredStatuses.includes(status),
             read: status === "read",
             userId: userIdValue ?? null,
+            whatsappId,
+            replyMessageId,
           };
         });
 
@@ -229,6 +261,48 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
           if (prev.chatId !== chatId) {
             return prev;
           }
+
+          const repliesById = new Map<
+            string,
+            NonNullable<Message["replyTo"]>
+          >();
+
+          prev.messages.forEach((message) => {
+            if (message.id) {
+              const meta = toReplyMetadata(message);
+              if (meta) {
+                repliesById.set(message.id, meta);
+              }
+            }
+          });
+
+          rawMessages.forEach((message) => {
+            if (message.id) {
+              const meta = toReplyMetadata(message);
+              if (meta) {
+                repliesById.set(message.id, meta);
+              }
+            }
+          });
+
+          const mappedMessages: Message[] = rawMessages.map((message) => {
+            const { replyMessageId, ...rest } = message;
+            const baseMessage = rest as Message;
+
+            if (!replyMessageId) {
+              return baseMessage;
+            }
+
+            const replyMetadata = repliesById.get(replyMessageId);
+            if (!replyMetadata) {
+              return baseMessage;
+            }
+
+            return {
+              ...baseMessage,
+              replyTo: replyMetadata,
+            };
+          });
 
           const isInitialLoad = replace || prev.messages.length === 0;
           const existingIds = new Set(
@@ -293,7 +367,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
         if (replace) {
           setCurrentChat((prev) =>
             prev.chatId === chatId
-              ? { ...prev, messages: [], isLoading: false }
+              ? { ...prev, messages: [], isLoading: false, replyTo: null }
               : prev
           );
           latestMessageTimestampRef.current = null;
@@ -317,6 +391,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
         isSending: false,
         phoneNumber: null,
         backendId: null,
+        replyTo: null,
       }));
       latestMessageTimestampRef.current = null;
       latestMessageIdRef.current = null;
@@ -409,6 +484,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
       ...prev,
       ...chat,
       isSending: false,
+      replyTo: null,
     }));
     latestMessageTimestampRef.current = null;
     latestMessageIdRef.current = null;
@@ -446,6 +522,11 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
       const backendId = currentChat.backendId ?? authBackendId ?? undefined;
       const optimisticId = `local-${Date.now()}`;
       const timestamp = getTimestamp();
+      const replyTarget = currentChat.replyTo;
+      const replyMetadata =
+        replyTarget && replyTarget.contactId === activeChatId
+          ? toReplyMetadata(replyTarget)
+          : null;
 
       setCurrentChat((prev) => {
         if (prev.chatId !== activeChatId) {
@@ -466,9 +547,12 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
               delivered: false,
               read: false,
               userId: backendUserId ?? null,
+              whatsappId: null,
+              replyTo: replyMetadata ?? undefined,
             },
           ],
           isSending: true,
+          replyTo: null,
         };
       });
 
@@ -489,6 +573,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
             phoneNumber: fallbackPhone,
             message: trimmed,
             backendId,
+            replyToMessageId: replyMetadata?.messageId ?? undefined,
           }),
         });
 
@@ -505,6 +590,10 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
         const messageId =
           typeof result?.message_id === "number"
             ? result.message_id
+            : undefined;
+        const whatsappId =
+          typeof result?.whatsapp_message_id === "string"
+            ? result.whatsapp_message_id
             : undefined;
         const status =
           typeof result?.status === "string"
@@ -526,6 +615,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
               return {
                 ...message,
                 id: messageId ? messageId.toString() : message.id,
+                whatsappId: whatsappId ?? message.whatsappId,
                 sent: true,
                 delivered: status
                   ? deliveredStatuses.includes(status)
@@ -576,6 +666,28 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
     [sessionId, currentChat, backendUserId, authBackendId, fetchMessages]
   );
 
+  const startReply = useCallback((message: Message) => {
+    if (!message.whatsappId) {
+      return;
+    }
+    setCurrentChat((prev) => {
+      if (prev.chatId !== message.contactId) {
+        return prev;
+      }
+      return {
+        ...prev,
+        replyTo: message,
+      };
+    });
+  }, []);
+
+  const cancelReply = useCallback(() => {
+    setCurrentChat((prev) => ({
+      ...prev,
+      replyTo: null,
+    }));
+  }, []);
+
   useEffect(() => {
     const activeChatId = currentChat.chatId;
     if (!activeChatId) {
@@ -623,7 +735,13 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
 
   return (
     <CurrentChatContext.Provider
-      value={{ ...currentChat, loadCurrentChat, sendMessage }}
+      value={{
+        ...currentChat,
+        loadCurrentChat,
+        sendMessage,
+        startReply,
+        cancelReply,
+      }}
     >
       {children}
     </CurrentChatContext.Provider>

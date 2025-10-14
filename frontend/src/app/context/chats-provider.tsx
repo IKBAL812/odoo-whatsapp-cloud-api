@@ -35,6 +35,13 @@ export type Message = {
   reactions?: ReactionType[];
   error?: string;
   userId?: number | null;
+  whatsappId?: string | null;
+  replyTo?: {
+    messageId: string;
+    message: string;
+    contactId: string;
+    senderIsUser: boolean;
+  };
 };
 
 export type Chat = {
@@ -205,6 +212,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
               message: preview,
               timestamp: timestamp ?? Date.now(),
               isSentFromUser: false,
+              whatsappId: null,
             },
           ]
         : [];

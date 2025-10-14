@@ -25,13 +25,15 @@
     "statusTyping": "typing",
     "statusOnline": "online",
     "dayToday": "Today",
-    "dayYesterday": "Yesterday"
+    "dayYesterday": "Yesterday",
+    "reply": "Reply"
   },
   "chatInput": {
     "placeholder": "Type a message",
     "send": "Send",
     "sending": "Sending...",
-    "sendError": "Failed to send the message"
+    "sendError": "Failed to send the message",
+    "replyingTo": "Replying to {{name}}"
   },
   "chatList": {
     "title": "Chats",
