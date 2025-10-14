@@ -14,8 +14,6 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
   const {
     filter,
     updateFilter,
-    search,
-    updateSearch,
     chats: { filtered, isLoading },
   } = useChats();
   const { getContact } = useContacts();
@@ -162,13 +160,7 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
         </TooltipWrapper>
       </section>
       <section className="w-full flex flex-col gap-1">
-        <input
-          className="rounded-full w-full p-2 px-4 outline-none bg-white/10 hover:ring-[1px] hover:ring-gray-600 focus:ring-2 focus:ring-green-500 ring-0 ring-transparent focus:bg-transparent placeholder-gray-400 focus:placeholder-gray-400 text-white"
-          placeholder={t("chatList.searchPlaceholder")}
-          value={search}
-          onChange={(event) => updateSearch(event.target.value)}
-        />
-        <div className="flex justify-start items-center text-white gap-2 mt-2">
+        <div className="flex justify-start items-center text-white gap-2">
           {Object.values(Filters).map((f: string) => (
             <button
               key={f}

@@ -72,8 +72,6 @@ export const ChatsContext = createContext<
   | {
       filter: string;
       updateFilter: (filter: string) => void;
-      search: string;
-      updateSearch: (query: string) => void;
       chats: Chats;
       updateThreadPreview: (chatId: string, preview: string, timestamp: number) => void;
     }
@@ -81,7 +79,6 @@ export const ChatsContext = createContext<
 
 export default function ChatsProvider({ children }: PropsWithChildren) {
   const [filter, setFilter] = useState<Filters>(Filters.ALL);
-  const [search, setSearch] = useState<string>("");
   const [chats, setChats] = useState<Chats>({
     complete: [],
     filtered: [],
@@ -96,6 +93,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
   // SSE callbacks for real-time thread updates
   const handleThreadsUpdate = useCallback((threads: unknown[]) => {
     console.log('Thread SSE update received:', threads.length, 'threads');
+    console.log('First thread data:', threads[0]);
     // Process new threads from SSE
     const odooThreads = threads as Array<{
       id: number;
@@ -108,39 +106,68 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
     }>;
 
     setChats((prev) => {
-      const newChats: Chat[] = odooThreads.map((thread) => ({
-        id: thread.id.toString(),
-        contactId: thread.phone_number || "",
-        threadName: thread.name || undefined,
-        phoneNumber: thread.phone_number || null,
-        backendId: thread.backend_id || null,
-        lastMessagePreview: thread.last_message_preview || "",
-        lastMessageAt: thread.last_message_date ? new Date(thread.last_message_date).getTime() : Date.now(),
-        groupName: undefined,
-        groupAvatar: undefined,
-        read: false,
-        favorite: false,
-        group: false,
-        messages: [],
-      }));
-
-      // Update existing threads or add new ones
+      // Create a map of existing chats for efficient lookup
       const existingChatsMap = new Map(prev.complete.map(chat => [chat.id, chat]));
       
-      newChats.forEach(newChat => {
-        existingChatsMap.set(newChat.id, newChat);
+      // Process updates from SSE
+      odooThreads.forEach((thread) => {
+        const threadId = thread.id.toString();
+        const existingChat = existingChatsMap.get(threadId);
+        
+        if (existingChat) {
+          // Update existing chat, preserving important data like messages
+          existingChatsMap.set(threadId, {
+            ...existingChat,
+            lastMessagePreview: thread.last_message_preview || existingChat.lastMessagePreview,
+            lastMessageAt: thread.last_message_date 
+              ? new Date(thread.last_message_date).getTime() 
+              : existingChat.lastMessageAt,
+            threadName: thread.name || existingChat.threadName,
+            read: false, // Mark as unread since there's a new message
+          });
+        } else {
+          // Add new chat
+          existingChatsMap.set(threadId, {
+            id: threadId,
+            contactId: thread.phone_number || "",
+            threadName: thread.name || undefined,
+            phoneNumber: thread.phone_number || null,
+            backendId: thread.backend_id || null,
+            lastMessagePreview: thread.last_message_preview || "",
+            lastMessageAt: thread.last_message_date ? new Date(thread.last_message_date).getTime() : Date.now(),
+            groupName: undefined,
+            groupAvatar: undefined,
+            read: false,
+            favorite: false,
+            group: false,
+            messages: [],
+          });
+        }
       });
       
+      // Sort by last message timestamp
       const updatedComplete = Array.from(existingChatsMap.values())
         .sort((a, b) => (b.lastMessageAt || 0) - (a.lastMessageAt || 0));
 
+      // Apply filter to get filtered list
+      let filteredList = updatedComplete;
+      if (filter === Filters.UNREAD) {
+        filteredList = updatedComplete.filter(chat => !chat.read);
+      } else if (filter === Filters.FAVORITES) {
+        filteredList = updatedComplete.filter(chat => chat.favorite);
+      } else if (filter === Filters.GROUPS) {
+        filteredList = updatedComplete.filter(chat => chat.group);
+      }
+
+      console.log('Updating chats state with', updatedComplete.length, 'threads');
       return {
         ...prev,
         complete: updatedComplete,
+        filtered: filteredList,
         isLoading: false,
       };
     });
-  }, []);
+  }, [filter]);
 
   // Initialize SSE connection for threads
   const { isConnected: sseConnected } = useSSE(
@@ -162,7 +189,6 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
       enabled: !!sessionId,
     }
   );
-  const searchRef = useRef(search);
 
   const contactNameLookup = useMemo(() => {
     const map = new Map<string, string>();
@@ -193,48 +219,11 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
     [filter]
   );
 
-  const applySearch = useCallback(
-    (completeChats: Chat[], query: string) => {
-      const normalized = query.trim().toLowerCase();
-      if (normalized.length === 0) {
-        return completeChats;
-      }
-      return completeChats.filter((chat) => {
-        const nameMatch = chat.threadName
-          ?.toLowerCase()
-          .includes(normalized);
-        const previewValue = chat.lastMessagePreview || "";
-        const previewMatch = previewValue
-          .toLowerCase()
-          .includes(normalized);
-        const phoneMatch = chat.phoneNumber?.includes(query.trim());
-
-        let contactNameMatch = false;
-        if (typeof chat.contactId === "string") {
-          const contactName = contactNameLookup.get(chat.contactId);
-          contactNameMatch = contactName ? contactName.includes(normalized) : false;
-        } else if (Array.isArray(chat.contactId)) {
-          contactNameMatch = chat.contactId.some((id) => {
-            const contactName = contactNameLookup.get(id);
-            return contactName ? contactName.includes(normalized) : false;
-          });
-        }
-
-        return Boolean(
-          nameMatch || previewMatch || phoneMatch || contactNameMatch
-        );
-      });
-    },
-    [contactNameLookup]
-  );
 
   const updateFilter = (filter: string) => {
     setFilter(filter as Filters);
   };
 
-  const updateSearch = (query: string) => {
-    setSearch(query);
-  };
 
   const updateThreadPreview = useCallback((chatId: string, preview: string, timestamp: number) => {
     setChats((prev) => {
@@ -253,7 +242,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
       const sortedComplete = updatedComplete.sort((a, b) => (b.lastMessageAt || 0) - (a.lastMessageAt || 0));
 
       // Apply current filters to the updated complete list
-      const filteredChats = applySearch(applyFilter(sortedComplete), search);
+      const filteredChats = applyFilter(sortedComplete);
 
       return {
         ...prev,
@@ -261,7 +250,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
         filtered: filteredChats,
       };
     });
-  }, [applyFilter, applySearch, search]);
+  }, [applyFilter]);
 
   type ThreadRecord = {
     id: number;
@@ -351,10 +340,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
           ? data.threads
           : [];
         const mappedChats = transformThreads(threads);
-        const filteredChats = applySearch(
-          applyFilter(mappedChats),
-          searchRef.current
-        );
+        const filteredChats = applyFilter(mappedChats);
 
         setChats((prev) => ({
           ...prev,
@@ -372,12 +358,9 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
         isFetchingRef.current = false;
       }
     },
-    [sessionId, transformThreads, applyFilter, applySearch]
+    [sessionId, transformThreads, applyFilter]
   );
 
-  useEffect(() => {
-    searchRef.current = search;
-  }, [search]);
 
   useEffect(() => {
     if (!sessionId) {
@@ -401,17 +384,17 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     setChats((prev) => {
-      const filtered = applySearch(applyFilter(prev.complete), search);
+      const filtered = applyFilter(prev.complete);
       return {
         ...prev,
         filtered,
       };
     });
-  }, [filter, search, applyFilter, applySearch]);
+  }, [filter, applyFilter, chats.complete]);
 
   return (
     <ChatsContext.Provider
-      value={{ chats, filter, search, updateFilter, updateSearch, updateThreadPreview }}
+      value={{ chats, filter, updateFilter, updateThreadPreview }}
     >
       {children}
     </ChatsContext.Provider>
