@@ -1,4 +1,3 @@
-import dayjs from "dayjs";
 import {
   createContext,
   PropsWithChildren,
@@ -75,6 +74,7 @@ export const ChatsContext = createContext<
       search: string;
       updateSearch: (query: string) => void;
       chats: Chats;
+      updateThreadPreview: (chatId: string, preview: string, timestamp: number) => void;
     }
 >(undefined);
 
@@ -93,6 +93,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
   
   // SSE callbacks for real-time thread updates
   const handleThreadsUpdate = useCallback((threads: unknown[]) => {
+    console.log('Thread SSE update received:', threads.length, 'threads');
     // Process new threads from SSE
     const odooThreads = threads as Array<{
       id: number;
@@ -112,7 +113,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
         phoneNumber: thread.phone_number || null,
         backendId: thread.backend_id || null,
         lastMessagePreview: thread.last_message_preview || "",
-        lastMessageAt: thread.last_message_date ? dayjs(thread.last_message_date).valueOf() : Date.now(),
+        lastMessageAt: thread.last_message_date ? new Date(thread.last_message_date).getTime() : Date.now(),
         groupName: undefined,
         groupAvatar: undefined,
         read: false,
@@ -121,11 +122,14 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
         messages: [],
       }));
 
-      // Merge with existing chats, avoiding duplicates
-      const existingIds = new Set(prev.complete.map(chat => chat.id));
-      const uniqueNewChats = newChats.filter(chat => !existingIds.has(chat.id));
+      // Update existing threads or add new ones
+      const existingChatsMap = new Map(prev.complete.map(chat => [chat.id, chat]));
       
-      const updatedComplete = [...prev.complete, ...uniqueNewChats]
+      newChats.forEach(newChat => {
+        existingChatsMap.set(newChat.id, newChat);
+      });
+      
+      const updatedComplete = Array.from(existingChatsMap.values())
         .sort((a, b) => (b.lastMessageAt || 0) - (a.lastMessageAt || 0));
 
       return {
@@ -144,7 +148,10 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
         console.error("SSE Error:", error);
       },
       onReconnect: () => {
-        console.log("SSE Reconnected");
+        console.log("SSE Reconnected for threads");
+      },
+      onHeartbeat: (timestamp) => {
+        console.log("Thread SSE heartbeat:", timestamp);
       },
     },
     {
@@ -225,6 +232,33 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
     setSearch(query);
   };
 
+  const updateThreadPreview = useCallback((chatId: string, preview: string, timestamp: number) => {
+    setChats((prev) => {
+      const updatedComplete = prev.complete.map((chat) => {
+        if (chat.id === chatId) {
+          return {
+            ...chat,
+            lastMessagePreview: preview,
+            lastMessageAt: timestamp,
+          };
+        }
+        return chat;
+      });
+
+      // Sort by lastMessageAt to put the updated thread at the top
+      const sortedComplete = updatedComplete.sort((a, b) => (b.lastMessageAt || 0) - (a.lastMessageAt || 0));
+
+      // Apply current filters to the updated complete list
+      const filteredChats = applySearch(applyFilter(sortedComplete), search);
+
+      return {
+        ...prev,
+        complete: sortedComplete,
+        filtered: filteredChats,
+      };
+    });
+  }, [applyFilter, applySearch, search]);
+
   type ThreadRecord = {
     id: number;
     name: string;
@@ -239,7 +273,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
       const chatId = String(thread.id);
       const preview = thread.last_message_preview ?? "";
       const timestamp = thread.last_message_date
-        ? dayjs(thread.last_message_date).valueOf()
+        ? new Date(thread.last_message_date).getTime()
         : null;
       const backendId =
         Array.isArray(thread.backend_id) && thread.backend_id.length > 0
@@ -373,7 +407,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
 
   return (
     <ChatsContext.Provider
-      value={{ chats, filter, search, updateFilter, updateSearch }}
+      value={{ chats, filter, search, updateFilter, updateSearch, updateThreadPreview }}
     >
       {children}
     </ChatsContext.Provider>

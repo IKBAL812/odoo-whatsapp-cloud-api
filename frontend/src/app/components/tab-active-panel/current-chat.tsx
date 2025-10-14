@@ -32,6 +32,7 @@ export default function CurrentChat() {
   }, [chatId]);
 
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const container = scrollContainerRef.current;
@@ -51,6 +52,10 @@ export default function CurrentChat() {
       await sendMessage(trimmed);
       setMessageText("");
       setSendError(null);
+      // Refocus the input after sending
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 0);
     } catch (error) {
       const err = error as Error;
       setSendError(err.message || t("chatInput.sendError"));
@@ -219,6 +224,7 @@ export default function CurrentChat() {
           <form onSubmit={handleSubmit} className="bg-black rounded-full">
             <div className="bg-white/15 rounded-full flex items-center gap-2">
               <input
+                ref={inputRef}
                 className="flex-1 outline-none p-3 px-4 text-white placeholder-white/60 caret-green-400 text-sm bg-transparent"
                 placeholder={t("chatInput.placeholder")}
                 value={messageText}

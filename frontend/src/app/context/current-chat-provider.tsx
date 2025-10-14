@@ -136,6 +136,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
 
   const {
     chats: { complete },
+    updateThreadPreview,
   } = useChats();
   const { contacts } = useContacts();
   const { sessionId, backendId: authBackendId, backendUserId } = useAuth();
@@ -251,12 +252,18 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
       const updatedMessages = Array.from(updatedMessagesMap.values())
         .sort((a, b) => a.timestamp - b.timestamp); // Still need sorting when merging SSE messages
 
+      // Update thread preview with the latest message
+      if (updatedMessages.length > 0) {
+        const latestMessage = updatedMessages[updatedMessages.length - 1];
+        updateThreadPreview(threadId, latestMessage.message, latestMessage.timestamp);
+      }
+
       return {
         ...prev,
         messages: updatedMessages,
       };
     });
-  }, [chatId]);
+  }, [chatId, updateThreadPreview]);
 
   // Initialize SSE for current chat messages
   useSSE(
@@ -748,6 +755,9 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
         } else {
           void fetchMessages({ replace: true }).catch(() => undefined);
         }
+
+        // Update thread preview with the sent message
+        updateThreadPreview(activeChatId, trimmed, timestamp);
       } catch (error) {
         const err = error as Error;
         setCurrentChat((prev) => {
@@ -774,7 +784,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
         throw err;
       }
     },
-    [sessionId, currentChat, backendUserId, authBackendId, fetchMessages]
+    [sessionId, currentChat, backendUserId, authBackendId, fetchMessages, updateThreadPreview]
   );
 
   const startReply = useCallback((message: Message) => {

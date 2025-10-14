@@ -47,10 +47,12 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
       typeof chat.contactId === "string"
         ? currentContact?.displayName ?? chat.threadName ?? "Unknown"
         : chat.groupName ?? chat.threadName ?? "Unknown";
-    const lastMessage =
-      chat.messages.length > 0
-        ? chat.messages[chat.messages.length - 1]
-        : undefined;
+    // For non-active chats, prefer lastMessagePreview over messages array
+    // since messages array only contains data for the currently active chat
+    const isCurrentChat = typeof chat.contactId === "string" && chat.contactId === contact?.id;
+    const lastMessage = isCurrentChat && chat.messages.length > 0
+      ? chat.messages[chat.messages.length - 1]
+      : undefined;
     const messagePreview = getMetaMessage(chat, lastMessage);
     const lastMessageTimestamp =
       lastMessage?.timestamp ?? chat.lastMessageAt ?? null;

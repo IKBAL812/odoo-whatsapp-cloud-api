@@ -131,7 +131,7 @@ export async function GET(request: NextRequest) {
           try {
             const threadsResponse = await sessionClient.searchRead(
               "whatsapp.thread",
-              [["write_date", ">", lastThreadsCheck]],
+              [["last_message_date", ">", lastThreadsCheck]],
               {
                 limit: 50,
                 select: [
@@ -142,23 +142,28 @@ export async function GET(request: NextRequest) {
                   "backend_id",
                   "write_date",
                 ],
-                order: "write_date desc"
+                order: "last_message_date desc"
               }
             );
 
-            // Always update timestamp, regardless of results
-            const currentCheckTime = formatOdooDateTime(new Date());
-            
             if (Array.isArray(threadsResponse) && threadsResponse.length > 0) {
               sendSSEMessage({
                 type: "threads",
                 data: { threads: threadsResponse },
                 timestamp: now
               });
+              
+              // Update timestamp to the latest message date from the response
+              const latestThread = threadsResponse[0]; // Already sorted by last_message_date desc
+              if (latestThread.last_message_date) {
+                lastThreadsCheck = latestThread.last_message_date;
+              } else {
+                lastThreadsCheck = formatOdooDateTime(new Date());
+              }
+            } else {
+              // No updates, just advance the timestamp slightly to avoid re-checking same data
+              lastThreadsCheck = formatOdooDateTime(new Date());
             }
-            
-            // Update timestamp after successful check
-            lastThreadsCheck = currentCheckTime;
             consecutiveErrors = 0; // Reset error counter on success
           } catch (error) {
             console.error("Error checking threads:", error);
