@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useAuth } from "../hooks/use-auth";
 import { useContacts } from "../hooks/use-contacts";
+import { useSSE } from "../hooks/use-sse";
 
 export enum Filters {
   ALL = "all",
@@ -66,8 +67,6 @@ export type Chats = {
   isLoading: boolean;
 };
 
-const THREADS_POLL_INTERVAL_MS = 10000;
-
 export const ChatsContext = createContext<
   | undefined
   | {
@@ -90,6 +89,68 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
   const { sessionId, backendId: authBackendId } = useAuth();
   const { contacts: contactEntries } = useContacts();
   const isFetchingRef = useRef(false);
+
+  
+  // SSE callbacks for real-time thread updates
+  const handleThreadsUpdate = useCallback((threads: unknown[]) => {
+    // Process new threads from SSE
+    const odooThreads = threads as Array<{
+      id: number;
+      name: string;
+      last_message_date: string | null;
+      last_message_preview: string | null;
+      phone_number: string | null;
+      backend_id: number | null;
+      write_date: string;
+    }>;
+
+    setChats((prev) => {
+      const newChats: Chat[] = odooThreads.map((thread) => ({
+        id: thread.id.toString(),
+        contactId: thread.phone_number || "",
+        threadName: thread.name || undefined,
+        phoneNumber: thread.phone_number || null,
+        backendId: thread.backend_id || null,
+        lastMessagePreview: thread.last_message_preview || "",
+        lastMessageAt: thread.last_message_date ? dayjs(thread.last_message_date).valueOf() : Date.now(),
+        groupName: undefined,
+        groupAvatar: undefined,
+        read: false,
+        favorite: false,
+        group: false,
+        messages: [],
+      }));
+
+      // Merge with existing chats, avoiding duplicates
+      const existingIds = new Set(prev.complete.map(chat => chat.id));
+      const uniqueNewChats = newChats.filter(chat => !existingIds.has(chat.id));
+      
+      const updatedComplete = [...prev.complete, ...uniqueNewChats]
+        .sort((a, b) => (b.lastMessageAt || 0) - (a.lastMessageAt || 0));
+
+      return {
+        ...prev,
+        complete: updatedComplete,
+        isLoading: false,
+      };
+    });
+  }, []);
+
+  // Initialize SSE connection for threads
+  const { isConnected: sseConnected } = useSSE(
+    {
+      onThreadsUpdate: handleThreadsUpdate,
+      onError: (error) => {
+        console.error("SSE Error:", error);
+      },
+      onReconnect: () => {
+        console.log("SSE Reconnected");
+      },
+    },
+    {
+      enabled: !!sessionId,
+    }
+  );
   const searchRef = useRef(search);
 
   const contactNameLookup = useMemo(() => {
@@ -131,12 +192,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
         const nameMatch = chat.threadName
           ?.toLowerCase()
           .includes(normalized);
-        const previewValue =
-          typeof chat.lastMessagePreview === "string"
-            ? chat.lastMessagePreview
-            : Array.isArray(chat.lastMessagePreview)
-            ? chat.lastMessagePreview.join(" ")
-            : "";
+        const previewValue = chat.lastMessagePreview || "";
         const previewMatch = previewValue
           .toLowerCase()
           .includes(normalized);
@@ -178,17 +234,6 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
     backend_id?: [number, string] | number | null | false;
   };
 
-  const extractPhoneNumber = useCallback((thread: ThreadRecord) => {
-    if (thread.phone_number && thread.phone_number.length > 0) {
-      return thread.phone_number;
-    }
-    const match = thread.name.match(/(\d{6,})/g);
-    if (match && match.length > 0) {
-      return match[match.length - 1];
-    }
-    return null;
-  }, []);
-
   const transformThreads = useCallback((threads: ThreadRecord[]): Chat[] => {
     return threads.map((thread) => {
       const chatId = String(thread.id);
@@ -202,7 +247,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
           : typeof thread.backend_id === "number"
             ? thread.backend_id
             : authBackendId ?? null;
-      const phoneNumber = extractPhoneNumber(thread);
+      const phoneNumber = thread.phone_number;
 
       const messages: Message[] = preview
         ? [
@@ -231,7 +276,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
         messages,
       };
     });
-  }, [extractPhoneNumber, authBackendId]);
+  }, [authBackendId]);
 
   const fetchThreads = useCallback(
     async ({ showLoading = false }: { showLoading?: boolean } = {}) => {
@@ -308,17 +353,13 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
       return;
     }
 
+    // Initial fetch only - SSE will handle updates
     fetchThreads({ showLoading: true });
 
-    const intervalId = window.setInterval(() => {
-      fetchThreads();
-    }, THREADS_POLL_INTERVAL_MS);
-
     return () => {
-      window.clearInterval(intervalId);
       isFetchingRef.current = false;
     };
-  }, [sessionId, fetchThreads]);
+  }, [sessionId, fetchThreads, sseConnected]);
 
   useEffect(() => {
     setChats((prev) => {

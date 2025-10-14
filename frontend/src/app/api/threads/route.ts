@@ -66,7 +66,9 @@ export async function GET(request: NextRequest) {
           "last_message_preview",
           "phone_number",
           "backend_id",
+          "write_date",
         ],
+        order: "write_date desc"
       }
     );
 

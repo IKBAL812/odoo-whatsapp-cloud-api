@@ -1,4 +1,3 @@
-import dayjs from "dayjs";
 import {
   createContext,
   PropsWithChildren,
@@ -11,8 +10,8 @@ import { Chat, Message } from "./chats-provider";
 import { useChats } from "../hooks/use-chats";
 import { useContacts } from "../hooks/use-contacts";
 import { Contact } from "./contacts-provider";
-import { getTimestamp } from "../utils";
 import { useAuth } from "../hooks/use-auth";
+import { useSSE } from "../hooks/use-sse";
 
 export type CurrentChatContacts = {
   [contactId: string]: Contact | undefined;
@@ -49,8 +48,6 @@ export const CurrentChatContext = createContext<undefined | CurrentChat>(
   undefined
 );
 
-const POLL_INTERVAL_MS = 10000;
-
 type OdooMessageRecord = {
   id: number;
   create_date: string;
@@ -61,6 +58,7 @@ type OdooMessageRecord = {
   attachment_id: false | [number, string] | null;
   create_uid: [number, string];
   replied_message_id?: false | [number, string] | null;
+  timestamp: number;
 };
 
 type MessageWithReplyReference = Message & {
@@ -142,6 +140,138 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
   const { contacts } = useContacts();
   const { sessionId, backendId: authBackendId, backendUserId } = useAuth();
 
+  const chatId = currentChat.chatId;
+  
+  // SSE message handler for real-time message updates
+  const handleMessagesUpdate = useCallback((messages: unknown[], threadId: string) => {
+    if (threadId !== chatId) {
+      return; // Ignore messages for other chats
+    }
+
+    const odooMessages = (messages as OdooMessageRecord[]).reverse(); // Backend returns newest first, reverse for chat display
+    const rawMessages: MessageWithReplyReference[] = odooMessages.map((record) => {
+      const timestamp = record.timestamp * 1000; // Convert seconds to milliseconds
+      const direction = record.direction ?? "incoming";
+      const status = (record.status ?? "").toLowerCase();
+      const messageText =
+        record.body ?? (record.attachment_id ? "Attachment received" : "");
+      
+      const deliveredStatuses = ["delivered", "read"];
+      const sentStatuses = ["sent", ...deliveredStatuses];
+      const userIdValue =
+        Array.isArray(record.create_uid) && record.create_uid.length > 0
+          ? record.create_uid[0]
+          : null;
+      const whatsappId =
+        typeof record.message_id === "string" ? record.message_id : null;
+      const replyTuple = Array.isArray(record.replied_message_id)
+        ? record.replied_message_id
+        : null;
+      const replyMessageId = replyTuple?.[0] ? String(replyTuple[0]) : null;
+      
+      return {
+        id: record.id.toString(),
+        contactId: threadId,
+        message: messageText,
+        timestamp,
+        isSentFromUser: direction === "outgoing",
+        sent: sentStatuses.includes(status),
+        delivered: deliveredStatuses.includes(status),
+        read: status === "read",
+        userId: userIdValue ?? null,
+        whatsappId,
+        replyMessageId,
+      };
+    });
+
+    // Process messages similar to fetchMessages
+    setCurrentChat((prev) => {
+      if (prev.chatId !== threadId) {
+        return prev;
+      }
+
+      const repliesById = new Map<string, NonNullable<Message["replyTo"]>>();
+
+      // Build reply metadata map
+      [...prev.messages, ...rawMessages].forEach((message) => {
+        if (message.id) {
+          const meta = toReplyMetadata(message);
+          if (meta) {
+            repliesById.set(message.id, meta);
+          }
+        }
+      });
+
+      const mappedMessages: Message[] = rawMessages.map((message) => {
+        const { replyMessageId, ...rest } = message;
+        const baseMessage = rest as Message;
+
+        if (!replyMessageId) {
+          return baseMessage;
+        }
+
+        const replyMetadata = repliesById.get(replyMessageId);
+        if (!replyMetadata) {
+          return baseMessage;
+        }
+
+        return {
+          ...baseMessage,
+          replyTo: replyMetadata,
+        };
+      });
+
+      // Handle message updates: merge new messages with existing ones
+      const existingMessagesMap = new Map(prev.messages.map(m => [m.id, m]));
+      const updatedMessagesMap = new Map(existingMessagesMap);
+      
+      let hasNewMessages = false;
+      
+      mappedMessages.forEach(newMessage => {
+        if (newMessage.id && existingMessagesMap.has(newMessage.id)) {
+          // Update existing message (e.g., status changes)
+          updatedMessagesMap.set(newMessage.id, {
+            ...existingMessagesMap.get(newMessage.id)!,
+            ...newMessage,
+            // Preserve optimistic properties if this is an update to an optimistic message
+            sent: newMessage.sent || existingMessagesMap.get(newMessage.id)!.sent,
+            delivered: newMessage.delivered || existingMessagesMap.get(newMessage.id)!.delivered,
+          });
+        } else if (newMessage.id && !existingMessagesMap.has(newMessage.id)) {
+          // Add new message
+          updatedMessagesMap.set(newMessage.id, newMessage);
+          hasNewMessages = true;
+        }
+      });
+
+      if (!hasNewMessages) {
+        return prev;
+      }
+
+      const updatedMessages = Array.from(updatedMessagesMap.values())
+        .sort((a, b) => a.timestamp - b.timestamp); // Still need sorting when merging SSE messages
+
+      return {
+        ...prev,
+        messages: updatedMessages,
+      };
+    });
+  }, [chatId]);
+
+  // Initialize SSE for current chat messages
+  useSSE(
+    {
+      onMessagesUpdate: handleMessagesUpdate,
+      onError: (error) => {
+        console.error("SSE Error:", error);
+      },
+    },
+    {
+      threadId: chatId,
+      enabled: !!sessionId && !!chatId,
+    }
+  );
+
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
@@ -151,8 +281,6 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
       Notification.requestPermission().catch(() => undefined);
     }
   }, []);
-
-  const chatId = currentChat.chatId;
 
   const fetchMessages = useCallback(
     async ({
@@ -212,13 +340,11 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
 
         const data = await response.json();
         const records: OdooMessageRecord[] = Array.isArray(data?.messages)
-          ? data.messages
+          ? data.messages.reverse() // Backend returns newest first, reverse for chat display
           : [];
 
         const rawMessages: MessageWithReplyReference[] = records.map((record) => {
-          const timestamp = record.create_date
-            ? dayjs(record.create_date).valueOf()
-            : Date.now();
+          const timestamp = record.timestamp * 1000; // Convert seconds to milliseconds
           const direction = record.direction ?? "incoming";
           const status = (record.status ?? "").toLowerCase();
           const messageText =
@@ -329,7 +455,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
             ? incomingMessages
             : [...prev.messages, ...incomingMessages];
 
-          mergedMessages.sort((a, b) => a.timestamp - b.timestamp);
+          // No need to sort - backend provides messages in correct order
 
           nextLatestTimestamp =
             mergedMessages.length > 0
@@ -408,24 +534,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
     };
   }, [chatId, sessionId, fetchMessages]);
 
-  useEffect(() => {
-    if (!chatId || !sessionId) {
-      return;
-    }
-
-    const intervalId = window.setInterval(() => {
-      const latestId = latestMessageIdRef.current;
-      if (latestId === null || typeof latestId === "undefined") {
-        fetchMessages({ replace: true });
-        return;
-      }
-      fetchMessages({ lastId: latestId });
-    }, POLL_INTERVAL_MS);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [chatId, sessionId, fetchMessages]);
+  // Polling disabled - using SSE instead
 
   useEffect(() => {
     const chat = complete.find((chat: Chat) => chat.id === currentChat.chatId);
@@ -521,7 +630,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
 
       const backendId = currentChat.backendId ?? authBackendId ?? undefined;
       const optimisticId = `local-${Date.now()}`;
-      const timestamp = getTimestamp();
+      const timestamp = Math.floor(Date.now()); // Use millisecond precision timestamp
       const replyTarget = currentChat.replyTo;
       const replyMetadata =
         replyTarget && replyTarget.contactId === activeChatId
@@ -622,6 +731,8 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
                   : true,
                 read: status ? readStatuses.includes(status) : false,
                 error: undefined,
+                // Keep the optimistic timestamp for consistent ordering
+                timestamp: message.timestamp,
               };
             }),
             isSending: false,

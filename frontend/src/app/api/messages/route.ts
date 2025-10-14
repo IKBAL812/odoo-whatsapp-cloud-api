@@ -21,6 +21,7 @@ type OdooMessageRecord = {
   attachment_id: false | [number, string] | null;
   message_id?: string | null;
   replied_message_id?: false | [number, string] | null;
+  timestamp: number;
 };
 
 export async function GET(request: NextRequest) {
@@ -114,7 +115,6 @@ export async function GET(request: NextRequest) {
       domain,
       {
         limit,
-        order: "create_date asc",
         select: [
           "create_date",
           "body",
@@ -124,6 +124,8 @@ export async function GET(request: NextRequest) {
           "create_uid",
           "message_id",
           "replied_message_id",
+          "write_date",
+          "timestamp",
         ],
       }
     );
