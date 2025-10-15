@@ -69,7 +69,7 @@ export async function POST(request: Request) {
         false
       );
     } catch (initError) {
-      console.error("Failed to initialize WhatsApp backend", initError);
+      // Failed to initialize WhatsApp backend
     }
 
     return NextResponse.json({

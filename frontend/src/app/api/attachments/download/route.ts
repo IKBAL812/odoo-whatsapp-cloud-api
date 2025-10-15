@@ -50,7 +50,6 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error downloading attachment:", error);
     return NextResponse.json(
       { error: "Failed to download attachment" },
       { status: 500 }

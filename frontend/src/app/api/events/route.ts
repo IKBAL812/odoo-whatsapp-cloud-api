@@ -167,13 +167,11 @@ export async function GET(request: NextRequest) {
             }
             consecutiveErrors = 0; // Reset error counter on success
           } catch (error) {
-            console.error("Error checking threads:", error);
             consecutiveErrors++;
-            
+
             // If connection refused or network error, stop checking to avoid spamming logs
             const err = error as any;
             if (err?.cause?.code === 'ECONNREFUSED' || err?.message?.includes('fetch failed')) {
-              console.error("Backend connection refused, stopping SSE updates");
               clearInterval(intervalId);
               controller.close();
               return;
@@ -224,13 +222,11 @@ export async function GET(request: NextRequest) {
               lastMessagesCheck = currentMessageCheckTime;
               consecutiveErrors = 0; // Reset error counter on success
             } catch (error) {
-              console.error("Error checking messages:", error);
               consecutiveErrors++;
-              
+
               // If connection refused or network error, stop checking to avoid spamming logs
               const err = error as any;
               if (err?.cause?.code === 'ECONNREFUSED' || err?.message?.includes('fetch failed')) {
-                console.error("Backend connection refused, stopping SSE updates");
                 clearInterval(intervalId);
                 controller.close();
                 return;
@@ -244,14 +240,12 @@ export async function GET(request: NextRequest) {
             lastHeartbeat = now;
           }
 
-        } catch (error) {
-          console.error("SSE update check error:", error);
+        } catch {
           consecutiveErrors++;
-          
+
           // If too many consecutive errors, slow down the checks
           if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
-            console.warn(`Too many consecutive SSE errors (${consecutiveErrors}), slowing down checks`);
-            // Could implement exponential backoff here
+            // Too many consecutive SSE errors - could implement exponential backoff here
           }
         }
       };

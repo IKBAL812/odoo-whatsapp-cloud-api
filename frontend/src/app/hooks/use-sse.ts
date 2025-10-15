@@ -104,8 +104,8 @@ export const useSSE = (callbacks: SSECallbacks, options: SSEOptions = {}) => {
               callbacksRef.current.onHeartbeat?.(update.timestamp);
               break;
           }
-        } catch (error) {
-          console.error("Failed to parse SSE message:", error);
+        } catch {
+          // Failed to parse SSE message
         }
       };
 
@@ -130,13 +130,10 @@ export const useSSE = (callbacks: SSECallbacks, options: SSEOptions = {}) => {
             console.log(`SSE reconnect attempt ${reconnectAttemptsRef.current}/${maxReconnectAttempts}`);
             connect();
           }, reconnectInterval * reconnectAttemptsRef.current); // Exponential backoff
-        } else {
-          console.error("SSE max reconnect attempts reached or connection disabled");
         }
       };
 
-    } catch (error) {
-      console.error("Failed to create SSE connection:", error);
+    } catch {
       setIsConnected(false);
     }
   }, [enabled, sessionId, threadId, reconnectInterval, maxReconnectAttempts]);

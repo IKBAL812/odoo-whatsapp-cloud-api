@@ -103,7 +103,6 @@ export default function AttachmentDisplay({ attachment, messageId }: AttachmentD
         document.body.removeChild(a);
       }, 100);
     } catch (error) {
-      console.error('Failed to download attachment:', error);
       alert(`Failed to download file: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };

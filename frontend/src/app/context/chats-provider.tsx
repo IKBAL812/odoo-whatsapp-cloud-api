@@ -191,13 +191,6 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
     {
       onThreadsUpdate: handleThreadsUpdate,
       onError: (error) => {
-        console.error("SSE Error for threads:", error);
-        console.error("SSE Error type:", error.type);
-        console.error("SSE Error target:", error.target);
-        if (error.target && 'readyState' in error.target) {
-          console.error("SSE ReadyState:", (error.target as EventSource).readyState);
-          console.error("SSE URL:", (error.target as EventSource).url);
-        }
         reportApiError(error);
       },
       onReconnect: () => {
@@ -383,8 +376,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
           filtered: filteredChats,
           isLoading: false,
         }));
-      } catch (error) {
-        console.error("Failed to fetch threads", error);
+      } catch {
         setChats((prev) => ({
           ...prev,
           isLoading: false,

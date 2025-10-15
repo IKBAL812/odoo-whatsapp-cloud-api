@@ -285,7 +285,6 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
     {
       onMessagesUpdate: handleMessagesUpdate,
       onError: (error) => {
-        console.error("SSE Error:", error);
         reportApiError(error);
       },
       onReconnect: () => {
@@ -526,7 +525,6 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
         ) {
           return;
         }
-        console.error("Failed to fetch messages", error);
         reportApiError(error);
         if (replace) {
           setCurrentChat((prev) =>

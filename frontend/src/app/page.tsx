@@ -14,6 +14,45 @@ import LoginScreen from "./components/auth/login-screen";
 import { TranslationProvider, useTranslations } from "./context/translation-provider";
 import ConnectionProvider from "./context/connection-provider";
 import ConnectionOverlay from "./components/connection-overlay";
+import { MobileNavigationProvider, useMobileNavigation } from "./context/mobile-navigation-provider";
+import { useResponsive } from "./hooks/use-responsive";
+
+function ResponsiveLayout() {
+  const { isMobile, isInitialized } = useResponsive();
+  const { currentView } = useMobileNavigation();
+
+  // Prevent flash of wrong layout during hydration
+  if (!isInitialized) {
+    return null;
+  }
+
+  // Mobile layout: single panel view
+  if (isMobile) {
+    return (
+      <section className="h-full min-h-0 w-full flex flex-col">
+        {currentView === "chatList" ? (
+          <>
+            <TabPanel />
+            <TabIcons />
+          </>
+        ) : (
+          <TabActivePanel />
+        )}
+        <ConnectionOverlay />
+      </section>
+    );
+  }
+
+  // Tablet/Desktop layout: multi-panel grid
+  return (
+    <section className="h-full min-h-0 w-full grid grid-cols-14 md:grid-cols-24">
+      <TabIcons />
+      <TabPanel />
+      <TabActivePanel />
+      <ConnectionOverlay />
+    </section>
+  );
+}
 
 function AppShell() {
   return (
@@ -22,12 +61,9 @@ function AppShell() {
         <ContactsProvider>
           <ChatsProvider>
             <CurrentChatProvider>
-              <section className="h-full min-h-0 w-full grid grid-cols-14 md:grid-cols-24">
-                <TabIcons />
-                <TabPanel />
-                <TabActivePanel />
-              </section>
-              <ConnectionOverlay />
+              <MobileNavigationProvider>
+                <ResponsiveLayout />
+              </MobileNavigationProvider>
             </CurrentChatProvider>
           </ChatsProvider>
         </ContactsProvider>

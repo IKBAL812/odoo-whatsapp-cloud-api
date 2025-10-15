@@ -93,7 +93,6 @@ export async function POST(request: NextRequest) {
       mimeType: file.type,
     });
   } catch (error) {
-    console.error("Error uploading attachment:", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to upload attachment" },
       { status: 500 }

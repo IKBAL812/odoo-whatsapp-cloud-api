@@ -8,6 +8,8 @@ import dayjs from "dayjs";
 import { formatTime } from "@/app/utils";
 import { useTranslations } from "@/app/context/translation-provider";
 import MessageStatusIcon from "../message-status-icon";
+import { useMobileNavigation } from "@/app/context/mobile-navigation-provider";
+import { useResponsive } from "@/app/hooks/use-responsive";
 
 export default function Chats({ selectedTab }: { selectedTab: string }) {
   const {
@@ -19,6 +21,8 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
   const { getContact } = useContacts();
   const { loadCurrentChat, contact, chatId: currentChatId } = useCurrentChat();
   const { t, locale } = useTranslations();
+  const { showActiveChat } = useMobileNavigation();
+  const { isMobile } = useResponsive();
 
   const getMetaMessage = (chat: Chat, message?: Message): string => {
     if (!message) {
@@ -81,8 +85,12 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
               backendId: chat.backendId ?? null,
             });
           }
+          // Navigate to active chat view on mobile
+          if (isMobile) {
+            showActiveChat();
+          }
         }}
-        className={`outline-none grid grid-cols-6 w-full gap-4 p-2.5 hover:bg-white/10 rounded-xl cursor-pointer ${
+        className={`outline-none grid grid-cols-6 w-full gap-4 p-3 md:p-2.5 hover:bg-white/10 rounded-xl cursor-pointer active:bg-white/20 transition-colors ${
           typeof chat.contactId === "string" && chat.contactId === contact?.id
             ? "bg-white/10"
             : ""
@@ -169,7 +177,7 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
                 f === filter
                   ? "bg-green-700/30 text-green-100 border-green-600/30"
                   : "border-white/20 hover:bg-white/10"
-              } text-sm p-1 px-3 border-[1px] rounded-full cursor-pointer capitalize`}
+              } text-sm p-2 px-4 md:p-1 md:px-3 border-[1px] rounded-full cursor-pointer capitalize active:bg-white/20 transition-colors`}
               onClick={() => updateFilter(f)}
             >
               {t(`chat.filters.${f}`)}

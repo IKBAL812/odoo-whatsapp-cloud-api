@@ -155,7 +155,7 @@ export default function CurrentChat() {
             className="relative flex-1 min-h-0 w-full overflow-y-auto"
           >
             <div className="min-h-full flex flex-col justify-end">
-            <div className="p-4 flex flex-col gap-2">
+            <div className="p-4 md:p-4 px-3 md:px-4 flex flex-col gap-2">
               {isLoading && <div className="text-white">{t("chat.loading")}</div>}
               {annotatedMessages.map((item) => {
                 if (item.type === "label") {
@@ -241,10 +241,10 @@ export default function CurrentChat() {
               </div>
               <button
                 type="button"
-                className="text-white/60 hover:text-white"
+                className="text-white/60 hover:text-white p-2 active:bg-white/10 rounded-lg transition-colors"
                 onClick={cancelReply}
               >
-                <XCircleIcon className="size-4" weight="bold" />
+                <XCircleIcon className="size-5 md:size-4" weight="bold" />
               </button>
             </div>
           )}
@@ -258,7 +258,7 @@ export default function CurrentChat() {
               />
               <input
                 ref={inputRef}
-                className="flex-1 outline-none p-3 px-4 text-white placeholder-white/60 caret-green-400 text-sm bg-transparent"
+                className="flex-1 outline-none p-3 px-4 md:p-3 text-white placeholder-white/60 caret-green-400 text-sm md:text-sm bg-transparent"
                 placeholder={t("chatInput.placeholder")}
                 value={messageText}
                 onChange={(event) => {
@@ -272,7 +272,7 @@ export default function CurrentChat() {
               <button
                 type="submit"
                 disabled={isSending || messageText.trim().length === 0}
-                className="text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed transition rounded-full px-4 py-2 mr-2"
+                className="text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed transition rounded-full px-5 py-2.5 md:px-4 md:py-2 mr-2"
               >
                 {isSending ? t("chatInput.sending") : t("chatInput.send")}
               </button>
