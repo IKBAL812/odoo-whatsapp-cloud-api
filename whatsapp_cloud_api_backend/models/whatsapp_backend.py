@@ -125,6 +125,84 @@ class WhatsAppBackend(models.Model):
             _logger.exception("Invalid JSON response received from WhatsApp API")
             raise UserError(_("Invalid response from WhatsApp API.")) from exc
 
+    def _upload_media_to_whatsapp(self, attachment):
+        """Upload media to WhatsApp and return the media ID.
+
+        Args:
+            attachment: ir.attachment record containing the media file
+
+        Returns:
+            str: WhatsApp media ID
+        """
+        self.ensure_one()
+        if not self.api_token:
+            raise UserError(_("API token is required to upload media to WhatsApp."))
+        if not attachment:
+            raise UserError(_("Attachment is required to upload media."))
+
+        url = f"{self._graph_api_base_url()}/media"
+        headers = {
+            "Authorization": f"Bearer {self.api_token}",
+        }
+
+        # Get file data from attachment
+        file_data = attachment.raw
+        if not file_data:
+            raise UserError(_("Attachment has no file data."))
+
+        # Prepare multipart form data
+        files = {
+            'file': (attachment.name, file_data, attachment.mimetype)
+        }
+        data = {
+            'messaging_product': 'whatsapp',
+        }
+
+        try:
+            response = requests.post(
+                url,
+                headers=headers,
+                files=files,
+                data=data,
+                timeout=30
+            )
+        except RequestException as exc:
+            _logger.exception("WhatsApp media upload failed")
+            raise UserError(_("Unable to upload media to WhatsApp: %s") % exc) from exc
+
+        if response.status_code >= 400:
+            try:
+                error_content = response.json()
+            except ValueError:
+                error_content = response.text
+
+            if isinstance(error_content, dict):
+                error_message = (
+                    error_content.get("error", {}).get("message")
+                    or error_content.get("message")
+                    or str(error_content)
+                )
+            else:
+                error_message = error_content
+
+            _logger.error(
+                "WhatsApp media upload error (status %s): %s",
+                response.status_code,
+                error_message,
+            )
+            raise UserError(_("WhatsApp media upload error: %s") % error_message)
+
+        try:
+            result = response.json()
+            media_id = result.get("id")
+            if not media_id:
+                raise UserError(_("WhatsApp API did not return a media ID."))
+            _logger.info("Media uploaded to WhatsApp successfully: %s", media_id)
+            return media_id
+        except ValueError as exc:
+            _logger.exception("Invalid JSON response received from WhatsApp API")
+            raise UserError(_("Invalid response from WhatsApp API.")) from exc
+
     # ---------------------------------------------------------------------
     # Thread helpers
     # ---------------------------------------------------------------------

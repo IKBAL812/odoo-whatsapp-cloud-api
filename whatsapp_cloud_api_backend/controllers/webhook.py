@@ -27,7 +27,7 @@ _logger = logging.getLogger(__name__)
 
 
 class WhatsAppCloudAPIWebhookController(http.Controller):
-    _webhook_url = "/graph_tus/webhook"  # TODO: change this to a more generic path
+    _webhook_url = "/whatsapp/webhook"
 
     @http.route(
         _webhook_url,

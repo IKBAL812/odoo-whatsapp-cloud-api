@@ -2,6 +2,8 @@
 # License LGPL-3.0 or later (http://www.gnu.org/licenses/lgpl-3.0.html)
 from odoo import api, fields, models
 
+from ..controllers.main import WP_ATTACHMENT_DOWNLOAD_PATH
+
 
 class WhatsAppMessage(models.Model):
     _name = "whatsapp.message"
@@ -109,6 +111,15 @@ class WhatsAppMessage(models.Model):
         required=True,
     )
 
+    read_status_ids = fields.Many2many(
+        comodel_name="whatsapp.message.read.status",
+    )
+
+    is_read_by_me = fields.Boolean(
+        string="Read by Me",
+        compute="_compute_is_read_by_me",
+    )
+
     _sql_constraints = [
         (
             "whatsapp_message_unique",
@@ -116,6 +127,42 @@ class WhatsAppMessage(models.Model):
             "A message with the same identifier already exists for this backend.",
         )
     ]
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        res = super().create(vals_list)
+        for record in res:
+            ReadStatus = self.env["whatsapp.message.read.status"]
+            user_ids = record.backend_id.user_ids
+            for user in user_ids:
+                status = self.env["whatsapp.message.read.status"].create(
+                    {
+                        "message_id": record.id,
+                        "user_id": user.id,
+                        "is_read": record.direction == "outgoing",
+                        "read_timestamp": fields.Datetime.now()
+                        if record.direction == "outgoing"
+                        else None,
+                    }
+                )
+                ReadStatus |= status
+            record.read_status_ids = [(6, 0, ReadStatus.ids)]
+
+        return res
+
+    def _compute_is_read_by_me(self):
+        for record in self:
+            read_status = record.read_status_ids.filtered(
+                lambda r: r.user_id == self.env.user
+            )
+            record.is_read_by_me = read_status.is_read if read_status else False
+
+    def mark_as_read_by_user(self, user):
+        for record in self:
+            read_status = record.read_status_ids.filtered(lambda r: r.user_id == user)
+            if read_status and not read_status.is_read:
+                read_status.is_read = True
+                read_status.read_timestamp = fields.Datetime.now()
 
     def name_get(self):
         direction_labels = dict(self._fields["direction"].selection)
@@ -151,7 +198,34 @@ class WhatsAppMessage(models.Model):
                         "id": attachment_record.id,
                         "name": attachment_record.name,
                         "mimetype": attachment_record.mimetype,
-                        "url": f"{base_url}/whatsapp/attachment/{attachment_record.id}",
+                        "url": (
+                            f"{base_url}{WP_ATTACHMENT_DOWNLOAD_PATH}"
+                            f"{attachment_record.id}"
+                        ),
                         "file_size": attachment_record.file_size,
                     }
         return res
+
+
+class WhatsAppMessageReadStatus(models.Model):
+    _name = "whatsapp.message.read.status"
+    _description = "WhatsApp Message Read Status"
+
+    message_id = fields.Many2one(
+        comodel_name="whatsapp.message",
+        string="Message",
+        required=True,
+        ondelete="cascade",
+        help="Message that has been read.",
+    )
+    user_id = fields.Many2one(
+        comodel_name="res.users",
+        string="User",
+        required=True,
+        ondelete="cascade",
+        help="User who has read the message.",
+    )
+    is_read = fields.Boolean(
+        default=False,
+    )
+    read_timestamp = fields.Datetime()

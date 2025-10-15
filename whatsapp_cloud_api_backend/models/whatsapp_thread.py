@@ -57,6 +57,16 @@ class WhatsAppThread(models.Model):
         )
     ]
 
+    unread_count = fields.Integer(
+        string="Unread Count",
+        compute="_compute_unread_count",
+    )
+
+    def _compute_unread_count(self):
+        """Compute unread count for each thread."""
+        for thread in self:
+            thread.unread_count = thread.get_unread_count()
+
     @api.model
     def _generate_thread_name(self, partner_id=None, phone_number=None):
         partner_name = ""
@@ -124,6 +134,24 @@ class WhatsAppThread(models.Model):
         }
         return mapping.get(raw_status, "pending")
 
+    def _get_media_id(self, media_id=None, attachment=None):
+        """Get media ID from provided media_id or by uploading attachment.
+
+        Args:
+            media_id: WhatsApp media ID (if already uploaded)
+            attachment: ir.attachment record or ID to upload
+
+        Returns:
+            str: WhatsApp media ID
+        """
+        if media_id:
+            return media_id
+        if attachment:
+            if isinstance(attachment, int):
+                attachment = self.env["ir.attachment"].browse(attachment).sudo()
+            return self.backend_id._upload_media_to_whatsapp(attachment)
+        return None
+
     def _send_message(
         self, *, payload, message_type, body=None, attachment=None, extra_vals=None
     ):
@@ -160,7 +188,7 @@ class WhatsAppThread(models.Model):
             "timestamp": int(time.time()),
         }
         if attachment:
-            vals["attachment_id"] = attachment.id
+            vals["attachment_id"] = attachment
         if extra_vals:
             vals.update(extra_vals)
 
@@ -176,6 +204,45 @@ class WhatsAppThread(models.Model):
             "phone_number": self.phone_number,
             "timestamp": message_record.timestamp,
         }
+
+    @api.model
+    def get_unread_count(self):
+        """
+        Calculate unread count for this thread.
+        Only count incoming messages that haven't been read.
+        """
+        return len(
+            self.env["whatsapp.message.read.status"]
+            .search(
+                [
+                    ("message_id.thread_id", "=", self.id),
+                    ("is_read", "=", False),
+                    ("user_id", "=", self.env.user.id),
+                ]
+            )
+            .mapped("message_id")
+        )
+
+    def mark_as_read(self):
+        """
+        Mark all incoming messages in this thread as read.
+        Called when user opens a thread in the frontend.
+        """
+        messages = (
+            self.env["whatsapp.message.read.status"]
+            .search(
+                [
+                    ("message_id.thread_id", "=", self.id),
+                    ("is_read", "=", False),
+                    ("user_id", "=", self.env.user.id),
+                ]
+            )
+            .mapped("message_id")
+        )
+        for msg in messages:
+            msg.mark_as_read_by_user(self.env.user)
+
+        return True
 
     # -------------------------------------------------------------------------
     # Sending API
@@ -239,17 +306,26 @@ class WhatsAppThread(models.Model):
         attachment=None,
     ):
         self.ensure_one()
+        media_id = self._get_media_id(media_id, attachment)
+
         document = {}
         if media_id:
             document["id"] = media_id
-        if link:
+        elif link:
             document["link"] = link
+        else:
+            raise UserError(
+                _(
+                    "Document message requires either an attachment, "
+                    "media ID, or a link."
+                )
+            )
+
         if caption:
             document["caption"] = caption
         if filename:
             document["filename"] = filename
-        if not document:
-            raise UserError(_("Document message requires either a media ID or a link."))
+
         body_value = caption or filename or _("Document")
         payload = {
             "type": "document",
@@ -345,15 +421,21 @@ class WhatsAppThread(models.Model):
         attachment=None,
     ):
         self.ensure_one()
+        media_id = self._get_media_id(media_id, attachment)
+
         image = {}
         if media_id:
             image["id"] = media_id
-        if link:
+        elif link:
             image["link"] = link
+        else:
+            raise UserError(
+                _("Image message requires either an attachment, media ID, or a link.")
+            )
+
         if caption:
             image["caption"] = caption
-        if not image:
-            raise UserError(_("Image message requires either a media ID or a link."))
+
         body_value = caption or _("Image")
         payload = {
             "type": "image",
@@ -375,15 +457,21 @@ class WhatsAppThread(models.Model):
         attachment=None,
     ):
         self.ensure_one()
+        media_id = self._get_media_id(media_id, attachment)
+
         video = {}
         if media_id:
             video["id"] = media_id
-        if link:
+        elif link:
             video["link"] = link
+        else:
+            raise UserError(
+                _("Video message requires either an attachment, media ID, or a link.")
+            )
+
         if caption:
             video["caption"] = caption
-        if not video:
-            raise UserError(_("Video message requires either a media ID or a link."))
+
         body_value = caption or _("Video")
         payload = {
             "type": "video",

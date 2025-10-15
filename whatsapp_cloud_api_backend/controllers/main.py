@@ -16,10 +16,13 @@ import base64
 
 from odoo import http
 
+WP_ATTACHMENT_DOWNLOAD_PATH = "/whatsapp/attachment/download/"
+WP_ATTACHMENT_UPLOAD_PATH = "/whatsapp/attachment/upload/"
+
 
 class WhatsAppCloudAPIBackendController(http.Controller):
     @http.route(
-        "/whatsapp/attachment/<int:attachment_id>",
+        WP_ATTACHMENT_DOWNLOAD_PATH + "<int:attachment_id>",
         type="http",
         auth="user",
         methods=["GET"],
@@ -42,3 +45,30 @@ class WhatsAppCloudAPIBackendController(http.Controller):
             ),
         ]
         return http.request.make_response(filecontent, headers)
+
+    @http.route(
+        WP_ATTACHMENT_UPLOAD_PATH,
+        type="http",
+        auth="user",
+        methods=["POST"],
+        csrf=False,
+    )
+    def upload_attachment(self, **kwargs):
+        Attachment = http.request.env["ir.attachment"].sudo()
+        if "file" not in kwargs:
+            return http.request.make_response("No file part in the request", status=400)
+        file = kwargs.get("file")
+        if file.filename == "":
+            return http.request.make_response("No selected file", status=400)
+        filecontent = file.read()
+        if not filecontent:
+            return http.request.make_response("Empty file", status=400)
+        attachment = Attachment.create(
+            {
+                "name": file.filename,
+                "datas": base64.b64encode(filecontent),
+                "mimetype": file.content_type,
+            }
+        )
+        # Just return uploaded attachment ID for simplicity
+        return http.request.make_response(f"{attachment.id}", status=200)
