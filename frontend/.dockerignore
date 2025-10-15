@@ -1,0 +1,54 @@
+# Ignore git
+.git
+.gitignore
+
+# Ignore dependencies
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Ignore build output
+.next
+out
+build
+dist
+
+# Ignore local environment files
+.env
+.env*.local
+.env.development
+.env.test
+
+# Ignore IDE files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Ignore test and coverage
+coverage
+.nyc_output
+*.test.*
+__tests__
+
+# Ignore documentation
+README.md
+*.md
+docs
+
+# Ignore Docker files (we don't need them in the build)
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Ignore misc
+.vercel
+.turbo
+*.tsbuildinfo
+next-env.d.ts

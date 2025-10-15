@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: odoo-whatsapp-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - ODOO_JSONRPC_PROTOCOL=${ODOO_JSONRPC_PROTOCOL}
+      - ODOO_JSONRPC_HOST=${ODOO_JSONRPC_HOST}
+      - ODOO_JSONRPC_PORT=${ODOO_JSONRPC_PORT}
+      - ODOO_JSONRPC_DATABASE=${ODOO_JSONRPC_DATABASE}
+    env_file:
+      - .env.production
+    networks:
+      - whatsapp-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  whatsapp-network:
+    driver: bridge
