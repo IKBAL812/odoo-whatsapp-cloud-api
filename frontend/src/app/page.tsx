@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import TabActivePanel from "./components/tab-active-panel";
 import TabIcons from "./components/tab-icons";
 import TabPanel from "./components/tab-panel";
@@ -16,6 +17,7 @@ import ConnectionProvider from "./context/connection-provider";
 import ConnectionOverlay from "./components/connection-overlay";
 import { MobileNavigationProvider, useMobileNavigation } from "./context/mobile-navigation-provider";
 import { useResponsive } from "./hooks/use-responsive";
+import { useChats } from "./hooks/use-chats";
 
 function ResponsiveLayout() {
   const { isMobile, isInitialized } = useResponsive();
@@ -54,12 +56,28 @@ function ResponsiveLayout() {
   );
 }
 
+function PageTitleUpdater() {
+  const { totalUnreadCount } = useChats();
+
+  useEffect(() => {
+    const baseTitle = "WhatsApp Cloud API";
+    if (totalUnreadCount > 0) {
+      document.title = `(${totalUnreadCount}) ${baseTitle}`;
+    } else {
+      document.title = baseTitle;
+    }
+  }, [totalUnreadCount]);
+
+  return null;
+}
+
 function AppShell() {
   return (
     <ProfileProvider>
       <TabProvider>
         <ContactsProvider>
           <ChatsProvider>
+            <PageTitleUpdater />
             <CurrentChatProvider>
               <MobileNavigationProvider>
                 <ResponsiveLayout />

@@ -132,7 +132,7 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
             </p>
           </div>
         </div>
-        <div className="col-span-2 flex flex-col justify-center items-end">
+        <div className="col-span-2 flex flex-col justify-center items-end gap-1">
           {lastMessageTimestamp && (
             <p
               className={`text-xs font-semibold ${
@@ -143,6 +143,14 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
             >
               {formattedDate}
             </p>
+          )}
+          {/* Unread badge - only show if count > 0 */}
+          {chat.unreadCount != null && chat.unreadCount > 0 && (
+            <div className="flex justify-end items-center">
+              <span className="bg-emerald-500 text-white text-xs font-bold rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center">
+                {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
+              </span>
+            </div>
           )}
         </div>
       </button>

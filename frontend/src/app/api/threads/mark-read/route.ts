@@ -12,7 +12,7 @@ const ensureEnv = () => {
   }
 };
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
     ensureEnv();
   } catch (error) {
@@ -55,29 +55,29 @@ export async function GET(request: NextRequest) {
   const sessionClient = odooClient.createSession(sessionId);
 
   try {
-    const threads = await sessionClient.searchRead(
+    const { threadId } = await request.json();
+
+    if (!threadId) {
+      return NextResponse.json(
+        { error: "Missing threadId" },
+        { status: 400 }
+      );
+    }
+
+    // Call mark_as_read on the thread record (instance method)
+    const result = await sessionClient.call(
       "whatsapp.thread",
-      [],
-      {
-        limit: 30,
-        select: [
-          "name",
-          "last_message_date",
-          "last_message_preview",
-          "phone_number",
-          "backend_id",
-          "write_date",
-          "unread_count",  // NEW: Request unread count from backend
-        ],
-        order: "write_date desc"
-      }
+      "mark_as_read",
+      [Number(threadId)],
+      {},  // kwargs required
+      false  // Don't wrap args - pass record ID directly
     );
 
-    return NextResponse.json({ threads });
+    return NextResponse.json({ success: true, result });
   } catch (error) {
     const err = error as Error;
     return NextResponse.json(
-      { error: err.message || "Failed to fetch threads from Odoo" },
+      { error: err.message || "Failed to mark thread as read" },
       { status: 500 }
     );
   }

@@ -65,6 +65,7 @@ export type Chat = {
   backendId?: number | null;
   lastMessagePreview?: string;
   lastMessageAt?: number | null;
+  unreadCount?: number;  // NEW: Unread message count from backend
   read: boolean;
   group: boolean;
   favorite: boolean;
@@ -85,6 +86,7 @@ export const ChatsContext = createContext<
       chats: Chats;
       updateThreadPreview: (chatId: string, preview: string, timestamp: number) => void;
       markChatAsRead: (chatId: string) => void;
+      totalUnreadCount: number;
     }
 >(undefined);
 
@@ -98,12 +100,23 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
   const { sessionId, backendId: authBackendId } = useAuth();
   const { reportApiError, reportConnectionRestored } = useConnection();
   const isFetchingRef = useRef(false);
+  const notificationAudioRef = useRef<HTMLAudioElement | null>(null);
+  const lastNotifiedUnreadCountRef = useRef<Map<string, number>>(new Map()); // threadId -> last notified unread count
 
-  
+  // Initialize notification audio
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    notificationAudioRef.current = new Audio("/notification.mp3");
+  }, []);
+
   // SSE callbacks for real-time thread updates
   const handleThreadsUpdate = useCallback((threads: unknown[]) => {
-    console.log('Thread SSE update received:', threads.length, 'threads');
-    console.log('First thread data:', threads[0]);
+    console.log('[SSE] Thread update received:', threads.length, 'threads');
+    console.log('[SSE] First thread data:', threads[0]);
+    console.log('[SSE] Current notification tracker:', Array.from(lastNotifiedUnreadCountRef.current.entries()));
+
     // Process new threads from SSE
     const odooThreads = threads as Array<{
       id: number;
@@ -113,37 +126,74 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
       phone_number: string | null;
       backend_id: number | null;
       write_date: string;
+      unread_count?: number;  // NEW: Unread count from backend
     }>;
+
+    // Track if any thread has a genuinely new message for notifications
+    // Use ref to check outside of setChats to avoid stale closure
+    let shouldPlayNotification = false;
 
     setChats((prev) => {
       // Create a map of existing chats for efficient lookup
       const existingChatsMap = new Map(prev.complete.map(chat => [chat.id, chat]));
-      
+
       // Process updates from SSE
       odooThreads.forEach((thread) => {
         const threadId = thread.id.toString();
         const existingChat = existingChatsMap.get(threadId);
-        
+
         if (existingChat) {
           // Update existing chat, preserving important data like messages
-          const newTimestamp = thread.last_message_date 
-            ? new Date(thread.last_message_date).getTime() 
+          const newTimestamp = thread.last_message_date
+            ? new Date(thread.last_message_date).getTime()
             : existingChat.lastMessageAt;
-          
-          // Only mark as unread if there's actually a new message (timestamp changed)
-          const hasNewMessage = newTimestamp && newTimestamp > (existingChat.lastMessageAt || 0);
-          
-          console.log(`Thread ${threadId}: existing timestamp=${existingChat.lastMessageAt}, new timestamp=${newTimestamp}, hasNewMessage=${hasNewMessage}, currentRead=${existingChat.read}`);
-          
+
+          const newUnreadCount = thread.unread_count ?? 0;
+          const prevUnreadCount = existingChat.unreadCount ?? 0;
+          const lastNotifiedCount = lastNotifiedUnreadCountRef.current.get(threadId);
+
+          // Check if we should play notification for this thread
+          // Play if: unread count INCREASED compared to last notified count
+          // This handles ONLY incoming messages (outgoing messages don't increase unread count)
+          if (lastNotifiedCount !== undefined && newUnreadCount > lastNotifiedCount) {
+            // Unread count increased - play notification!
+            shouldPlayNotification = true;
+            lastNotifiedUnreadCountRef.current.set(threadId, newUnreadCount);
+            console.log(`[Thread Notification] ✅ Thread ${threadId} unread increased: ${lastNotifiedCount} -> ${newUnreadCount}`);
+          } else if (lastNotifiedCount === undefined) {
+            // First time seeing this thread - set baseline without notifying
+            lastNotifiedUnreadCountRef.current.set(threadId, newUnreadCount);
+            console.log(`[Thread Notification] 📊 Thread ${threadId} baseline set: ${newUnreadCount}`);
+          } else if (newUnreadCount === lastNotifiedCount) {
+            // Unread count unchanged - don't update baseline, don't notify
+            console.log(`[Thread Notification] ➖ Thread ${threadId} unchanged: ${newUnreadCount}`);
+          } else if (newUnreadCount < lastNotifiedCount) {
+            // Unread count decreased (user read messages) - update baseline
+            lastNotifiedUnreadCountRef.current.set(threadId, newUnreadCount);
+            console.log(`[Thread Notification] 📉 Thread ${threadId} unread decreased: ${lastNotifiedCount} -> ${newUnreadCount}`);
+          }
+
+          const hasUnread = newUnreadCount > 0;
+
+          console.log(`Thread ${threadId}: prev unread=${prevUnreadCount}, new unread=${newUnreadCount}, lastNotified=${lastNotifiedCount}, hasUnread=${hasUnread}`);
+
           existingChatsMap.set(threadId, {
             ...existingChat,
             lastMessagePreview: thread.last_message_preview || existingChat.lastMessagePreview,
             lastMessageAt: newTimestamp,
             threadName: thread.name || existingChat.threadName,
-            read: hasNewMessage ? false : existingChat.read,
+            unreadCount: newUnreadCount,  // Update unread count
+            read: !hasUnread,  // Mark as read if no unread messages
           });
         } else {
           // Add new chat
+          const newTimestamp = thread.last_message_date ? new Date(thread.last_message_date).getTime() : Date.now();
+          const newUnreadCount = thread.unread_count ?? 0;
+
+          // For new chats, set baseline without notifying (they're new to the list)
+          lastNotifiedUnreadCountRef.current.set(threadId, newUnreadCount);
+          console.log(`[Thread Notification] New thread ${threadId} baseline set: ${newUnreadCount}`);
+
           existingChatsMap.set(threadId, {
             id: threadId,
             contactId: thread.phone_number || "",
@@ -151,17 +201,18 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
             phoneNumber: thread.phone_number || null,
             backendId: thread.backend_id || null,
             lastMessagePreview: thread.last_message_preview || "",
-            lastMessageAt: thread.last_message_date ? new Date(thread.last_message_date).getTime() : Date.now(),
+            lastMessageAt: newTimestamp,
+            unreadCount: newUnreadCount,  // Set unread count
             groupName: undefined,
             groupAvatar: undefined,
-            read: false,
+            read: newUnreadCount === 0,  // Mark as read if no unread messages
             favorite: false,
             group: false,
             messages: [],
           });
         }
       });
-      
+
       // Sort by last message timestamp
       const updatedComplete = Array.from(existingChatsMap.values())
         .sort((a, b) => (b.lastMessageAt || 0) - (a.lastMessageAt || 0));
@@ -184,7 +235,33 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
         isLoading: false,
       };
     });
-  }, [filter]);
+
+    // Play notification sound if any thread had a new message
+    // This fixes Bug 2: notifications for messages from inactive threads
+    console.log('[SSE] shouldPlayNotification:', shouldPlayNotification, 'audioRef exists:', !!notificationAudioRef.current);
+
+    if (shouldPlayNotification) {
+      if (notificationAudioRef.current) {
+        console.log('[Thread Notification] ✅ PLAYING notification sound');
+        notificationAudioRef.current.currentTime = 0;
+        notificationAudioRef.current.play().catch((err) => {
+          console.error("[Thread Notification] Audio play failed:", err);
+        });
+      } else {
+        console.error('[Thread Notification] ❌ Should play but audio ref is null');
+        // Try to initialize audio if it doesn't exist
+        try {
+          const audio = new Audio("/notification.mp3");
+          audio.play().catch(() => undefined);
+          notificationAudioRef.current = audio;
+        } catch {
+          console.error('[Thread Notification] Failed to create audio element');
+        }
+      }
+    } else {
+      console.log('[Thread Notification] ℹ️ No notification needed');
+    }
+  }, []);
 
   // Initialize SSE connection for threads
   const { isConnected: sseConnected } = useSSE(
@@ -262,10 +339,14 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
   }, [applyFilter]);
 
   const markChatAsRead = useCallback((chatId: string) => {
+    // Reset the notified unread count so we don't re-notify
+    lastNotifiedUnreadCountRef.current.set(chatId, 0);
+
     setChats((prev) => {
       const updatedComplete = prev.complete.map((chat) => {
         if (chat.id === chatId) {
-          return { ...chat, read: true };
+          // Also reset unread count when marking as read
+          return { ...chat, read: true, unreadCount: 0 };
         }
         return chat;
       });
@@ -287,6 +368,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
     last_message_preview: string | null;
     phone_number?: string | null;
     backend_id?: [number, string] | number | null | false;
+    unread_count?: number;  // NEW: Unread count from backend
   };
 
   const transformThreads = useCallback((threads: ThreadRecord[]): Chat[] => {
@@ -303,6 +385,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
             ? thread.backend_id
             : authBackendId ?? null;
       const phoneNumber = thread.phone_number;
+      const unreadCount = thread.unread_count || 0;
 
       const messages: Message[] = preview
         ? [
@@ -325,7 +408,8 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
         backendId,
         lastMessagePreview: preview,
         lastMessageAt: timestamp,
-        read: true,
+        unreadCount,  // Include unread count
+        read: unreadCount === 0,  // Mark as read if no unread messages
         group: false,
         favorite: false,
         messages,
@@ -419,9 +503,14 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
     });
   }, [filter, applyFilter, chats.complete]);
 
+  // Calculate total unread count
+  const totalUnreadCount = chats.complete.reduce((total, chat) => {
+    return total + (chat.unreadCount ?? 0);
+  }, 0);
+
   return (
     <ChatsContext.Provider
-      value={{ chats, filter, updateFilter, updateThreadPreview, markChatAsRead }}
+      value={{ chats, filter, updateFilter, updateThreadPreview, markChatAsRead, totalUnreadCount }}
     >
       {children}
     </ChatsContext.Provider>

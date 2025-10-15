@@ -38,6 +38,7 @@ export default function CurrentChat() {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
+  // Auto-scroll to bottom on initial load and new messages
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (container) {

@@ -137,11 +137,12 @@ export async function GET(request: NextRequest) {
                 limit: 50,
                 select: [
                   "name",
-                  "last_message_date", 
+                  "last_message_date",
                   "last_message_preview",
                   "phone_number",
                   "backend_id",
                   "write_date",
+                  "unread_count",  // NEW: Request unread count from backend
                 ],
                 order: "last_message_date desc"
               }
