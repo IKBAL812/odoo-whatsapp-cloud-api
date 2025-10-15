@@ -773,6 +773,8 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
                 error: undefined,
                 // Keep the optimistic timestamp for consistent ordering
                 timestamp: message.timestamp,
+                // Preserve replyTo metadata
+                replyTo: message.replyTo,
               };
             }),
             isSending: false,
