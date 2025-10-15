@@ -1,0 +1,127 @@
+"use client";
+
+import { useState, useCallback, DragEvent, ReactNode } from "react";
+import { Upload } from "@phosphor-icons/react";
+
+type DragDropZoneProps = {
+  onFilesDrop: (files: File[]) => void;
+  children: ReactNode;
+  disabled?: boolean;
+};
+
+const MAX_FILE_SIZE = 16 * 1024 * 1024; // 16MB limit
+
+export default function DragDropZone({ onFilesDrop, children, disabled }: DragDropZoneProps) {
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragCounter, setDragCounter] = useState(0);
+
+  const handleDragEnter = useCallback((e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (disabled) return;
+
+    // Check if dragged items contain files
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      setDragCounter(prev => prev + 1);
+      setIsDragging(true);
+    }
+  }, [disabled]);
+
+  const handleDragLeave = useCallback((e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (disabled) return;
+
+    setDragCounter(prev => {
+      const newCounter = prev - 1;
+      if (newCounter === 0) {
+        setIsDragging(false);
+      }
+      return newCounter;
+    });
+  }, [disabled]);
+
+  const handleDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (disabled) return;
+
+    // Show copy cursor
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = "copy";
+    }
+  }, [disabled]);
+
+  const handleDrop = useCallback((e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (disabled) return;
+
+    setIsDragging(false);
+    setDragCounter(0);
+
+    // Get files from drop
+    const files = Array.from(e.dataTransfer.files);
+
+    if (files.length === 0) {
+      return;
+    }
+
+    // Filter valid files (media files only, within size limit)
+    const validFiles = files.filter(file => {
+      const isValidType =
+        file.type.startsWith('image/') ||
+        file.type.startsWith('video/') ||
+        file.type.startsWith('audio/') ||
+        file.type === 'application/pdf' ||
+        file.type.includes('document') ||
+        file.type.includes('word') ||
+        file.type.includes('sheet') ||
+        file.type.includes('presentation') ||
+        file.type === 'text/plain';
+
+      const isValidSize = file.size <= MAX_FILE_SIZE;
+
+      return isValidType && isValidSize;
+    });
+
+    if (validFiles.length > 0) {
+      onFilesDrop(validFiles);
+    }
+  }, [disabled, onFilesDrop]);
+
+  return (
+    <div
+      className="relative w-full h-full flex flex-col flex-1 min-h-0"
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      {children}
+
+      {/* Drag overlay */}
+      {isDragging && (
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[9999] pointer-events-none">
+          <div className="bg-emerald-600/20 border-2 border-emerald-500 border-dashed rounded-2xl p-12 flex flex-col items-center gap-4">
+            <div className="bg-emerald-600/30 rounded-full p-6">
+              <Upload className="size-16 text-emerald-400" weight="bold" />
+            </div>
+            <div className="text-center">
+              <p className="text-white text-xl font-semibold mb-2">
+                Drop files here
+              </p>
+              <p className="text-white/70 text-sm">
+                Images, videos, documents up to 16MB
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

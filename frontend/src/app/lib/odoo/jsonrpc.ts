@@ -209,7 +209,11 @@ export class OdooSessionClient {
   constructor(options: SessionClientOptions) {
     this.baseURL = options.baseURL;
     this.sessionCookie = `session_id=${options.sessionId};`;
-    this.userContext = options.userContext ?? {};
+    // Always include whatsapp_connector context for all frontend calls
+    this.userContext = {
+      whatsapp_connector: true,
+      ...(options.userContext ?? {}),
+    };
   }
 
   async readGroup<T>(

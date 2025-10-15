@@ -41,6 +41,7 @@ export type CurrentChatData = {
 export type CurrentChat = CurrentChatData & {
   loadCurrentChat: (chat: Partial<CurrentChatData>) => void;
   sendMessage: (content: string) => Promise<void>;
+  sendAttachment: (file: File, caption?: string) => Promise<void>;
   startReply: (message: Message) => void;
   cancelReply: () => void;
 };
@@ -820,6 +821,227 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
     [sessionId, currentChat, backendUserId, authBackendId, fetchMessages, updateThreadPreview, reportApiError, reportConnectionRestored]
   );
 
+  const sendAttachment = useCallback(
+    async (file: File, caption?: string) => {
+      if (!sessionId) {
+        throw new Error("You are not authenticated");
+      }
+      const activeChatId = currentChat.chatId;
+      if (!activeChatId) {
+        throw new Error("No conversation selected");
+      }
+      const numericThreadId = Number(activeChatId);
+      if (Number.isNaN(numericThreadId)) {
+        throw new Error("Invalid conversation identifier");
+      }
+
+      const fallbackPhone =
+        currentChat.phoneNumber ??
+        extractDigits(currentChat.threadName) ??
+        extractDigits(currentChat.contact?.displayName);
+
+      if (!fallbackPhone) {
+        throw new Error("Unable to determine the recipient phone number");
+      }
+
+      const backendId = currentChat.backendId ?? authBackendId ?? undefined;
+      if (!backendId) {
+        throw new Error("Unable to determine backend ID");
+      }
+
+      const optimisticId = `local-${Date.now()}`;
+      const timestamp = Math.floor(Date.now());
+
+      // Create optimistic attachment preview
+      const optimisticAttachment = {
+        id: 0,
+        name: file.name,
+        mimetype: file.type,
+        url: URL.createObjectURL(file),
+        file_size: file.size,
+      };
+
+      setCurrentChat((prev) => {
+        if (prev.chatId !== activeChatId) {
+          return prev;
+        }
+        return {
+          ...prev,
+          phoneNumber: prev.phoneNumber ?? fallbackPhone,
+          messages: [
+            ...prev.messages,
+            {
+              id: optimisticId,
+              contactId: activeChatId,
+              message: caption || "",
+              timestamp,
+              isSentFromUser: true,
+              sent: false,
+              delivered: false,
+              read: false,
+              userId: backendUserId ?? null,
+              whatsappId: null,
+              attachment: optimisticAttachment,
+            },
+          ],
+          isSending: true,
+        };
+      });
+
+      latestMessageTimestampRef.current =
+        latestMessageTimestampRef.current === null
+          ? timestamp
+          : Math.max(latestMessageTimestampRef.current, timestamp);
+
+      try {
+        // Step 1: Upload attachment to Odoo
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const uploadResponse = await fetch("/api/attachments/upload", {
+          method: "POST",
+          headers: {
+            "x-session-id": sessionId,
+          },
+          body: formData,
+        });
+
+        if (!uploadResponse.ok) {
+          const errorData = await uploadResponse.json().catch(() => ({}));
+          throw new Error(errorData.error || "Failed to upload attachment");
+        }
+
+        const uploadData = await uploadResponse.json();
+        const attachmentId = uploadData.attachmentId;
+
+        if (!attachmentId) {
+          throw new Error("No attachment ID returned from upload");
+        }
+
+        // Step 2: Send message with attachment using send_image_message
+        // Determine the method based on file type
+        const isImage = file.type.startsWith("image/");
+        const isVideo = file.type.startsWith("video/");
+        const isAudio = file.type.startsWith("audio/");
+        const method = isImage
+          ? "send_image_message"
+          : isVideo
+            ? "send_video_message"
+            : isAudio
+              ? "send_audio_message"
+              : "send_document_message";
+
+        const response = await fetch("/api/messages/send-attachment", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-session-id": sessionId,
+          },
+          body: JSON.stringify({
+            threadId: numericThreadId,
+            phoneNumber: fallbackPhone,
+            backendId,
+            attachmentId,
+            caption: caption || undefined,
+            method,
+          }),
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          const message =
+            typeof data?.error === "string"
+              ? data.error
+              : "Failed to send the attachment";
+          reportApiError({ status: response.status, message });
+          throw new Error(message);
+        }
+
+        const result = data?.result ?? {};
+        reportConnectionRestored();
+        const messageId =
+          typeof result?.message_id === "number"
+            ? result.message_id
+            : undefined;
+
+        // Clean up the optimistic object URL
+        setCurrentChat((prev) => {
+          const optimisticMessage = prev.messages.find(m => m.id === optimisticId);
+          if (optimisticMessage?.attachment?.url) {
+            URL.revokeObjectURL(optimisticMessage.attachment.url);
+          }
+          return prev;
+        });
+
+        // Always refetch messages to get the real attachment URL from backend
+        if (typeof messageId === "number") {
+          latestMessageIdRef.current =
+            latestMessageIdRef.current === null
+              ? messageId
+              : Math.max(latestMessageIdRef.current, messageId);
+
+          // Fetch messages to get the complete attachment data
+          await fetchMessages({ replace: true });
+        } else {
+          void fetchMessages({ replace: true }).catch(() => undefined);
+        }
+
+        setCurrentChat((prev) => {
+          if (prev.chatId !== activeChatId) {
+            return prev;
+          }
+          return {
+            ...prev,
+            isSending: false,
+          };
+        });
+
+        // Update thread preview with the caption or attachment indicator
+        const previewText = caption || `📎 ${file.name}`;
+        updateThreadPreview(activeChatId, previewText, timestamp);
+      } catch (error) {
+        const err = error as Error;
+        reportApiError(error);
+        setCurrentChat((prev) => {
+          if (prev.chatId !== activeChatId) {
+            return prev;
+          }
+          return {
+            ...prev,
+            messages: prev.messages.map((message) => {
+              if (message.id !== optimisticId) {
+                return message;
+              }
+              // Clean up object URL on error
+              if (message.attachment?.url) {
+                URL.revokeObjectURL(message.attachment.url);
+              }
+              return {
+                ...message,
+                sent: false,
+                delivered: false,
+                read: false,
+                error: err.message || "Failed to send the attachment",
+              };
+            }),
+            isSending: false,
+          };
+        });
+        throw err;
+      }
+    },
+    [
+      sessionId,
+      currentChat,
+      backendUserId,
+      authBackendId,
+      fetchMessages,
+      updateThreadPreview,
+      reportApiError,
+      reportConnectionRestored,
+    ]
+  );
+
   const startReply = useCallback((message: Message) => {
     if (!message.whatsappId) {
       return;
@@ -893,6 +1115,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
         ...currentChat,
         loadCurrentChat,
         sendMessage,
+        sendAttachment,
         startReply,
         cancelReply,
       }}

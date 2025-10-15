@@ -6,6 +6,8 @@ import Reaction from "../message/reaction";
 import ContactHeader from "./contact-header";
 import ChatMessage from "./chat-message";
 import MessageReactions from "./message-reactions";
+import AttachmentPicker from "../message/attachment-picker";
+import DragDropZone from "../message/drag-drop-zone";
 import { useTranslations } from "@/app/context/translation-provider";
 import { useContacts } from "@/app/hooks/use-contacts";
 import { XCircleIcon } from "@phosphor-icons/react";
@@ -16,6 +18,7 @@ export default function CurrentChat() {
     messages,
     isLoading,
     sendMessage,
+    sendAttachment,
     isSending,
     replyTo,
     cancelReply,
@@ -23,6 +26,7 @@ export default function CurrentChat() {
   } = useCurrentChat();
   const [messageText, setMessageText] = useState("");
   const [sendError, setSendError] = useState<string | null>(null);
+  const [droppedFile, setDroppedFile] = useState<File | null>(null);
   const { t } = useTranslations();
   const { contacts } = useContacts();
 
@@ -60,6 +64,28 @@ export default function CurrentChat() {
       const err = error as Error;
       setSendError(err.message || t("chatInput.sendError"));
     }
+  };
+
+  const handleAttachmentSelect = async (file: File, caption: string) => {
+    setSendError(null);
+    try {
+      await sendAttachment(file, caption);
+    } catch (error) {
+      const err = error as Error;
+      setSendError(err.message || "Failed to send attachment");
+    }
+  };
+
+  const handleFilesDrop = (files: File[]) => {
+    // For now, handle only the first file
+    // Could be extended to handle multiple files
+    if (files.length > 0 && !isSending) {
+      setDroppedFile(files[0]);
+    }
+  };
+
+  const handleDroppedFileProcessed = () => {
+    setDroppedFile(null);
   };
 
   const annotatedMessages = useMemo(() => {
@@ -120,14 +146,15 @@ export default function CurrentChat() {
   return (
     <section className="w-full h-full flex flex-col">
       <ContactHeader />
-      <div className="relative flex-1 min-h-0 w-full flex flex-col">
-        <div className="absolute inset-0 background-custom pointer-events-none"></div>
+      <DragDropZone onFilesDrop={handleFilesDrop} disabled={isSending || !chatId}>
+        <div className="relative flex-1 min-h-0 w-full flex flex-col">
+          <div className="absolute inset-0 background-custom pointer-events-none"></div>
 
-        <div
-          ref={scrollContainerRef}
-          className="relative flex-1 min-h-0 w-full overflow-y-auto"
-        >
-          <div className="min-h-full flex flex-col justify-end">
+          <div
+            ref={scrollContainerRef}
+            className="relative flex-1 min-h-0 w-full overflow-y-auto"
+          >
+            <div className="min-h-full flex flex-col justify-end">
             <div className="p-4 flex flex-col gap-2">
               {isLoading && <div className="text-white">{t("chat.loading")}</div>}
               {annotatedMessages.map((item) => {
@@ -223,6 +250,12 @@ export default function CurrentChat() {
           )}
           <form onSubmit={handleSubmit} className="bg-black rounded-full">
             <div className="bg-white/15 rounded-full flex items-center gap-2">
+              <AttachmentPicker
+                onAttachmentSelect={handleAttachmentSelect}
+                disabled={isSending}
+                externalFile={droppedFile}
+                onExternalFileProcessed={handleDroppedFileProcessed}
+              />
               <input
                 ref={inputRef}
                 className="flex-1 outline-none p-3 px-4 text-white placeholder-white/60 caret-green-400 text-sm bg-transparent"
@@ -249,7 +282,8 @@ export default function CurrentChat() {
             <p className="text-xs text-red-400 mt-2 px-2">{sendError}</p>
           )}
         </section>
-      </div>
+        </div>
+      </DragDropZone>
     </section>
   );
 }
