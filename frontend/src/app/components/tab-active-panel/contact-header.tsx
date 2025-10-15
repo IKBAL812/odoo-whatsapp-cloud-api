@@ -4,7 +4,6 @@ import { useProfile } from "@/app/hooks/use-profile";
 import Profile from "../profile";
 import {
   CaretDownIcon,
-  DotsThreeVerticalIcon,
   MagnifyingGlassIcon,
   UsersThreeIcon,
 } from "@phosphor-icons/react";
@@ -30,19 +29,7 @@ export default function ContactHeader() {
   };
 
   const renderChatOptions = () => {
-    return (
-      <section className="flex justify-end items-center gap-2">
-        <TooltipWrapper showTooltip={false}>
-          <CaretDownIcon className="text-white size-5" weight="bold" />
-        </TooltipWrapper>
-        <TooltipWrapper showTooltip={false}>
-          <MagnifyingGlassIcon className="text-white size-5" weight="bold" />
-        </TooltipWrapper>
-        <TooltipWrapper showTooltip={false}>
-          <DotsThreeVerticalIcon className="text-white size-5" weight="bold" />
-        </TooltipWrapper>
-      </section>
-    );
+    return null;
   };
 
   if (group) {

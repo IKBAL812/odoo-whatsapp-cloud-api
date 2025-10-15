@@ -1,5 +1,4 @@
-import { DotsThreeVerticalIcon, UsersThreeIcon } from "@phosphor-icons/react";
-import TooltipWrapper from "../tooltip-wrapper";
+import { UsersThreeIcon } from "@phosphor-icons/react";
 import { useChats } from "@/app/hooks/use-chats";
 import { Chat, Filters, Message } from "@/app/context/chats-provider";
 import Profile from "../profile";
@@ -160,13 +159,10 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
         <p className="text-white text-2xl font-semibold capitalize">
           {t(`navigation.${selectedTab}`)}
         </p>
-        <TooltipWrapper showTooltip={false}>
-          <DotsThreeVerticalIcon className="text-white size-6" weight="bold" />
-        </TooltipWrapper>
       </section>
       <section className="w-full flex flex-col gap-1">
         <div className="flex justify-start items-center text-white gap-2">
-          {Object.values(Filters).map((f: string) => (
+          {[Filters.ALL, Filters.UNREAD].map((f: string) => (
             <button
               key={f}
               className={`${
