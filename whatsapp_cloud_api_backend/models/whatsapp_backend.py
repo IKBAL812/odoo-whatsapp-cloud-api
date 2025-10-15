@@ -17,7 +17,6 @@ import secrets
 
 import requests
 from requests import RequestException
-from whatsapp import WhatsApp
 
 from odoo import _, fields, models
 from odoo.exceptions import UserError
@@ -61,15 +60,6 @@ class WhatsAppBackend(models.Model):
         string="Company",
         default=lambda self: self.env.company,
     )
-
-    def get_whatsapp_client(self):
-        self.ensure_one()
-
-        return WhatsApp(
-            self.api_token,
-            phone_number_id={self.name: self.phone_number_id},
-            version=self.api_version,
-        )
 
     # -------------------------------------------------------------------------
     # WhatsApp Cloud API helpers
