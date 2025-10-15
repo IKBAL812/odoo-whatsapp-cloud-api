@@ -27,6 +27,7 @@ type AuthContextValue = {
   isCheckingAuth: boolean;
   isAuthenticating: boolean;
   login: (username: string, password: string) => Promise<void>;
+  loginWithSessionId: (sessionId: string) => Promise<void>;
   logout: () => void;
 };
 
@@ -223,6 +224,82 @@ export default function AuthProvider({ children }: PropsWithChildren) {
     [persistSession, clearPersistedSession]
   );
 
+  const loginWithSessionId = useCallback(
+    async (providedSessionId: string) => {
+      setIsAuthenticating(true);
+      try {
+        const response = await fetch("/api/auth/validate-session", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ sessionId: providedSessionId }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          const message =
+            typeof data?.error === "string"
+              ? data.error
+              : "Invalid or expired session ID";
+          throw new Error(message);
+        }
+
+        const sessionUser = (data?.user ?? null) as OdooLoginResult | null;
+        const backendMeta = data?.backend as
+          | {
+              backend_id?: number;
+              user_id?: number;
+              users?: { id: number; name: string; image_url?: string | null }[];
+            }
+          | undefined;
+
+        setSessionId(providedSessionId);
+        setUser(sessionUser);
+        const backendUsersList: BackendUser[] = Array.isArray(
+          backendMeta?.users
+        )
+          ? backendMeta.users.map((user) => ({
+              id: user.id,
+              name: user.name,
+              imageUrl: user.image_url,
+            }))
+          : [];
+        const resolvedBackendId =
+          typeof backendMeta?.backend_id === "number"
+            ? backendMeta?.backend_id
+            : null;
+        const resolvedBackendUserId =
+          typeof backendMeta?.user_id === "number"
+            ? backendMeta?.user_id
+            : null;
+
+        setBackendId(resolvedBackendId);
+        setBackendUserId(resolvedBackendUserId);
+        setBackendUsers(backendUsersList);
+        persistSession(providedSessionId, sessionUser, {
+          backendId: resolvedBackendId,
+          backendUserId: resolvedBackendUserId,
+          backendUsers: backendUsersList,
+        });
+        setStatus("authenticated");
+      } catch (error) {
+        setSessionId(null);
+        setUser(null);
+        setBackendId(null);
+        setBackendUserId(null);
+        setBackendUsers([]);
+        clearPersistedSession();
+        setStatus("unauthenticated");
+        throw error;
+      } finally {
+        setIsAuthenticating(false);
+      }
+    },
+    [persistSession, clearPersistedSession]
+  );
+
   const logout = useCallback(() => {
     setSessionId(null);
     setUser(null);
@@ -251,6 +328,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
       isCheckingAuth: status === "checking",
       isAuthenticating,
       login,
+      loginWithSessionId,
       logout,
     }),
     [
@@ -262,6 +340,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
       status,
       isAuthenticating,
       login,
+      loginWithSessionId,
       logout,
     ]
   );

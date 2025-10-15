@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "WhatsApp Cloud API",
+  title: "Odoo WhatsApp Web",
   description: "WhatsApp Cloud API Web Interface",
 };
 

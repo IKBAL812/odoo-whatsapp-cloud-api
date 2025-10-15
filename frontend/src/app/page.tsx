@@ -60,7 +60,7 @@ function PageTitleUpdater() {
   const { totalUnreadCount } = useChats();
 
   useEffect(() => {
-    const baseTitle = "WhatsApp Cloud API";
+    const baseTitle = "Odoo WhatsApp Web";
     if (totalUnreadCount > 0) {
       document.title = `(${totalUnreadCount}) ${baseTitle}`;
     } else {

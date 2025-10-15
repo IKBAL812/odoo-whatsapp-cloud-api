@@ -4,13 +4,18 @@
     "selectChatPrompt": "Please select a chat to see messages"
   },
   "auth": {
-    "title": "WhatsApp Odoo Connector",
+    "title": "Odoo WhatsApp Web",
     "subtitle": "Sign in with your Odoo credentials to start messaging.",
     "username": "Username",
     "password": "Password",
     "submit": "Sign in",
     "submitting": "Signing in...",
-    "submitError": "Unable to sign in right now"
+    "submitError": "Unable to sign in right now",
+    "loginModeCredentials": "Username & Password",
+    "loginModeSessionId": "Session ID",
+    "sessionIdLabel": "Session ID",
+    "sessionIdPlaceholder": "Paste your session_id from Odoo cookies here...",
+    "sessionIdHelp": "Copy the <code>session_id</code> value from your Odoo browser cookies"
   },
   "chat": {
     "filters": {

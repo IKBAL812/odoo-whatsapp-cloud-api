@@ -4,13 +4,18 @@
     "selectChatPrompt": "Mesajları görmek için bir sohbet seçin"
   },
   "auth": {
-    "title": "WhatsApp Odoo Bağlayıcısı",
+    "title": "Odoo WhatsApp Web",
     "subtitle": "Mesajlaşmaya başlamak için Odoo bilgilerinizi kullanarak giriş yapın.",
     "username": "Kullanıcı adı",
     "password": "Şifre",
     "submit": "Giriş yap",
     "submitting": "Giriş yapılıyor...",
-    "submitError": "Şu anda giriş yapılamıyor"
+    "submitError": "Şu anda giriş yapılamıyor",
+    "loginModeCredentials": "Kullanıcı Adı & Şifre",
+    "loginModeSessionId": "Oturum ID",
+    "sessionIdLabel": "Oturum ID",
+    "sessionIdPlaceholder": "Odoo çerezlerinden session_id değerini buraya yapıştırın...",
+    "sessionIdHelp": "Odoo tarayıcı çerezlerinden <code>session_id</code> değerini kopyalayın"
   },
   "chat": {
     "filters": {
