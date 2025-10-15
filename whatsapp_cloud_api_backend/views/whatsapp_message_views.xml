@@ -32,6 +32,8 @@
                             <field name="thread_id" readonly="1" />
                             <field name="direction" />
                             <field name="status" />
+                            <field name="replied_message_id" readonly="1"/>
+                            <field name="timestamp" readonly="1"/>
                         </group>
                         <group>
                             <field name="message_type" />

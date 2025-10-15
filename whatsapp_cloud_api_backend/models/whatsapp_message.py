@@ -1,12 +1,12 @@
 # Copyright (C) 2025 Ahmet Yiğit Budak
 # License LGPL-3.0 or later (http://www.gnu.org/licenses/lgpl-3.0.html)
-from odoo import fields, models
+from odoo import api, fields, models
 
 
 class WhatsAppMessage(models.Model):
     _name = "whatsapp.message"
     _description = "WhatsApp Message"
-    _order = "create_date desc, id desc"
+    _order = "timestamp desc, id desc"
     _rec_name = "message_id"
 
     backend_id = fields.Many2one(
@@ -56,6 +56,7 @@ class WhatsAppMessage(models.Model):
             ("text", "Text"),
             ("media", "Media"),
             ("interactive", "Interactive"),
+            ("reaction", "Reaction"),
             ("template", "Template"),
             ("status", "Status"),
             ("unknown", "Unknown"),
@@ -97,6 +98,17 @@ class WhatsAppMessage(models.Model):
         store=True,
     )
 
+    replied_message_id = fields.Many2one(
+        comodel_name="whatsapp.message",
+        string="Replied Message",
+        help="Reference to the message this message is replying to, if any.",
+    )
+
+    timestamp = fields.Integer(
+        string="Timestamp",
+        required=True,
+    )
+
     _sql_constraints = [
         (
             "whatsapp_message_unique",
@@ -118,3 +130,28 @@ class WhatsAppMessage(models.Model):
                 name = f"{name} [{fields.Datetime.to_string(record.create_date)}]"
             result.append((record.id, name))
         return result
+
+    @api.model
+    def search_read(self, domain=None, fields=None, offset=0, limit=None, order=None):
+        res = super().search_read(
+            domain=domain, fields=fields, offset=offset, limit=limit, order=order
+        )
+        if "attachment_id" in (fields or []) and self.env.context.get(
+            "whatsapp_connector"
+        ):
+            base_url = self.env["ir.config_parameter"].sudo().get_param("web.base.url")
+            for record in res:
+                if record.get("attachment_id"):
+                    attachment_record = (
+                        self.env["ir.attachment"]
+                        .browse(record["attachment_id"][0])
+                        .sudo()
+                    )
+                    record["attachment"] = {
+                        "id": attachment_record.id,
+                        "name": attachment_record.name,
+                        "mimetype": attachment_record.mimetype,
+                        "url": f"{base_url}/whatsapp/attachment/{attachment_record.id}",
+                        "file_size": attachment_record.file_size,
+                    }
+        return res
