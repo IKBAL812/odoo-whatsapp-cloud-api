@@ -31,7 +31,9 @@
     "statusOnline": "online",
     "dayToday": "Today",
     "dayYesterday": "Yesterday",
-    "reply": "Reply"
+    "reply": "Reply",
+    "openInOdoo": "Odoo Page",
+    "openInOdooTitle": "Open partner in Odoo"
   },
   "chatInput": {
     "placeholder": "Type a message",

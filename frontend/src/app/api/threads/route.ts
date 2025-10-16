@@ -68,6 +68,7 @@ export async function GET(request: NextRequest) {
           "backend_id",
           "write_date",
           "unread_count",  // NEW: Request unread count from backend
+          "partner_id",    // Partner ID for opening in Odoo
         ],
         order: "write_date desc"
       }

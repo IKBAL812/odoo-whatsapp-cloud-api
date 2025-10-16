@@ -34,6 +34,7 @@ export type CurrentChatData = {
   threadName: string | null;
   phoneNumber: string | null;
   backendId: number | null;
+  partnerId: number | null;
   isSending: boolean;
   replyTo: Message | null;
 };
@@ -137,6 +138,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
     threadName: null,
     phoneNumber: null,
     backendId: null,
+    partnerId: null,
     isSending: false,
     replyTo: null,
   });
@@ -160,20 +162,11 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
 
   // SSE message handler for real-time message updates
   const handleMessagesUpdate = useCallback((messages: unknown[], threadId: string) => {
-    console.log("[SSE] Received message update:", messages.length, "messages for thread", threadId);
-
     if (threadId !== chatId) {
-      console.log("[SSE] Ignoring - not current chat. Current:", chatId, "Received:", threadId);
       return; // Ignore messages for other chats
     }
 
     const odooMessages = (messages as OdooMessageRecord[]).reverse(); // Backend returns newest first, reverse for chat display
-    console.log("[SSE] Processing messages:", odooMessages);
-    console.log("[SSE Reply Debug] Raw odooMessages with reply info:", odooMessages.map(m => ({
-      id: m.id,
-      replied_message_id: m.replied_message_id,
-      message_id: m.message_id
-    })));
     const rawMessages: MessageWithReplyReference[] = odooMessages.map((record) => {
       const timestamp = record.timestamp * 1000; // Convert seconds to milliseconds
       const direction = record.direction ?? "incoming";
@@ -217,17 +210,12 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
 
       const repliesById = new Map<string, NonNullable<Message["replyTo"]>>();
 
-      console.log("[SSE Reply Debug] Building reply metadata map");
-      console.log("[SSE Reply Debug] Existing messages count:", prev.messages.length);
-      console.log("[SSE Reply Debug] Raw messages count:", rawMessages.length);
-
       // Build reply metadata map from existing messages
       prev.messages.forEach((message) => {
         if (message.id) {
           const meta = toReplyMetadata(message);
           if (meta) {
             repliesById.set(message.id, meta);
-            console.log("[SSE Reply Debug] Added existing message to map:", message.id, "whatsappId:", message.whatsappId);
           }
         }
       });
@@ -241,12 +229,8 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
             contactId: rawMessage.contactId,
             senderIsUser: rawMessage.isSentFromUser,
           });
-          console.log("[SSE Reply Debug] Added raw message to map:", rawMessage.id, "whatsappId:", rawMessage.whatsappId);
         }
       });
-
-      console.log("[SSE Reply Debug] Total replies in map:", repliesById.size);
-      console.log("[SSE Reply Debug] Reply map keys:", Array.from(repliesById.keys()));
 
       const mappedMessages: Message[] = rawMessages.map((message) => {
         const { replyMessageId, ...rest } = message;
@@ -256,15 +240,11 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
           return baseMessage;
         }
 
-        console.log("[SSE Reply Debug] Trying to resolve reply for message:", message.id, "replyMessageId:", replyMessageId);
         const replyMetadata = repliesById.get(replyMessageId);
         if (!replyMetadata) {
-          console.log("[SSE Reply Debug] ❌ FAILED to find reply metadata for:", replyMessageId);
-          console.log("[SSE Reply Debug] Available keys:", Array.from(repliesById.keys()));
           return baseMessage;
         }
 
-        console.log("[SSE Reply Debug] ✅ Successfully resolved reply:", replyMessageId, "->", replyMetadata);
         return {
           ...baseMessage,
           replyTo: replyMetadata,
@@ -281,7 +261,6 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
       mappedMessages.forEach((newMessage, index) => {
         if (newMessage.id && existingMessagesMap.has(newMessage.id)) {
           // Update existing message (e.g., status changes)
-          console.log("[SSE] Updating existing message:", newMessage.id);
           updatedMessagesMap.set(newMessage.id, {
             ...existingMessagesMap.get(newMessage.id)!,
             ...newMessage,
@@ -291,7 +270,6 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
           } as Message);
         } else if (newMessage.id && !existingMessagesMap.has(newMessage.id)) {
           // Add new message - keep the replyMessageId from rawMessages for later resolution
-          console.log("[SSE] Adding NEW message:", newMessage.id, newMessage.message);
           const rawMessageWithReplyId = rawMessages[index];
           updatedMessagesMap.set(newMessage.id, {
             ...newMessage,
@@ -306,10 +284,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
         }
       });
 
-      console.log("[SSE] hasNewMessages:", hasNewMessages, "hasNewIncomingMessages:", hasNewIncomingMessages);
-
       if (!hasNewMessages) {
-        console.log("[SSE] No new messages, skipping state update");
         return prev;
       }
 
@@ -361,7 +336,6 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
 
       // If we received new incoming messages in the active chat, mark as read
       if (hasNewIncomingMessages) {
-        console.log("[SSE] New incoming message in active chat, marking as read");
         pendingMarkAsReadRef.current = threadId;
       }
 
@@ -380,7 +354,6 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
         reportApiError(error);
       },
       onReconnect: () => {
-        console.log("SSE Reconnected for messages");
         reportConnectionRestored();
       },
     },
@@ -405,8 +378,6 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
       const threadId = pendingMarkAsReadRef.current;
       pendingMarkAsReadRef.current = null;
 
-      console.log("[SSE] Marking thread as read:", threadId);
-
       // Update local state immediately
       markChatAsRead(threadId);
 
@@ -418,8 +389,8 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
           "x-session-id": sessionId,
         },
         body: JSON.stringify({ threadId }),
-      }).catch((err) => {
-        console.error("[SSE] Failed to mark thread as read:", err);
+      }).catch(() => {
+        // Failed to mark thread as read
       });
     }
   }, [currentChat.messages, sessionId, markChatAsRead]);
@@ -674,6 +645,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
         isSending: false,
         phoneNumber: null,
         backendId: null,
+        partnerId: null,
         replyTo: null,
       }));
       latestMessageTimestampRef.current = null;
@@ -715,6 +687,10 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
             typeof chat.backendId === "number"
               ? chat.backendId
               : prev.backendId,
+          partnerId:
+            typeof chat.partnerId === "number"
+              ? chat.partnerId
+              : prev.partnerId,
         }));
       } else {
         const groupContacts: CurrentChatContacts = {};
@@ -740,6 +716,10 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
             typeof chat.backendId === "number"
               ? chat.backendId
               : prev.backendId,
+          partnerId:
+            typeof chat.partnerId === "number"
+              ? chat.partnerId
+              : prev.partnerId,
         }));
       }
     }
@@ -1203,7 +1183,6 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     const activeChatId = currentChat.chatId;
     if (!activeChatId) {
-      console.log("[Message Notification] No active chat ID");
       return;
     }
 
@@ -1215,43 +1194,30 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
     );
     globalNotifiedMessagesRef.current = next;
 
-    console.log("[Message Notification] Checking messages:", {
-      totalMessages: currentChat.messages.length,
-      incomingCount: incoming.length,
-      isInitial: initialNotificationRef.current,
-    });
-
     if (initialNotificationRef.current) {
-      console.log("[Message Notification] Skipping initial load");
       initialNotificationRef.current = false;
       return;
     }
 
     if (incoming.length === 0) {
-      console.log("[Message Notification] No new incoming messages");
       return;
     }
-
-    console.log("[Message Notification] Processing", incoming.length, "new messages");
 
     // Note: Audio notification is now handled by chats-provider at thread level
     // This prevents double notifications and ensures notifications work for all threads
     // We only show browser notifications here for the active chat
 
     if (typeof window !== "undefined" && "Notification" in window) {
-      console.log("[Message Notification] Permission:", Notification.permission);
       if (Notification.permission === "granted") {
         incoming.forEach((message) => {
           const contact = contacts.find((c) => c.id === message.contactId);
           const title =
             contact?.displayName ?? currentChat.threadName ?? "New message";
-          console.log("[Message Notification] Showing notification:", title);
           new Notification(title, {
             body: message.message,
           });
         });
       } else if (Notification.permission === "default") {
-        console.log("[Message Notification] Requesting permission");
         Notification.requestPermission().catch(() => undefined);
       }
     }

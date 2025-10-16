@@ -31,7 +31,9 @@
     "statusOnline": "çevrimiçi",
     "dayToday": "Bugün",
     "dayYesterday": "Dün",
-    "reply": "Yanıtla"
+    "reply": "Yanıtla",
+    "openInOdoo": "Odoo Sayfası",
+    "openInOdooTitle": "Odoo'da partneri aç"
   },
   "chatInput": {
     "placeholder": "Mesaj yazın",

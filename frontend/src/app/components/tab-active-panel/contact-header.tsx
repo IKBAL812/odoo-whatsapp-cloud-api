@@ -5,19 +5,36 @@ import Profile from "../profile";
 import {
   UsersThreeIcon,
   ArrowLeftIcon,
+  ArrowSquareOut,
 } from "@phosphor-icons/react";
 import { useTranslations } from "@/app/context/translation-provider";
 import { useMobileNavigation } from "@/app/context/mobile-navigation-provider";
 import { useResponsive } from "@/app/hooks/use-responsive";
+import { useState, useEffect } from "react";
 
 export default function ContactHeader() {
   const {
     profile: { id },
   } = useProfile();
-  const { contact, group, threadName } = useCurrentChat();
+  const { contact, group, threadName, partnerId } = useCurrentChat();
   const { t } = useTranslations();
   const { showChatList } = useMobileNavigation();
   const { isMobile } = useResponsive();
+  const [odooBaseUrl, setOdooBaseUrl] = useState<string | null>(null);
+
+  // Fetch Odoo base URL
+  useEffect(() => {
+    fetch("/api/config")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.odooBaseUrl) {
+          setOdooBaseUrl(data.odooBaseUrl);
+        }
+      })
+      .catch(() => {
+        // Failed to fetch Odoo config
+      });
+  }, []);
 
   const renderContactStatus = () => {
     if (!contact) {
@@ -31,7 +48,25 @@ export default function ContactHeader() {
   };
 
   const renderChatOptions = () => {
-    return null;
+    // Only show the button if we have partnerId and odooBaseUrl
+    if (!partnerId || !odooBaseUrl) {
+      return null;
+    }
+
+    const partnerUrl = `${odooBaseUrl}/web#id=${partnerId}&model=res.partner&view_type=form`;
+
+    return (
+      <a
+        href={partnerUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors text-white text-sm font-medium"
+        title={t("chat.openInOdooTitle")}
+      >
+        <span>{t("chat.openInOdoo")}</span>
+        <ArrowSquareOut className="size-5" weight="bold" />
+      </a>
+    );
   };
 
   if (group) {

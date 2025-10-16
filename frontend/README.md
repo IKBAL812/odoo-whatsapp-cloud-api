@@ -1,36 +1,96 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Odoo WhatsApp Cloud API - Frontend
+
+A Next.js-based frontend for managing WhatsApp conversations integrated with Odoo.
+
+## About This Project
+
+This frontend was created through AI-assisted development (vibe coding) while the developer focused on the backend implementation. This is a collaborative effort between human expertise in Odoo backend development and AI tooling for the Next.js frontend.
+
+## Tech Stack
+
+- **Framework**: Next.js 15.3.2 (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **Icons**: Phosphor Icons
+- **Backend**: Odoo JSON-RPC
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js (v18 or higher)
+- Yarn package manager
+- Running Odoo backend with WhatsApp Cloud API module
+
+### Installation
 
 ```bash
-npm run dev
-# or
+# Install dependencies
+yarn install
+
+# Set up environment variables
+cp .env.example .env.local
+# Edit .env.local with your Odoo configuration
+
+# Run development server
 yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```env
+ODOO_JSONRPC_HOST=localhost
+ODOO_JSONRPC_PORT=8069
+ODOO_JSONRPC_PROTOCOL=http
+ODOO_JSONRPC_DATABASE=your_database
+```
 
-## Learn More
+## Available Scripts
 
-To learn more about Next.js, take a look at the following resources:
+- `yarn dev` - Start development server
+- `yarn build` - Build for production
+- `yarn start` - Start production server
+- `yarn lint` - Run ESLint
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Features
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Real-time message updates via Server-Sent Events (SSE)
+- Multi-language support (English/Turkish)
+- Responsive design (mobile and desktop)
+- Contact management
+- Message threading
+- File attachments support
+- Reply functionality
+- Desktop notifications
 
-## Deploy on Vercel
+## Project Structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```plaintext
+src/app/
+├── api/           # API routes (proxy to Odoo)
+├── components/    # React components
+├── context/       # Context providers
+├── hooks/         # Custom React hooks
+├── lib/           # Utilities and helpers
+└── locales/       # Translation files
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Development Notes
+
+For detailed development guidelines, coding standards, and best practices, see [CLAUDE.md](./CLAUDE.md).
+
+## Docker Deployment
+
+```bash
+docker compose up -d --build
+```
+
+## License
+
+This project is part of the Odoo WhatsApp Cloud API integration.
+
+---
+
+**Note**: This is an active learning project. Contributions and feedback are welcome!

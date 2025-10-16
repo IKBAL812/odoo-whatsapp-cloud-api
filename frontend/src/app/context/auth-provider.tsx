@@ -64,8 +64,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
       if (storedUser) {
         try {
           setUser(JSON.parse(storedUser));
-        } catch (error) {
-          console.warn("Failed to parse stored user session", error);
+        } catch {
           window.localStorage.removeItem(SESSION_USER_KEY);
         }
       }
@@ -85,8 +84,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
               : null
           );
           setBackendUsers(Array.isArray(parsed.backendUsers) ? parsed.backendUsers : []);
-        } catch (error) {
-          console.warn("Failed to parse stored backend meta", error);
+        } catch {
           window.localStorage.removeItem(SESSION_BACKEND_KEY);
         }
       }

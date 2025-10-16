@@ -63,6 +63,7 @@ export type Chat = {
   threadName?: string;
   phoneNumber?: string | null;
   backendId?: number | null;
+  partnerId?: number | null;  // Partner ID for opening in Odoo
   lastMessagePreview?: string;
   lastMessageAt?: number | null;
   unreadCount?: number;  // NEW: Unread message count from backend
@@ -113,10 +114,6 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
 
   // SSE callbacks for real-time thread updates
   const handleThreadsUpdate = useCallback((threads: unknown[]) => {
-    console.log('[SSE] Thread update received:', threads.length, 'threads');
-    console.log('[SSE] First thread data:', threads[0]);
-    console.log('[SSE] Current notification tracker:', Array.from(lastNotifiedUnreadCountRef.current.entries()));
-
     // Process new threads from SSE
     const odooThreads = threads as Array<{
       id: number;
@@ -125,6 +122,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
       last_message_preview: string | null;
       phone_number: string | null;
       backend_id: number | null;
+      partner_id?: [number, string] | number | null | false;
       write_date: string;
       unread_count?: number;  // NEW: Unread count from backend
     }>;
@@ -159,29 +157,28 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
             // Unread count increased - play notification!
             shouldPlayNotification = true;
             lastNotifiedUnreadCountRef.current.set(threadId, newUnreadCount);
-            console.log(`[Thread Notification] ✅ Thread ${threadId} unread increased: ${lastNotifiedCount} -> ${newUnreadCount}`);
           } else if (lastNotifiedCount === undefined) {
             // First time seeing this thread - set baseline without notifying
             lastNotifiedUnreadCountRef.current.set(threadId, newUnreadCount);
-            console.log(`[Thread Notification] 📊 Thread ${threadId} baseline set: ${newUnreadCount}`);
-          } else if (newUnreadCount === lastNotifiedCount) {
-            // Unread count unchanged - don't update baseline, don't notify
-            console.log(`[Thread Notification] ➖ Thread ${threadId} unchanged: ${newUnreadCount}`);
           } else if (newUnreadCount < lastNotifiedCount) {
             // Unread count decreased (user read messages) - update baseline
             lastNotifiedUnreadCountRef.current.set(threadId, newUnreadCount);
-            console.log(`[Thread Notification] 📉 Thread ${threadId} unread decreased: ${lastNotifiedCount} -> ${newUnreadCount}`);
           }
 
           const hasUnread = newUnreadCount > 0;
 
-          console.log(`Thread ${threadId}: prev unread=${prevUnreadCount}, new unread=${newUnreadCount}, lastNotified=${lastNotifiedCount}, hasUnread=${hasUnread}`);
+          const partnerId = Array.isArray(thread.partner_id) && thread.partner_id.length > 0
+            ? thread.partner_id[0]
+            : typeof thread.partner_id === "number"
+              ? thread.partner_id
+              : null;
 
           existingChatsMap.set(threadId, {
             ...existingChat,
             lastMessagePreview: thread.last_message_preview || existingChat.lastMessagePreview,
             lastMessageAt: newTimestamp,
             threadName: thread.name || existingChat.threadName,
+            partnerId: partnerId ?? existingChat.partnerId,
             unreadCount: newUnreadCount,  // Update unread count
             read: !hasUnread,  // Mark as read if no unread messages
           });
@@ -192,7 +189,12 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
 
           // For new chats, set baseline without notifying (they're new to the list)
           lastNotifiedUnreadCountRef.current.set(threadId, newUnreadCount);
-          console.log(`[Thread Notification] New thread ${threadId} baseline set: ${newUnreadCount}`);
+
+          const partnerId = Array.isArray(thread.partner_id) && thread.partner_id.length > 0
+            ? thread.partner_id[0]
+            : typeof thread.partner_id === "number"
+              ? thread.partner_id
+              : null;
 
           existingChatsMap.set(threadId, {
             id: threadId,
@@ -200,6 +202,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
             threadName: thread.name || undefined,
             phoneNumber: thread.phone_number || null,
             backendId: thread.backend_id || null,
+            partnerId,
             lastMessagePreview: thread.last_message_preview || "",
             lastMessageAt: newTimestamp,
             unreadCount: newUnreadCount,  // Set unread count
@@ -227,7 +230,6 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
         filteredList = updatedComplete.filter(chat => chat.group);
       }
 
-      console.log('Updating chats state with', updatedComplete.length, 'threads');
       return {
         ...prev,
         complete: updatedComplete,
@@ -238,28 +240,22 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
 
     // Play notification sound if any thread had a new message
     // This fixes Bug 2: notifications for messages from inactive threads
-    console.log('[SSE] shouldPlayNotification:', shouldPlayNotification, 'audioRef exists:', !!notificationAudioRef.current);
-
     if (shouldPlayNotification) {
       if (notificationAudioRef.current) {
-        console.log('[Thread Notification] ✅ PLAYING notification sound');
         notificationAudioRef.current.currentTime = 0;
-        notificationAudioRef.current.play().catch((err) => {
-          console.error("[Thread Notification] Audio play failed:", err);
+        notificationAudioRef.current.play().catch(() => {
+          // Failed to play notification sound
         });
       } else {
-        console.error('[Thread Notification] ❌ Should play but audio ref is null');
         // Try to initialize audio if it doesn't exist
         try {
           const audio = new Audio("/notification.mp3");
           audio.play().catch(() => undefined);
           notificationAudioRef.current = audio;
         } catch {
-          console.error('[Thread Notification] Failed to create audio element');
+          // Failed to create audio element
         }
       }
-    } else {
-      console.log('[Thread Notification] ℹ️ No notification needed');
     }
   }, [filter]);
 
@@ -271,11 +267,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
         reportApiError(error);
       },
       onReconnect: () => {
-        console.log("SSE Reconnected for threads");
         reportConnectionRestored();
-      },
-      onHeartbeat: (timestamp) => {
-        console.log("Thread SSE heartbeat:", timestamp);
       },
     },
     {
@@ -368,6 +360,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
     last_message_preview: string | null;
     phone_number?: string | null;
     backend_id?: [number, string] | number | null | false;
+    partner_id?: [number, string] | number | null | false;
     unread_count?: number;  // NEW: Unread count from backend
   };
 
@@ -384,6 +377,12 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
           : typeof thread.backend_id === "number"
             ? thread.backend_id
             : authBackendId ?? null;
+      const partnerId =
+        Array.isArray(thread.partner_id) && thread.partner_id.length > 0
+          ? thread.partner_id[0]
+          : typeof thread.partner_id === "number"
+            ? thread.partner_id
+            : null;
       const phoneNumber = thread.phone_number;
       const unreadCount = thread.unread_count || 0;
 
@@ -406,6 +405,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
         threadName: thread.name,
         phoneNumber,
         backendId,
+        partnerId,
         lastMessagePreview: preview,
         lastMessageAt: timestamp,
         unreadCount,  // Include unread count
