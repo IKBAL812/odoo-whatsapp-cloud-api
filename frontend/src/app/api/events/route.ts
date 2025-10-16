@@ -171,7 +171,7 @@ export async function GET(request: NextRequest) {
             consecutiveErrors++;
 
             // If connection refused or network error, stop checking to avoid spamming logs
-            const err = error as any;
+            const err = error as Error & { cause?: { code?: string } };
             if (err?.cause?.code === 'ECONNREFUSED' || err?.message?.includes('fetch failed')) {
               clearInterval(intervalId);
               controller.close();
@@ -226,7 +226,7 @@ export async function GET(request: NextRequest) {
               consecutiveErrors++;
 
               // If connection refused or network error, stop checking to avoid spamming logs
-              const err = error as any;
+              const err = error as Error & { cause?: { code?: string } };
               if (err?.cause?.code === 'ECONNREFUSED' || err?.message?.includes('fetch failed')) {
                 clearInterval(intervalId);
                 controller.close();

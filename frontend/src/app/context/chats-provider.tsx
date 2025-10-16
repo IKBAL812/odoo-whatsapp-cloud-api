@@ -261,7 +261,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
     } else {
       console.log('[Thread Notification] ℹ️ No notification needed');
     }
-  }, []);
+  }, [filter]);
 
   // Initialize SSE connection for threads
   const { isConnected: sseConnected } = useSSE(

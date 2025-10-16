@@ -7,7 +7,7 @@ type ConnectionStatus = "connected" | "disconnected" | "session-expired";
 type ConnectionContextType = {
   connectionStatus: ConnectionStatus;
   setConnectionStatus: (status: ConnectionStatus) => void;
-  reportApiError: (error: any) => void;
+  reportApiError: (error: unknown) => void;
   reportSessionExpiry: () => void;
   reportConnectionRestored: () => void;
 };
@@ -25,27 +25,30 @@ export const useConnection = () => {
 export default function ConnectionProvider({ children }: PropsWithChildren) {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("connected");
 
-  const reportApiError = useCallback((error: any) => {
+  const reportApiError = useCallback((error: unknown) => {
     // Check if it's a network error or connection refused
     if (error instanceof TypeError && error.message.includes("fetch")) {
       setConnectionStatus("disconnected");
       return;
     }
-    
+
+    // Type narrowing for error objects
+    const err = error as { status?: number; cause?: { code?: string }; message?: string };
+
     // Check for ECONNREFUSED specifically
-    if (error?.cause?.code === 'ECONNREFUSED') {
+    if (err?.cause?.code === 'ECONNREFUSED') {
       setConnectionStatus("disconnected");
       return;
     }
 
     // Check if it's a 401/403 error (session expired)
-    if (error?.status === 401 || error?.status === 403) {
+    if (err?.status === 401 || err?.status === 403) {
       setConnectionStatus("session-expired");
       return;
     }
 
     // Check if it's a server error that indicates connection issues
-    if (error?.status >= 500) {
+    if (err?.status && err.status >= 500) {
       setConnectionStatus("disconnected");
       return;
     }

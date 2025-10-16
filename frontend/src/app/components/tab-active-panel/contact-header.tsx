@@ -3,12 +3,9 @@ import { useCurrentChat } from "@/app/hooks/use-current-chat";
 import { useProfile } from "@/app/hooks/use-profile";
 import Profile from "../profile";
 import {
-  CaretDownIcon,
-  MagnifyingGlassIcon,
   UsersThreeIcon,
   ArrowLeftIcon,
 } from "@phosphor-icons/react";
-import TooltipWrapper from "../tooltip-wrapper";
 import { useTranslations } from "@/app/context/translation-provider";
 import { useMobileNavigation } from "@/app/context/mobile-navigation-provider";
 import { useResponsive } from "@/app/hooks/use-responsive";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, ChangeEvent, useEffect } from "react";
-import { Paperclip, X, Image as ImageIcon, File } from "@phosphor-icons/react";
+import { Paperclip, X, File } from "@phosphor-icons/react";
 
 type AttachmentPickerProps = {
   onAttachmentSelect: (file: File, caption: string) => void;
@@ -146,6 +146,7 @@ export default function AttachmentPicker({
 
               {previewUrl ? (
                 <div className="flex justify-center mb-4">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={previewUrl}
                     alt={selectedFile.name}

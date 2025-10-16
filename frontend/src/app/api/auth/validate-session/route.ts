@@ -88,7 +88,7 @@ export async function POST(request: Request) {
         {},
         false
       );
-    } catch (initError) {
+    } catch {
       // Failed to initialize WhatsApp backend - not critical
     }
 

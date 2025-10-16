@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, DragEvent, ReactNode } from "react";
+import { useState, useCallback, DragEvent, ReactNode, useRef } from "react";
 import { Upload } from "@phosphor-icons/react";
 
 type DragDropZoneProps = {
@@ -13,7 +13,7 @@ const MAX_FILE_SIZE = 16 * 1024 * 1024; // 16MB limit
 
 export default function DragDropZone({ onFilesDrop, children, disabled }: DragDropZoneProps) {
   const [isDragging, setIsDragging] = useState(false);
-  const [dragCounter, setDragCounter] = useState(0);
+  const dragCounterRef = useRef(0);
 
   const handleDragEnter = useCallback((e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -23,7 +23,7 @@ export default function DragDropZone({ onFilesDrop, children, disabled }: DragDr
 
     // Check if dragged items contain files
     if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
-      setDragCounter(prev => prev + 1);
+      dragCounterRef.current += 1;
       setIsDragging(true);
     }
   }, [disabled]);
@@ -34,13 +34,10 @@ export default function DragDropZone({ onFilesDrop, children, disabled }: DragDr
 
     if (disabled) return;
 
-    setDragCounter(prev => {
-      const newCounter = prev - 1;
-      if (newCounter === 0) {
-        setIsDragging(false);
-      }
-      return newCounter;
-    });
+    dragCounterRef.current -= 1;
+    if (dragCounterRef.current === 0) {
+      setIsDragging(false);
+    }
   }, [disabled]);
 
   const handleDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
@@ -62,7 +59,7 @@ export default function DragDropZone({ onFilesDrop, children, disabled }: DragDr
     if (disabled) return;
 
     setIsDragging(false);
-    setDragCounter(0);
+    dragCounterRef.current = 0;
 
     // Get files from drop
     const files = Array.from(e.dataTransfer.files);

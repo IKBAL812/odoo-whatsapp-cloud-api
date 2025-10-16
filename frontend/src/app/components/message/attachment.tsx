@@ -53,7 +53,7 @@ const formatFileSize = (bytes: number): string => {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 };
 
-export default function AttachmentDisplay({ attachment, messageId }: AttachmentDisplayProps) {
+export default function AttachmentDisplay({ attachment }: AttachmentDisplayProps) {
   const { sessionId } = useAuth();
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
@@ -133,6 +133,7 @@ export default function AttachmentDisplay({ attachment, messageId }: AttachmentD
               </button>
             </div>
           )}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={downloadUrl}
             alt={attachment.name}
@@ -160,6 +161,7 @@ export default function AttachmentDisplay({ attachment, messageId }: AttachmentD
             onClick={() => setIsLightboxOpen(false)}
           >
             <div className="relative w-full h-full flex items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={downloadUrl}
                 alt={attachment.name}
