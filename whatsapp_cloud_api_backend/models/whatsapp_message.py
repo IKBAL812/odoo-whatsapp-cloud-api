@@ -149,7 +149,10 @@ class WhatsAppMessage(models.Model):
             read_status = record.read_status_ids.filtered(
                 lambda r: r.user_id == self.env.user
             )
-            record.is_read_by_me = read_status.is_read if read_status else False
+            if read_status:
+                record.is_read_by_me = read_status.is_read
+            else:  #  if no read status found for the user, consider as read
+                record.is_read_by_me = True
 
     def mark_as_read_by_user(self, user):
         for record in self:

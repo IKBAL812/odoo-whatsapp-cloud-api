@@ -140,7 +140,7 @@ class WhatsAppCloudAPIWebhookController(http.Controller):
         msg_type = self._map_message_type(msg_type_raw)
         phone_number = message.get("from")
         contact = (value.get("contacts") or [{}])[0]
-        partner = self._match_partner(phone_number)
+        partner = self._find_or_create_partner(phone_number, contact)
         thread = self._find_or_create_thread(backend, phone_number, partner, contact)
         reply_message = self._find_reply_message(backend, message)
         existing = message_model.search(
@@ -253,13 +253,30 @@ class WhatsAppCloudAPIWebhookController(http.Controller):
             _logger.exception("Error downloading WhatsApp media %s: %s", media_id, e)
             return False
 
-    def _match_partner(self, phone_number):
+    # def _match_partner(self, phone_number):
+    #     if not phone_number:
+    #         return False
+    #     partner_env = request.env["res.partner"].sudo()
+    #     partner = partner_env.search(
+    #         [("phone_mobile_search", "ilike", phone_number)], limit=1
+    #     )
+    #     return partner
+
+    def _find_or_create_partner(self, phone_number, contact):
         if not phone_number:
             return False
         partner_env = request.env["res.partner"].sudo()
         partner = partner_env.search(
             [("phone_mobile_search", "ilike", phone_number)], limit=1
         )
+        if not partner:
+            name = (contact or {}).get("profile", {}).get("name") or phone_number
+            partner = partner_env.create(
+                {
+                    "name": name,
+                    "mobile": phone_number,
+                }
+            )
         return partner
 
     def _build_media_url(self, media_id):
