@@ -29,19 +29,17 @@ class WhatsAppBackend(models.Model):
     _description = "WhatsApp Cloud API Backend"
     # _inherit = ["mail.thread", "mail.activity.mixin"]
 
-    name = fields.Char(string="Name", required=True)
-    active = fields.Boolean(string="Active", default=True)
+    name = fields.Char(required=True)
+    active = fields.Boolean(default=True)
     api_token = fields.Char(string="API Token", required=True)
     phone_number_id = fields.Char(string="Phone Number ID", required=True)
     api_version = fields.Char(string="API Version", required=True, default="v23.0")
     webhook_secret = fields.Char(
-        string="Webhook Secret",
         required=True,
         default=lambda self: secrets.token_urlsafe(32),
     )
     language = fields.Many2one(
         comodel_name="res.lang",
-        string="Language",
     )
     user_ids = fields.Many2many(
         comodel_name="res.users",
@@ -141,20 +139,14 @@ class WhatsAppBackend(models.Model):
             raise UserError(_("Attachment has no file data."))
 
         # Prepare multipart form data
-        files = {
-            'file': (attachment.name, file_data, attachment.mimetype)
-        }
+        files = {"file": (attachment.name, file_data, attachment.mimetype)}
         data = {
-            'messaging_product': 'whatsapp',
+            "messaging_product": "whatsapp",
         }
 
         try:
             response = requests.post(
-                url,
-                headers=headers,
-                files=files,
-                data=data,
-                timeout=30
+                url, headers=headers, files=files, data=data, timeout=30
             )
         except RequestException as exc:
             _logger.exception("WhatsApp media upload failed")

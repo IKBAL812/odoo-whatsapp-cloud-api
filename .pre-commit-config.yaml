@@ -45,7 +45,8 @@ repos:
       # update the NOT INSTALLABLE ADDONS section above
       - id: oca-update-pre-commit-excluded-addons
       - id: oca-fix-manifest-website
-        args: ["https://github.com/altinkaya-opensource/odoo-addons"]
+        args:
+          ["https://github.com/altinkaya-opensource/odoo-whatsapp-cloud-api"]
 
   - repo: https://github.com/OCA/odoo-pre-commit-hooks
     rev: v0.1.1
@@ -65,6 +66,7 @@ repos:
           - --ignore-unknown
         types: [text]
         files: \.(css|htm|html|js|json|jsx|less|md|scss|toml|ts|xml|yaml|yml)$
+        exclude: ^frontend/
         language: node
         additional_dependencies:
           - "prettier@3.3.3"

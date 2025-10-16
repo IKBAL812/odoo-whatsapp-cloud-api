@@ -4,7 +4,7 @@
         <field name="name">whatsapp.backend.tree</field>
         <field name="model">whatsapp.backend</field>
         <field name="arch" type="xml">
-            <tree string="WhatsApp Backends">
+            <tree>
                 <field name="name" />
                 <field name="phone_number_id" />
                 <field name="api_version" />

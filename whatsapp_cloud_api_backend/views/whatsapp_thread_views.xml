@@ -4,7 +4,7 @@
         <field name="name">whatsapp.thread.tree</field>
         <field name="model">whatsapp.thread</field>
         <field name="arch" type="xml">
-            <tree string="WhatsApp Threads" default_order="last_message_date desc">
+            <tree default_order="last_message_date desc">
                 <field name="name" />
                 <field name="backend_id" />
                 <field name="partner_id" />
@@ -39,7 +39,7 @@
                     <notebook>
                         <page string="WhatsApp Messages">
                             <field name="whatsapp_message_ids" readonly="1">
-                                <tree string="Messages" default_order="create_date desc">
+                                <tree default_order="create_date desc">
                                     <field name="create_date" />
                                     <field name="direction" />
                                     <field name="status" />

@@ -125,7 +125,8 @@ class WhatsAppCloudAPIWebhookController(http.Controller):
                     and phone_number_id != backend.phone_number_id
                 ):
                     _logger.debug(
-                        "Webhook phone_number_id (%s) does not match backend (%s); skipping",
+                        "Webhook phone_number_id (%s) does not "
+                        "match backend (%s); skipping",
                         phone_number_id,
                         backend.phone_number_id,
                     )
@@ -284,7 +285,10 @@ class WhatsAppCloudAPIWebhookController(http.Controller):
 
         try:
             # Step 1: Get the media URL
-            media_url = f"https://graph.facebook.com/{backend.api_version or 'v20.0'}/{media_id}"
+            media_url = (
+                f"https://graph.facebook.com/{backend.api_version or 'v20.0'}"
+                f"/{media_id}"
+            )
             response = requests.get(media_url, headers=headers, timeout=30)
 
             if response.status_code != 200:

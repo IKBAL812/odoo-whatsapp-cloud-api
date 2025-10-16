@@ -33,7 +33,7 @@ class WhatsAppThread(models.Model):
         ondelete="set null",
         index=True,
     )
-    phone_number = fields.Char(string="Phone Number", required=True, index=True)
+    phone_number = fields.Char(required=True, index=True)
     whatsapp_message_ids = fields.One2many(
         comodel_name="whatsapp.message",
         inverse_name="thread_id",
@@ -44,10 +44,12 @@ class WhatsAppThread(models.Model):
         string="Last Message",
         readonly=True,
     )
-    last_message_date = fields.Datetime(
-        string="Last Message Date", readonly=True, index=True
+    last_message_date = fields.Datetime(readonly=True, index=True)
+    last_message_preview = fields.Text(readonly=True)
+
+    unread_count = fields.Integer(
+        compute="_compute_unread_count",
     )
-    last_message_preview = fields.Text(string="Last Message Preview", readonly=True)
 
     _sql_constraints = [
         (
@@ -56,11 +58,6 @@ class WhatsAppThread(models.Model):
             "A thread already exists for this backend and phone number.",
         )
     ]
-
-    unread_count = fields.Integer(
-        string="Unread Count",
-        compute="_compute_unread_count",
-    )
 
     def _compute_unread_count(self):
         """Compute unread count for each thread."""
