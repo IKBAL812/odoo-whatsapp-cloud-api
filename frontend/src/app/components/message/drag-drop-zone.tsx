@@ -11,85 +11,101 @@ type DragDropZoneProps = {
 
 const MAX_FILE_SIZE = 16 * 1024 * 1024; // 16MB limit
 
-export default function DragDropZone({ onFilesDrop, children, disabled }: DragDropZoneProps) {
+export default function DragDropZone({
+  onFilesDrop,
+  children,
+  disabled,
+}: DragDropZoneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const dragCounterRef = useRef(0);
 
-  const handleDragEnter = useCallback((e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleDragEnter = useCallback(
+    (e: DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
 
-    if (disabled) return;
+      if (disabled) return;
 
-    // Check if dragged items contain files
-    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
-      dragCounterRef.current += 1;
-      setIsDragging(true);
-    }
-  }, [disabled]);
+      // Check if dragged items contain files
+      if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+        dragCounterRef.current += 1;
+        setIsDragging(true);
+      }
+    },
+    [disabled]
+  );
 
-  const handleDragLeave = useCallback((e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleDragLeave = useCallback(
+    (e: DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
 
-    if (disabled) return;
+      if (disabled) return;
 
-    dragCounterRef.current -= 1;
-    if (dragCounterRef.current === 0) {
+      dragCounterRef.current -= 1;
+      if (dragCounterRef.current === 0) {
+        setIsDragging(false);
+      }
+    },
+    [disabled]
+  );
+
+  const handleDragOver = useCallback(
+    (e: DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (disabled) return;
+
+      // Show copy cursor
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = "copy";
+      }
+    },
+    [disabled]
+  );
+
+  const handleDrop = useCallback(
+    (e: DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (disabled) return;
+
       setIsDragging(false);
-    }
-  }, [disabled]);
+      dragCounterRef.current = 0;
 
-  const handleDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
+      // Get files from drop
+      const files = Array.from(e.dataTransfer.files);
 
-    if (disabled) return;
+      if (files.length === 0) {
+        return;
+      }
 
-    // Show copy cursor
-    if (e.dataTransfer) {
-      e.dataTransfer.dropEffect = "copy";
-    }
-  }, [disabled]);
+      // Filter valid files (media files only, within size limit)
+      const validFiles = files.filter((file) => {
+        const isValidType =
+          file.type.startsWith("image/") ||
+          file.type.startsWith("video/") ||
+          file.type.startsWith("audio/") ||
+          file.type === "application/pdf" ||
+          file.type.includes("document") ||
+          file.type.includes("word") ||
+          file.type.includes("sheet") ||
+          file.type.includes("presentation") ||
+          file.type === "text/plain";
 
-  const handleDrop = useCallback((e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
+        const isValidSize = file.size <= MAX_FILE_SIZE;
 
-    if (disabled) return;
+        return isValidType && isValidSize;
+      });
 
-    setIsDragging(false);
-    dragCounterRef.current = 0;
-
-    // Get files from drop
-    const files = Array.from(e.dataTransfer.files);
-
-    if (files.length === 0) {
-      return;
-    }
-
-    // Filter valid files (media files only, within size limit)
-    const validFiles = files.filter(file => {
-      const isValidType =
-        file.type.startsWith('image/') ||
-        file.type.startsWith('video/') ||
-        file.type.startsWith('audio/') ||
-        file.type === 'application/pdf' ||
-        file.type.includes('document') ||
-        file.type.includes('word') ||
-        file.type.includes('sheet') ||
-        file.type.includes('presentation') ||
-        file.type === 'text/plain';
-
-      const isValidSize = file.size <= MAX_FILE_SIZE;
-
-      return isValidType && isValidSize;
-    });
-
-    if (validFiles.length > 0) {
-      onFilesDrop(validFiles);
-    }
-  }, [disabled, onFilesDrop]);
+      if (validFiles.length > 0) {
+        onFilesDrop(validFiles);
+      }
+    },
+    [disabled, onFilesDrop]
+  );
 
   return (
     <div

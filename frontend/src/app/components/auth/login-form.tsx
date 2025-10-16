@@ -6,7 +6,9 @@ import { useTranslations } from "@/app/context/translation-provider";
 
 export default function LoginForm() {
   const { login, loginWithSessionId, isAuthenticating } = useAuth();
-  const [loginMode, setLoginMode] = useState<"credentials" | "sessionId">("credentials");
+  const [loginMode, setLoginMode] = useState<"credentials" | "sessionId">(
+    "credentials"
+  );
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [sessionId, setSessionId] = useState("");
@@ -30,9 +32,12 @@ export default function LoginForm() {
     }
   };
 
-  const isSubmitDisabled = loginMode === "sessionId"
-    ? sessionId.trim().length === 0 || isAuthenticating
-    : username.trim().length === 0 || password.length === 0 || isAuthenticating;
+  const isSubmitDisabled =
+    loginMode === "sessionId"
+      ? sessionId.trim().length === 0 || isAuthenticating
+      : username.trim().length === 0 ||
+        password.length === 0 ||
+        isAuthenticating;
 
   return (
     <form
@@ -69,7 +74,10 @@ export default function LoginForm() {
       {loginMode === "credentials" ? (
         <>
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-white/70" htmlFor="username">
+            <label
+              className="text-sm font-medium text-white/70"
+              htmlFor="username"
+            >
               {t("auth.username")}
             </label>
             <input
@@ -84,7 +92,10 @@ export default function LoginForm() {
             />
           </div>
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-white/70" htmlFor="password">
+            <label
+              className="text-sm font-medium text-white/70"
+              htmlFor="password"
+            >
               {t("auth.password")}
             </label>
             <input
@@ -101,7 +112,10 @@ export default function LoginForm() {
         </>
       ) : (
         <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium text-white/70" htmlFor="sessionId">
+          <label
+            className="text-sm font-medium text-white/70"
+            htmlFor="sessionId"
+          >
             {t("auth.sessionIdLabel")}
           </label>
           <textarea
@@ -114,16 +128,20 @@ export default function LoginForm() {
             placeholder={t("auth.sessionIdPlaceholder")}
           />
           <p className="text-xs text-white/50">
-            {t("auth.sessionIdHelp").split("<code>").map((part, i) => {
-              if (i === 0) return part;
-              const [codeContent, ...rest] = part.split("</code>");
-              return (
-                <span key={i}>
-                  <code className="bg-white/10 px-1 py-0.5 rounded">{codeContent}</code>
-                  {rest.join("</code>")}
-                </span>
-              );
-            })}
+            {t("auth.sessionIdHelp")
+              .split("<code>")
+              .map((part, i) => {
+                if (i === 0) return part;
+                const [codeContent, ...rest] = part.split("</code>");
+                return (
+                  <span key={i}>
+                    <code className="bg-white/10 px-1 py-0.5 rounded">
+                      {codeContent}
+                    </code>
+                    {rest.join("</code>")}
+                  </span>
+                );
+              })}
           </p>
         </div>
       )}

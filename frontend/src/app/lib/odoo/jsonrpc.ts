@@ -127,10 +127,7 @@ export class OdooClient {
       },
     };
 
-    const response = await this.post(
-      "/web/session/authenticate",
-      payload
-    );
+    const response = await this.post("/web/session/authenticate", payload);
 
     if (!response.ok) {
       throw new Error(
@@ -160,8 +157,7 @@ export class OdooClient {
     const sessionClient = new OdooSessionClient({
       baseURL: this.baseURL,
       sessionId,
-      userContext: (loginResult.user_context ??
-        {}) as Record<string, unknown>,
+      userContext: (loginResult.user_context ?? {}) as Record<string, unknown>,
     });
 
     return {
@@ -172,10 +168,7 @@ export class OdooClient {
     };
   }
 
-  createSession(
-    sessionId: string,
-    userContext: Record<string, unknown> = {}
-  ) {
+  createSession(sessionId: string, userContext: Record<string, unknown> = {}) {
     return new OdooSessionClient({
       baseURL: this.baseURL,
       sessionId,
@@ -275,11 +268,7 @@ export class OdooSessionClient {
     return this.request<number[]>(body);
   }
 
-  async read<T>(
-    model: string,
-    args: unknown[],
-    params: RequestOptions = {}
-  ) {
+  async read<T>(model: string, args: unknown[], params: RequestOptions = {}) {
     const reqArgs = [args];
     if (params.select) {
       reqArgs.push(params.select);

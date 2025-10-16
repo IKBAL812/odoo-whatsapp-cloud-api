@@ -147,7 +147,10 @@ export default function CurrentChat() {
   return (
     <section className="w-full h-full flex flex-col">
       <ContactHeader />
-      <DragDropZone onFilesDrop={handleFilesDrop} disabled={isSending || !chatId}>
+      <DragDropZone
+        onFilesDrop={handleFilesDrop}
+        disabled={isSending || !chatId}
+      >
         <div className="relative flex-1 min-h-0 w-full flex flex-col">
           <div className="absolute inset-0 background-custom pointer-events-none"></div>
 
@@ -156,133 +159,135 @@ export default function CurrentChat() {
             className="relative flex-1 min-h-0 w-full overflow-y-auto"
           >
             <div className="min-h-full flex flex-col justify-end">
-            <div className="p-4 md:p-4 px-3 md:px-4 flex flex-col gap-2">
-              {isLoading && <div className="text-white">{t("chat.loading")}</div>}
-              {annotatedMessages.map((item) => {
-                if (item.type === "label") {
+              <div className="p-4 md:p-4 px-3 md:px-4 flex flex-col gap-2">
+                {isLoading && (
+                  <div className="text-white">{t("chat.loading")}</div>
+                )}
+                {annotatedMessages.map((item) => {
+                  if (item.type === "label") {
+                    return (
+                      <div
+                        key={`label-${item.key}`}
+                        className="w-full flex justify-center items-center"
+                      >
+                        <div className="rounded-full overflow-hidden bg-black z-20 w-fit">
+                          <p className="bg-white/20 text-white/55 h-full w-full text-xs p-1 px-2">
+                            {formatDayLabel(item.day)}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  const { message, index } = item;
+
                   return (
                     <div
-                      key={`label-${item.key}`}
-                      className="w-full flex justify-center items-center"
+                      className={`w-full flex items-center ${
+                        message.isSentFromUser ? "justify-end" : "justify-start"
+                      }`}
+                      key={message.id ?? `message-${index}`}
                     >
-                      <div className="rounded-full overflow-hidden bg-black z-20 w-fit">
-                        <p className="bg-white/20 text-white/55 h-full w-full text-xs p-1 px-2">
-                          {formatDayLabel(item.day)}
-                        </p>
+                      <div
+                        className={`flex justify-between gap-2 items-center ${getMessageSpacing(
+                          index,
+                          message.reactions?.length
+                        )} relative`}
+                      >
+                        {message.isSentFromUser && (
+                          <Reaction
+                            isSentFromUser={true}
+                            onReply={
+                              message.whatsappId
+                                ? () => startReply(message)
+                                : undefined
+                            }
+                          />
+                        )}
+                        <ChatMessage message={message} />
+                        {!message.isSentFromUser && (
+                          <Reaction
+                            isSentFromUser={false}
+                            onReply={
+                              message.whatsappId
+                                ? () => startReply(message)
+                                : undefined
+                            }
+                          />
+                        )}
+                        {message.reactions?.length && (
+                          <MessageReactions
+                            reactions={message.reactions}
+                            isSentFromUser={message.isSentFromUser}
+                          />
+                        )}
                       </div>
                     </div>
                   );
-                }
-
-                const { message, index } = item;
-
-                return (
-                  <div
-                    className={`w-full flex items-center ${
-                      message.isSentFromUser ? "justify-end" : "justify-start"
-                    }`}
-                    key={message.id ?? `message-${index}`}
-                  >
-                    <div
-                      className={`flex justify-between gap-2 items-center ${getMessageSpacing(
-                        index,
-                        message.reactions?.length
-                      )} relative`}
-                    >
-                {message.isSentFromUser && (
-                  <Reaction
-                    isSentFromUser={true}
-                    onReply={
-                      message.whatsappId
-                        ? () => startReply(message)
-                        : undefined
-                    }
-                  />
-                )}
-                <ChatMessage message={message} />
-                {!message.isSentFromUser && (
-                  <Reaction
-                    isSentFromUser={false}
-                    onReply={
-                      message.whatsappId
-                        ? () => startReply(message)
-                        : undefined
-                    }
-                  />
-                )}
-                      {message.reactions?.length && (
-                        <MessageReactions
-                          reactions={message.reactions}
-                          isSentFromUser={message.isSentFromUser}
-                        />
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+                })}
+              </div>
             </div>
           </div>
-        </div>
 
-        <section className="w-full z-50 p-4">
-          {replyTo && (
-            <div className="bg-white/5 border-l-2 border-emerald-500 px-3 py-2 rounded-lg mb-2 flex justify-between items-start gap-3">
-              <div className="flex flex-col">
-                <p className="text-xs text-emerald-200 font-semibold">
-                  {t("chatInput.replyingTo", {
-                    name: replyTo.isSentFromUser
-                      ? t("common.you")
-                      : contacts.find((c) => c.id === replyTo.contactId)
-                          ?.displayName ?? "",
-                  })}
-                </p>
-                <p className="text-xs text-white/70 max-w-xs truncate">
-                  {replyTo.message}
-                </p>
+          <section className="w-full z-50 p-4">
+            {replyTo && (
+              <div className="bg-white/5 border-l-2 border-emerald-500 px-3 py-2 rounded-lg mb-2 flex justify-between items-start gap-3">
+                <div className="flex flex-col">
+                  <p className="text-xs text-emerald-200 font-semibold">
+                    {t("chatInput.replyingTo", {
+                      name: replyTo.isSentFromUser
+                        ? t("common.you")
+                        : (contacts.find((c) => c.id === replyTo.contactId)
+                            ?.displayName ?? ""),
+                    })}
+                  </p>
+                  <p className="text-xs text-white/70 max-w-xs truncate">
+                    {replyTo.message}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="text-white/60 hover:text-white p-2 active:bg-white/10 rounded-lg transition-colors"
+                  onClick={cancelReply}
+                >
+                  <XCircleIcon className="size-5 md:size-4" weight="bold" />
+                </button>
               </div>
-              <button
-                type="button"
-                className="text-white/60 hover:text-white p-2 active:bg-white/10 rounded-lg transition-colors"
-                onClick={cancelReply}
-              >
-                <XCircleIcon className="size-5 md:size-4" weight="bold" />
-              </button>
-            </div>
-          )}
-          <form onSubmit={handleSubmit} className="bg-black rounded-full">
-            <div className="bg-white/15 rounded-full flex items-center gap-2">
-              <AttachmentPicker
-                onAttachmentSelect={handleAttachmentSelect}
-                disabled={isSending}
-                externalFile={droppedFile}
-                onExternalFileProcessed={handleDroppedFileProcessed}
-              />
-              <input
-                ref={inputRef}
-                className="flex-1 outline-none p-3 px-4 md:p-3 text-white placeholder-white/60 caret-green-400 text-sm md:text-sm bg-transparent"
-                placeholder={t("chatInput.placeholder")}
-                value={messageText}
-                onChange={(event) => {
-                  if (sendError) {
-                    setSendError(null);
-                  }
-                  setMessageText(event.target.value);
-                }}
-                disabled={isSending}
-              />
-              <button
-                type="submit"
-                disabled={isSending || messageText.trim().length === 0}
-                className="text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed transition rounded-full px-5 py-2.5 md:px-4 md:py-2 mr-2"
-              >
-                {isSending ? t("chatInput.sending") : t("chatInput.send")}
-              </button>
-            </div>
-          </form>
-          {sendError && (
-            <p className="text-xs text-red-400 mt-2 px-2">{sendError}</p>
-          )}
-        </section>
+            )}
+            <form onSubmit={handleSubmit} className="bg-black rounded-full">
+              <div className="bg-white/15 rounded-full flex items-center gap-2">
+                <AttachmentPicker
+                  onAttachmentSelect={handleAttachmentSelect}
+                  disabled={isSending}
+                  externalFile={droppedFile}
+                  onExternalFileProcessed={handleDroppedFileProcessed}
+                />
+                <input
+                  ref={inputRef}
+                  className="flex-1 outline-none p-3 px-4 md:p-3 text-white placeholder-white/60 caret-green-400 text-sm md:text-sm bg-transparent"
+                  placeholder={t("chatInput.placeholder")}
+                  value={messageText}
+                  onChange={(event) => {
+                    if (sendError) {
+                      setSendError(null);
+                    }
+                    setMessageText(event.target.value);
+                  }}
+                  disabled={isSending}
+                />
+                <button
+                  type="submit"
+                  disabled={isSending || messageText.trim().length === 0}
+                  className="text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed transition rounded-full px-5 py-2.5 md:px-4 md:py-2 mr-2"
+                >
+                  {isSending ? t("chatInput.sending") : t("chatInput.send")}
+                </button>
+              </div>
+            </form>
+            {sendError && (
+              <p className="text-xs text-red-400 mt-2 px-2">{sendError}</p>
+            )}
+          </section>
         </div>
       </DragDropZone>
     </section>

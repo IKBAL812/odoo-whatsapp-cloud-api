@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { OdooClient } from "@/app/lib/odoo/jsonrpc";
 
-const REQUIRED_ENV_VARS = ["ODOO_JSONRPC_HOST", "ODOO_JSONRPC_DATABASE"] as const;
+const REQUIRED_ENV_VARS = [
+  "ODOO_JSONRPC_HOST",
+  "ODOO_JSONRPC_DATABASE",
+] as const;
 
 const ensureEnv = () => {
   const missing = REQUIRED_ENV_VARS.filter((name) => !process.env[name]);

@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { OdooClient } from "@/app/lib/odoo/jsonrpc";
 
-const REQUIRED_ENV_VARS = ["ODOO_JSONRPC_HOST", "ODOO_JSONRPC_DATABASE"] as const;
+const REQUIRED_ENV_VARS = [
+  "ODOO_JSONRPC_HOST",
+  "ODOO_JSONRPC_DATABASE",
+] as const;
 
 const ensureEnv = () => {
   const missing = REQUIRED_ENV_VARS.filter((name) => !process.env[name]);
@@ -58,10 +61,7 @@ export async function POST(request: NextRequest) {
     const { threadId } = await request.json();
 
     if (!threadId) {
-      return NextResponse.json(
-        { error: "Missing threadId" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Missing threadId" }, { status: 400 });
     }
 
     // Call mark_as_read on the thread record (instance method)
@@ -69,8 +69,8 @@ export async function POST(request: NextRequest) {
       "whatsapp.thread",
       "mark_as_read",
       [Number(threadId)],
-      {},  // kwargs required
-      false  // Don't wrap args - pass record ID directly
+      {}, // kwargs required
+      false // Don't wrap args - pass record ID directly
     );
 
     return NextResponse.json({ success: true, result });

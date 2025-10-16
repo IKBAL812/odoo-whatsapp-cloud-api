@@ -22,7 +22,7 @@ export type ReactionType = {
   count: number;
 };
 
-export type AttachmentType = 'image' | 'video' | 'audio' | 'document';
+export type AttachmentType = "image" | "video" | "audio" | "document";
 
 export type Attachment = {
   id: number;
@@ -63,10 +63,10 @@ export type Chat = {
   threadName?: string;
   phoneNumber?: string | null;
   backendId?: number | null;
-  partnerId?: number | null;  // Partner ID for opening in Odoo
+  partnerId?: number | null; // Partner ID for opening in Odoo
   lastMessagePreview?: string;
   lastMessageAt?: number | null;
-  unreadCount?: number;  // NEW: Unread message count from backend
+  unreadCount?: number; // NEW: Unread message count from backend
   read: boolean;
   group: boolean;
   favorite: boolean;
@@ -85,7 +85,11 @@ export const ChatsContext = createContext<
       filter: string;
       updateFilter: (filter: string) => void;
       chats: Chats;
-      updateThreadPreview: (chatId: string, preview: string, timestamp: number) => void;
+      updateThreadPreview: (
+        chatId: string,
+        preview: string,
+        timestamp: number
+      ) => void;
       markChatAsRead: (chatId: string) => void;
       totalUnreadCount: number;
     }
@@ -113,151 +117,165 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
   }, []);
 
   // SSE callbacks for real-time thread updates
-  const handleThreadsUpdate = useCallback((threads: unknown[]) => {
-    // Process new threads from SSE
-    const odooThreads = threads as Array<{
-      id: number;
-      name: string;
-      last_message_date: string | null;
-      last_message_preview: string | null;
-      phone_number: string | null;
-      backend_id: number | null;
-      partner_id?: [number, string] | number | null | false;
-      write_date: string;
-      unread_count?: number;  // NEW: Unread count from backend
-    }>;
+  const handleThreadsUpdate = useCallback(
+    (threads: unknown[]) => {
+      // Process new threads from SSE
+      const odooThreads = threads as Array<{
+        id: number;
+        name: string;
+        last_message_date: string | null;
+        last_message_preview: string | null;
+        phone_number: string | null;
+        backend_id: number | null;
+        partner_id?: [number, string] | number | null | false;
+        write_date: string;
+        unread_count?: number; // NEW: Unread count from backend
+      }>;
 
-    // Track if any thread has a genuinely new message for notifications
-    // Use ref to check outside of setChats to avoid stale closure
-    let shouldPlayNotification = false;
+      // Track if any thread has a genuinely new message for notifications
+      // Use ref to check outside of setChats to avoid stale closure
+      let shouldPlayNotification = false;
 
-    setChats((prev) => {
-      // Create a map of existing chats for efficient lookup
-      const existingChatsMap = new Map(prev.complete.map(chat => [chat.id, chat]));
+      setChats((prev) => {
+        // Create a map of existing chats for efficient lookup
+        const existingChatsMap = new Map(
+          prev.complete.map((chat) => [chat.id, chat])
+        );
 
-      // Process updates from SSE
-      odooThreads.forEach((thread) => {
-        const threadId = thread.id.toString();
-        const existingChat = existingChatsMap.get(threadId);
+        // Process updates from SSE
+        odooThreads.forEach((thread) => {
+          const threadId = thread.id.toString();
+          const existingChat = existingChatsMap.get(threadId);
 
-        if (existingChat) {
-          // Update existing chat, preserving important data like messages
-          const newTimestamp = thread.last_message_date
-            ? new Date(thread.last_message_date).getTime()
-            : existingChat.lastMessageAt;
+          if (existingChat) {
+            // Update existing chat, preserving important data like messages
+            const newTimestamp = thread.last_message_date
+              ? new Date(thread.last_message_date).getTime()
+              : existingChat.lastMessageAt;
 
-          const newUnreadCount = thread.unread_count ?? 0;
-          const prevUnreadCount = existingChat.unreadCount ?? 0;
-          const lastNotifiedCount = lastNotifiedUnreadCountRef.current.get(threadId);
+            const newUnreadCount = thread.unread_count ?? 0;
+            const lastNotifiedCount =
+              lastNotifiedUnreadCountRef.current.get(threadId);
 
-          // Check if we should play notification for this thread
-          // Play if: unread count INCREASED compared to last notified count
-          // This handles ONLY incoming messages (outgoing messages don't increase unread count)
-          if (lastNotifiedCount !== undefined && newUnreadCount > lastNotifiedCount) {
-            // Unread count increased - play notification!
-            shouldPlayNotification = true;
+            // Check if we should play notification for this thread
+            // Play if: unread count INCREASED compared to last notified count
+            // This handles ONLY incoming messages (outgoing messages don't increase unread count)
+            if (
+              lastNotifiedCount !== undefined &&
+              newUnreadCount > lastNotifiedCount
+            ) {
+              // Unread count increased - play notification!
+              shouldPlayNotification = true;
+              lastNotifiedUnreadCountRef.current.set(threadId, newUnreadCount);
+            } else if (lastNotifiedCount === undefined) {
+              // First time seeing this thread - set baseline without notifying
+              lastNotifiedUnreadCountRef.current.set(threadId, newUnreadCount);
+            } else if (newUnreadCount < lastNotifiedCount) {
+              // Unread count decreased (user read messages) - update baseline
+              lastNotifiedUnreadCountRef.current.set(threadId, newUnreadCount);
+            }
+
+            const hasUnread = newUnreadCount > 0;
+
+            const partnerId =
+              Array.isArray(thread.partner_id) && thread.partner_id.length > 0
+                ? thread.partner_id[0]
+                : typeof thread.partner_id === "number"
+                  ? thread.partner_id
+                  : null;
+
+            existingChatsMap.set(threadId, {
+              ...existingChat,
+              lastMessagePreview:
+                thread.last_message_preview || existingChat.lastMessagePreview,
+              lastMessageAt: newTimestamp,
+              threadName: thread.name || existingChat.threadName,
+              partnerId: partnerId ?? existingChat.partnerId,
+              unreadCount: newUnreadCount, // Update unread count
+              read: !hasUnread, // Mark as read if no unread messages
+            });
+          } else {
+            // Add new chat
+            const newTimestamp = thread.last_message_date
+              ? new Date(thread.last_message_date).getTime()
+              : Date.now();
+            const newUnreadCount = thread.unread_count ?? 0;
+
+            // For new chats, set baseline without notifying (they're new to the list)
             lastNotifiedUnreadCountRef.current.set(threadId, newUnreadCount);
-          } else if (lastNotifiedCount === undefined) {
-            // First time seeing this thread - set baseline without notifying
-            lastNotifiedUnreadCountRef.current.set(threadId, newUnreadCount);
-          } else if (newUnreadCount < lastNotifiedCount) {
-            // Unread count decreased (user read messages) - update baseline
-            lastNotifiedUnreadCountRef.current.set(threadId, newUnreadCount);
+
+            const partnerId =
+              Array.isArray(thread.partner_id) && thread.partner_id.length > 0
+                ? thread.partner_id[0]
+                : typeof thread.partner_id === "number"
+                  ? thread.partner_id
+                  : null;
+
+            existingChatsMap.set(threadId, {
+              id: threadId,
+              contactId: thread.phone_number || "",
+              threadName: thread.name || undefined,
+              phoneNumber: thread.phone_number || null,
+              backendId: thread.backend_id || null,
+              partnerId,
+              lastMessagePreview: thread.last_message_preview || "",
+              lastMessageAt: newTimestamp,
+              unreadCount: newUnreadCount, // Set unread count
+              groupName: undefined,
+              groupAvatar: undefined,
+              read: newUnreadCount === 0, // Mark as read if no unread messages
+              favorite: false,
+              group: false,
+              messages: [],
+            });
           }
+        });
 
-          const hasUnread = newUnreadCount > 0;
+        // Sort by last message timestamp
+        const updatedComplete = Array.from(existingChatsMap.values()).sort(
+          (a, b) => (b.lastMessageAt || 0) - (a.lastMessageAt || 0)
+        );
 
-          const partnerId = Array.isArray(thread.partner_id) && thread.partner_id.length > 0
-            ? thread.partner_id[0]
-            : typeof thread.partner_id === "number"
-              ? thread.partner_id
-              : null;
-
-          existingChatsMap.set(threadId, {
-            ...existingChat,
-            lastMessagePreview: thread.last_message_preview || existingChat.lastMessagePreview,
-            lastMessageAt: newTimestamp,
-            threadName: thread.name || existingChat.threadName,
-            partnerId: partnerId ?? existingChat.partnerId,
-            unreadCount: newUnreadCount,  // Update unread count
-            read: !hasUnread,  // Mark as read if no unread messages
-          });
-        } else {
-          // Add new chat
-          const newTimestamp = thread.last_message_date ? new Date(thread.last_message_date).getTime() : Date.now();
-          const newUnreadCount = thread.unread_count ?? 0;
-
-          // For new chats, set baseline without notifying (they're new to the list)
-          lastNotifiedUnreadCountRef.current.set(threadId, newUnreadCount);
-
-          const partnerId = Array.isArray(thread.partner_id) && thread.partner_id.length > 0
-            ? thread.partner_id[0]
-            : typeof thread.partner_id === "number"
-              ? thread.partner_id
-              : null;
-
-          existingChatsMap.set(threadId, {
-            id: threadId,
-            contactId: thread.phone_number || "",
-            threadName: thread.name || undefined,
-            phoneNumber: thread.phone_number || null,
-            backendId: thread.backend_id || null,
-            partnerId,
-            lastMessagePreview: thread.last_message_preview || "",
-            lastMessageAt: newTimestamp,
-            unreadCount: newUnreadCount,  // Set unread count
-            groupName: undefined,
-            groupAvatar: undefined,
-            read: newUnreadCount === 0,  // Mark as read if no unread messages
-            favorite: false,
-            group: false,
-            messages: [],
-          });
+        // Apply filter to get filtered list
+        let filteredList = updatedComplete;
+        if (filter === Filters.UNREAD) {
+          filteredList = updatedComplete.filter((chat) => !chat.read);
+        } else if (filter === Filters.FAVORITES) {
+          filteredList = updatedComplete.filter((chat) => chat.favorite);
+        } else if (filter === Filters.GROUPS) {
+          filteredList = updatedComplete.filter((chat) => chat.group);
         }
+
+        return {
+          ...prev,
+          complete: updatedComplete,
+          filtered: filteredList,
+          isLoading: false,
+        };
       });
 
-      // Sort by last message timestamp
-      const updatedComplete = Array.from(existingChatsMap.values())
-        .sort((a, b) => (b.lastMessageAt || 0) - (a.lastMessageAt || 0));
-
-      // Apply filter to get filtered list
-      let filteredList = updatedComplete;
-      if (filter === Filters.UNREAD) {
-        filteredList = updatedComplete.filter(chat => !chat.read);
-      } else if (filter === Filters.FAVORITES) {
-        filteredList = updatedComplete.filter(chat => chat.favorite);
-      } else if (filter === Filters.GROUPS) {
-        filteredList = updatedComplete.filter(chat => chat.group);
-      }
-
-      return {
-        ...prev,
-        complete: updatedComplete,
-        filtered: filteredList,
-        isLoading: false,
-      };
-    });
-
-    // Play notification sound if any thread had a new message
-    // This fixes Bug 2: notifications for messages from inactive threads
-    if (shouldPlayNotification) {
-      if (notificationAudioRef.current) {
-        notificationAudioRef.current.currentTime = 0;
-        notificationAudioRef.current.play().catch(() => {
-          // Failed to play notification sound
-        });
-      } else {
-        // Try to initialize audio if it doesn't exist
-        try {
-          const audio = new Audio("/notification.mp3");
-          audio.play().catch(() => undefined);
-          notificationAudioRef.current = audio;
-        } catch {
-          // Failed to create audio element
+      // Play notification sound if any thread had a new message
+      // This fixes Bug 2: notifications for messages from inactive threads
+      if (shouldPlayNotification) {
+        if (notificationAudioRef.current) {
+          notificationAudioRef.current.currentTime = 0;
+          notificationAudioRef.current.play().catch(() => {
+            // Failed to play notification sound
+          });
+        } else {
+          // Try to initialize audio if it doesn't exist
+          try {
+            const audio = new Audio("/notification.mp3");
+            audio.play().catch(() => undefined);
+            notificationAudioRef.current = audio;
+          } catch {
+            // Failed to create audio element
+          }
         }
       }
-    }
-  }, [filter]);
+    },
+    [filter]
+  );
 
   // Initialize SSE connection for threads
   const { isConnected: sseConnected } = useSSE(
@@ -274,7 +292,6 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
       enabled: !!sessionId,
     }
   );
-
 
   const applyFilter = useCallback(
     (completeChats: Chat[]) => {
@@ -297,61 +314,67 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
     [filter]
   );
 
-
   const updateFilter = (filter: string) => {
     setFilter(filter as Filters);
   };
 
+  const updateThreadPreview = useCallback(
+    (chatId: string, preview: string, timestamp: number) => {
+      setChats((prev) => {
+        const updatedComplete = prev.complete.map((chat) => {
+          if (chat.id === chatId) {
+            return {
+              ...chat,
+              lastMessagePreview: preview,
+              lastMessageAt: timestamp,
+            };
+          }
+          return chat;
+        });
 
-  const updateThreadPreview = useCallback((chatId: string, preview: string, timestamp: number) => {
-    setChats((prev) => {
-      const updatedComplete = prev.complete.map((chat) => {
-        if (chat.id === chatId) {
-          return {
-            ...chat,
-            lastMessagePreview: preview,
-            lastMessageAt: timestamp,
-          };
-        }
-        return chat;
+        // Sort by lastMessageAt to put the updated thread at the top
+        const sortedComplete = updatedComplete.sort(
+          (a, b) => (b.lastMessageAt || 0) - (a.lastMessageAt || 0)
+        );
+
+        // Apply current filters to the updated complete list
+        const filteredChats = applyFilter(sortedComplete);
+
+        return {
+          ...prev,
+          complete: sortedComplete,
+          filtered: filteredChats,
+        };
       });
+    },
+    [applyFilter]
+  );
 
-      // Sort by lastMessageAt to put the updated thread at the top
-      const sortedComplete = updatedComplete.sort((a, b) => (b.lastMessageAt || 0) - (a.lastMessageAt || 0));
+  const markChatAsRead = useCallback(
+    (chatId: string) => {
+      // Reset the notified unread count so we don't re-notify
+      lastNotifiedUnreadCountRef.current.set(chatId, 0);
 
-      // Apply current filters to the updated complete list
-      const filteredChats = applyFilter(sortedComplete);
+      setChats((prev) => {
+        const updatedComplete = prev.complete.map((chat) => {
+          if (chat.id === chatId) {
+            // Also reset unread count when marking as read
+            return { ...chat, read: true, unreadCount: 0 };
+          }
+          return chat;
+        });
 
-      return {
-        ...prev,
-        complete: sortedComplete,
-        filtered: filteredChats,
-      };
-    });
-  }, [applyFilter]);
+        const filteredChats = applyFilter(updatedComplete);
 
-  const markChatAsRead = useCallback((chatId: string) => {
-    // Reset the notified unread count so we don't re-notify
-    lastNotifiedUnreadCountRef.current.set(chatId, 0);
-
-    setChats((prev) => {
-      const updatedComplete = prev.complete.map((chat) => {
-        if (chat.id === chatId) {
-          // Also reset unread count when marking as read
-          return { ...chat, read: true, unreadCount: 0 };
-        }
-        return chat;
+        return {
+          ...prev,
+          complete: updatedComplete,
+          filtered: filteredChats,
+        };
       });
-
-      const filteredChats = applyFilter(updatedComplete);
-
-      return {
-        ...prev,
-        complete: updatedComplete,
-        filtered: filteredChats,
-      };
-    });
-  }, [applyFilter]);
+    },
+    [applyFilter]
+  );
 
   type ThreadRecord = {
     id: number;
@@ -361,61 +384,64 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
     phone_number?: string | null;
     backend_id?: [number, string] | number | null | false;
     partner_id?: [number, string] | number | null | false;
-    unread_count?: number;  // NEW: Unread count from backend
+    unread_count?: number; // NEW: Unread count from backend
   };
 
-  const transformThreads = useCallback((threads: ThreadRecord[]): Chat[] => {
-    return threads.map((thread) => {
-      const chatId = String(thread.id);
-      const preview = thread.last_message_preview ?? "";
-      const timestamp = thread.last_message_date
-        ? new Date(thread.last_message_date).getTime()
-        : null;
-      const backendId =
-        Array.isArray(thread.backend_id) && thread.backend_id.length > 0
-          ? thread.backend_id[0]
-          : typeof thread.backend_id === "number"
-            ? thread.backend_id
-            : authBackendId ?? null;
-      const partnerId =
-        Array.isArray(thread.partner_id) && thread.partner_id.length > 0
-          ? thread.partner_id[0]
-          : typeof thread.partner_id === "number"
-            ? thread.partner_id
-            : null;
-      const phoneNumber = thread.phone_number;
-      const unreadCount = thread.unread_count || 0;
+  const transformThreads = useCallback(
+    (threads: ThreadRecord[]): Chat[] => {
+      return threads.map((thread) => {
+        const chatId = String(thread.id);
+        const preview = thread.last_message_preview ?? "";
+        const timestamp = thread.last_message_date
+          ? new Date(thread.last_message_date).getTime()
+          : null;
+        const backendId =
+          Array.isArray(thread.backend_id) && thread.backend_id.length > 0
+            ? thread.backend_id[0]
+            : typeof thread.backend_id === "number"
+              ? thread.backend_id
+              : (authBackendId ?? null);
+        const partnerId =
+          Array.isArray(thread.partner_id) && thread.partner_id.length > 0
+            ? thread.partner_id[0]
+            : typeof thread.partner_id === "number"
+              ? thread.partner_id
+              : null;
+        const phoneNumber = thread.phone_number;
+        const unreadCount = thread.unread_count || 0;
 
-      const messages: Message[] = preview
-        ? [
-            {
-              id: `thread-${thread.id}-preview`,
-              contactId: chatId,
-              message: preview,
-              timestamp: timestamp ?? Date.now(),
-              isSentFromUser: false,
-              whatsappId: null,
-            },
-          ]
-        : [];
+        const messages: Message[] = preview
+          ? [
+              {
+                id: `thread-${thread.id}-preview`,
+                contactId: chatId,
+                message: preview,
+                timestamp: timestamp ?? Date.now(),
+                isSentFromUser: false,
+                whatsappId: null,
+              },
+            ]
+          : [];
 
-      return {
-        id: chatId,
-        contactId: chatId,
-        threadName: thread.name,
-        phoneNumber,
-        backendId,
-        partnerId,
-        lastMessagePreview: preview,
-        lastMessageAt: timestamp,
-        unreadCount,  // Include unread count
-        read: unreadCount === 0,  // Mark as read if no unread messages
-        group: false,
-        favorite: false,
-        messages,
-      };
-    });
-  }, [authBackendId]);
+        return {
+          id: chatId,
+          contactId: chatId,
+          threadName: thread.name,
+          phoneNumber,
+          backendId,
+          partnerId,
+          lastMessagePreview: preview,
+          lastMessageAt: timestamp,
+          unreadCount, // Include unread count
+          read: unreadCount === 0, // Mark as read if no unread messages
+          group: false,
+          favorite: false,
+          messages,
+        };
+      });
+    },
+    [authBackendId]
+  );
 
   const fetchThreads = useCallback(
     async ({ showLoading = false }: { showLoading?: boolean } = {}) => {
@@ -442,8 +468,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
         if (!response.ok) {
           const errorBody = await response.json().catch(() => null);
           const message =
-            errorBody?.error ??
-            `Failed to fetch threads (${response.status})`;
+            errorBody?.error ?? `Failed to fetch threads (${response.status})`;
           throw new Error(message);
         }
 
@@ -471,7 +496,6 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
     },
     [sessionId, transformThreads, applyFilter]
   );
-
 
   useEffect(() => {
     if (!sessionId) {
@@ -510,7 +534,14 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
 
   return (
     <ChatsContext.Provider
-      value={{ chats, filter, updateFilter, updateThreadPreview, markChatAsRead, totalUnreadCount }}
+      value={{
+        chats,
+        filter,
+        updateFilter,
+        updateThreadPreview,
+        markChatAsRead,
+        totalUnreadCount,
+      }}
     >
       {children}
     </ChatsContext.Provider>

@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
-html, body {
+html,
+body {
   height: 100vh;
   width: 100vw;
   overflow: hidden;
@@ -18,5 +19,7 @@ html, body {
 .background-custom {
   background-color: #ffffff;
   opacity: 0.03;
-  background-image:  repeating-radial-gradient( circle at 0 0, transparent 0, #ffffff 10px ), repeating-linear-gradient( #17171755, #171717 );
+  background-image:
+    repeating-radial-gradient(circle at 0 0, transparent 0, #ffffff 10px),
+    repeating-linear-gradient(#17171755, #171717);
 }

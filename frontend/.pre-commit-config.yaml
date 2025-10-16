@@ -1,0 +1,42 @@
+default_language_version:
+  node: "20.18.0"
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: '\.md$'
+      - id: end-of-file-fixer
+        exclude: '\.md$'
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: check-json
+      - id: check-yaml
+      - id: mixed-line-ending
+        args: ["--fix=lf"]
+
+  - repo: local
+    hooks:
+      - id: prettier
+        name: Prettier
+        entry: bash -c 'cd frontend && yarn prettier --write --ignore-unknown'
+        language: system
+        types: [text]
+        files: ^frontend/.*\.(ts|tsx|js|jsx|json|css|md)$
+        pass_filenames: false
+
+      - id: eslint
+        name: ESLint
+        entry: bash -c 'cd frontend && yarn lint --fix'
+        language: system
+        types_or: [javascript, jsx, ts, tsx]
+        files: ^frontend/
+        pass_filenames: false
+
+      - id: typescript
+        name: TypeScript Check
+        entry: bash -c 'cd frontend && yarn type-check'
+        language: system
+        types_or: [ts, tsx]
+        files: ^frontend/
+        pass_filenames: false

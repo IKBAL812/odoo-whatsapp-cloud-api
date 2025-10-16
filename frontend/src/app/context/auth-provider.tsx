@@ -83,7 +83,9 @@ export default function AuthProvider({ children }: PropsWithChildren) {
               ? parsed.backendUserId
               : null
           );
-          setBackendUsers(Array.isArray(parsed.backendUsers) ? parsed.backendUsers : []);
+          setBackendUsers(
+            Array.isArray(parsed.backendUsers) ? parsed.backendUsers : []
+          );
         } catch {
           window.localStorage.removeItem(SESSION_BACKEND_KEY);
         }
@@ -312,16 +314,16 @@ export default function AuthProvider({ children }: PropsWithChildren) {
     () => ({
       sessionId,
       user,
-       backendId,
-       backendUserId,
-       backendUsers,
-       backendUsersById: backendUsers.reduce<Record<number, BackendUser>>(
-         (acc, backendUser) => {
-           acc[backendUser.id] = backendUser;
-           return acc;
-         },
-         {}
-       ),
+      backendId,
+      backendUserId,
+      backendUsers,
+      backendUsersById: backendUsers.reduce<Record<number, BackendUser>>(
+        (acc, backendUser) => {
+          acc[backendUser.id] = backendUser;
+          return acc;
+        },
+        {}
+      ),
       isAuthenticated: status === "authenticated",
       isCheckingAuth: status === "checking",
       isAuthenticating,

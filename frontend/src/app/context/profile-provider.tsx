@@ -32,15 +32,12 @@ export default function ProfileProvider({ children }: PropsWithChildren) {
   });
 
   useEffect(() => {
-    const backendUser = backendUsers.find(
-      (item) => item.id === backendUserId
-    );
+    const backendUser = backendUsers.find((item) => item.id === backendUserId);
 
     setProfile({
       profile: {
         id: String(backendUser?.id ?? user?.uid ?? ""),
-        name:
-          backendUser?.name ?? (user as { name?: string })?.name ?? "User",
+        name: backendUser?.name ?? (user as { name?: string })?.name ?? "User",
         blueTickEnabled: false,
         avatarUrl: backendUser?.imageUrl ?? "",
       },

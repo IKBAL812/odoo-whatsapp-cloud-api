@@ -53,6 +53,9 @@ ODOO_JSONRPC_DATABASE=your_database
 - `yarn build` - Build for production
 - `yarn start` - Start production server
 - `yarn lint` - Run ESLint
+- `yarn prettier` - Check code formatting
+- `yarn prettier:fix` - Fix code formatting
+- `yarn type-check` - Run TypeScript type checking
 
 ## Features
 
@@ -75,6 +78,38 @@ src/app/
 ├── hooks/         # Custom React hooks
 ├── lib/           # Utilities and helpers
 └── locales/       # Translation files
+```
+
+## Pre-commit Hooks
+
+This project uses pre-commit hooks to ensure code quality. The hooks automatically run on `git commit`.
+
+### Setup
+
+```bash
+# Install pre-commit (if not already installed)
+pip install pre-commit
+
+# Install the git hook scripts
+cd frontend
+pre-commit install
+```
+
+### Hooks Included
+
+- **Prettier** - Code formatting
+- **ESLint** - Linting and code quality
+- **TypeScript** - Type checking
+- **Basic checks** - Trailing whitespace, end of file, merge conflicts
+
+### Manual Run
+
+```bash
+# Run all hooks on all files
+pre-commit run --all-files
+
+# Run specific hook
+pre-commit run prettier --all-files
 ```
 
 ## Development Notes

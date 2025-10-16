@@ -82,9 +82,9 @@ export default function ContactsProvider({ children }: PropsWithChildren) {
     setContacts((prev) => {
       const contacts = prev.contacts;
       const search = prev.search;
-    const filteredContacts = contacts.filter((contact: Contact) =>
-      contact.displayName.toLowerCase().includes(search.toLowerCase())
-    );
+      const filteredContacts = contacts.filter((contact: Contact) =>
+        contact.displayName.toLowerCase().includes(search.toLowerCase())
+      );
       const dictionary = generateDictionary(filteredContacts);
 
       return {

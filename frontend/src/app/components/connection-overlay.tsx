@@ -30,19 +30,25 @@ export default function ConnectionOverlay() {
         return {
           icon: <WifiXIcon className="size-16 text-red-400" weight="bold" />,
           title: t("connection.disconnected.title") || "Connection Lost",
-          message: t("connection.disconnected.message") || "Unable to connect to the server. Please check your internet connection.",
+          message:
+            t("connection.disconnected.message") ||
+            "Unable to connect to the server. Please check your internet connection.",
           buttonText: t("connection.retry") || "Retry",
           buttonAction: handleRetry,
-          buttonClass: "bg-blue-600 hover:bg-blue-500"
+          buttonClass: "bg-blue-600 hover:bg-blue-500",
         };
       case "session-expired":
         return {
-          icon: <SignOutIcon className="size-16 text-orange-400" weight="bold" />,
+          icon: (
+            <SignOutIcon className="size-16 text-orange-400" weight="bold" />
+          ),
           title: t("connection.sessionExpired.title") || "Session Expired",
-          message: t("connection.sessionExpired.message") || "Your session has expired. Please log in again.",
+          message:
+            t("connection.sessionExpired.message") ||
+            "Your session has expired. Please log in again.",
           buttonText: t("connection.login") || "Log In",
           buttonAction: handleLogout,
-          buttonClass: "bg-emerald-600 hover:bg-emerald-500"
+          buttonClass: "bg-emerald-600 hover:bg-emerald-500",
         };
       default:
         return null;
@@ -57,14 +63,10 @@ export default function ConnectionOverlay() {
       <div className="bg-gray-900 rounded-2xl border border-gray-700 shadow-2xl max-w-md w-full p-8 text-center">
         <div className="flex flex-col items-center gap-6">
           {content.icon}
-          
+
           <div className="space-y-3">
-            <h2 className="text-2xl font-bold text-white">
-              {content.title}
-            </h2>
-            <p className="text-gray-300 leading-relaxed">
-              {content.message}
-            </p>
+            <h2 className="text-2xl font-bold text-white">{content.title}</h2>
+            <p className="text-gray-300 leading-relaxed">{content.message}</p>
           </div>
 
           <button
@@ -77,7 +79,9 @@ export default function ConnectionOverlay() {
           {connectionStatus === "disconnected" && (
             <div className="flex items-center justify-center gap-2 text-gray-400 text-sm">
               <WifiXIcon className="size-4" />
-              <span>{t("connection.checking") || "Checking connection..."}</span>
+              <span>
+                {t("connection.checking") || "Checking connection..."}
+              </span>
             </div>
           )}
         </div>

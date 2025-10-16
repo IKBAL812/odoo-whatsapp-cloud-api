@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { OdooClient } from "@/app/lib/odoo/jsonrpc";
 
-const REQUIRED_ENV_VARS = ["ODOO_JSONRPC_HOST", "ODOO_JSONRPC_DATABASE"] as const;
+const REQUIRED_ENV_VARS = [
+  "ODOO_JSONRPC_HOST",
+  "ODOO_JSONRPC_DATABASE",
+] as const;
 
 const ensureEnv = () => {
   const missing = REQUIRED_ENV_VARS.filter((name) => !process.env[name]);
@@ -55,24 +58,20 @@ export async function GET(request: NextRequest) {
   const sessionClient = odooClient.createSession(sessionId);
 
   try {
-    const threads = await sessionClient.searchRead(
-      "whatsapp.thread",
-      [],
-      {
-        limit: 30,
-        select: [
-          "name",
-          "last_message_date",
-          "last_message_preview",
-          "phone_number",
-          "backend_id",
-          "write_date",
-          "unread_count",  // NEW: Request unread count from backend
-          "partner_id",    // Partner ID for opening in Odoo
-        ],
-        order: "write_date desc"
-      }
-    );
+    const threads = await sessionClient.searchRead("whatsapp.thread", [], {
+      limit: 30,
+      select: [
+        "name",
+        "last_message_date",
+        "last_message_preview",
+        "phone_number",
+        "backend_id",
+        "write_date",
+        "unread_count", // NEW: Request unread count from backend
+        "partner_id", // Partner ID for opening in Odoo
+      ],
+      order: "write_date desc",
+    });
 
     return NextResponse.json({ threads });
   } catch (error) {

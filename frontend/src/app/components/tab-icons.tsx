@@ -32,7 +32,9 @@ export default function TabIcons() {
               aria-label={t(`navigation.${tab}`)}
             >
               <TabIcon tab={tab} />
-              <span className="text-xs capitalize">{t(`navigation.${tab}`)}</span>
+              <span className="text-xs capitalize">
+                {t(`navigation.${tab}`)}
+              </span>
             </button>
           ))}
           <button
@@ -43,7 +45,9 @@ export default function TabIcons() {
             aria-label={t("navigation.profile")}
           >
             <Profile url={avatarUrl} size="6" />
-            <span className="text-xs capitalize">{t("navigation.profile")}</span>
+            <span className="text-xs capitalize">
+              {t("navigation.profile")}
+            </span>
           </button>
         </nav>
       </section>

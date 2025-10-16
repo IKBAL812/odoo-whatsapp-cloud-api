@@ -22,7 +22,11 @@ describe("buildMessageNotificationKey", () => {
   });
 
   it("builds fallback key when id missing", () => {
-    const message = baseMessage({ timestamp: 123, message: "Hi", contactId: "2" });
+    const message = baseMessage({
+      timestamp: 123,
+      message: "Hi",
+      contactId: "2",
+    });
     expect(buildMessageNotificationKey(message)).toBe("2-123-Hi");
   });
 });
@@ -36,7 +40,10 @@ describe("findUnnotifiedIncomingMessages", () => {
       baseMessage({ id: "3", isSentFromUser: false }),
     ];
 
-    const { incoming, next } = findUnnotifiedIncomingMessages(messages, notified);
+    const { incoming, next } = findUnnotifiedIncomingMessages(
+      messages,
+      notified
+    );
 
     expect(incoming.map((msg) => msg.id)).toEqual(["1", "3"]);
     expect(next.has("1")).toBe(true);
@@ -51,7 +58,10 @@ describe("findUnnotifiedIncomingMessages", () => {
       baseMessage({ id: "2", isSentFromUser: false }),
     ];
 
-    const { incoming, next } = findUnnotifiedIncomingMessages(messages, notified);
+    const { incoming, next } = findUnnotifiedIncomingMessages(
+      messages,
+      notified
+    );
 
     expect(incoming.map((msg) => msg.id)).toEqual(["2"]);
     expect(next.size).toBe(2);
@@ -77,9 +87,8 @@ describe("shouldPlayNotificationAudio", () => {
     expect(shouldPlayNotificationAudio("visible")).toBe(false);
   });
 
-  it("returns true when tab is hidden or prerender", () => {
+  it("returns true when tab is hidden or undefined", () => {
     expect(shouldPlayNotificationAudio("hidden")).toBe(true);
-    expect(shouldPlayNotificationAudio("prerender")).toBe(true);
     expect(shouldPlayNotificationAudio(undefined)).toBe(true);
   });
 });

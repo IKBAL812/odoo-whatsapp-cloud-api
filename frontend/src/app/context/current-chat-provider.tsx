@@ -125,7 +125,9 @@ export const shouldPlayNotificationAudio = (
 ) => visibility !== "visible";
 
 // Global notification tracker - persists across thread switches
-const globalNotifiedMessagesRef: { current: Set<string> } = { current: new Set() };
+const globalNotifiedMessagesRef: { current: Set<string> } = {
+  current: new Set(),
+};
 
 export default function CurrentChatProvider({ children }: PropsWithChildren) {
   const [currentChat, setCurrentChat] = useState<CurrentChatData>({
@@ -157,194 +159,214 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
   const { reportApiError, reportConnectionRestored } = useConnection();
 
   const chatId = currentChat.chatId;
-  const pendingPreviewUpdateRef = useRef<{ threadId: string; message: string; timestamp: number } | null>(null);
+  const pendingPreviewUpdateRef = useRef<{
+    threadId: string;
+    message: string;
+    timestamp: number;
+  } | null>(null);
   const pendingMarkAsReadRef = useRef<string | null>(null);
 
   // SSE message handler for real-time message updates
-  const handleMessagesUpdate = useCallback((messages: unknown[], threadId: string) => {
-    if (threadId !== chatId) {
-      return; // Ignore messages for other chats
-    }
-
-    const odooMessages = (messages as OdooMessageRecord[]).reverse(); // Backend returns newest first, reverse for chat display
-    const rawMessages: MessageWithReplyReference[] = odooMessages.map((record) => {
-      const timestamp = record.timestamp * 1000; // Convert seconds to milliseconds
-      const direction = record.direction ?? "incoming";
-      const status = (record.status ?? "").toLowerCase();
-      const messageText = record.body || "";
-
-      const deliveredStatuses = ["delivered", "read"];
-      const sentStatuses = ["sent", ...deliveredStatuses];
-      const userIdValue =
-        Array.isArray(record.create_uid) && record.create_uid.length > 0
-          ? record.create_uid[0]
-          : null;
-      const whatsappId =
-        typeof record.message_id === "string" ? record.message_id : null;
-      const replyTuple = Array.isArray(record.replied_message_id)
-        ? record.replied_message_id
-        : null;
-      const replyMessageId = replyTuple?.[0] ? String(replyTuple[0]) : null;
-
-      return {
-        id: record.id.toString(),
-        contactId: threadId,
-        message: messageText,
-        timestamp,
-        isSentFromUser: direction === "outgoing",
-        sent: sentStatuses.includes(status),
-        delivered: deliveredStatuses.includes(status),
-        read: status === "read",
-        userId: userIdValue ?? null,
-        whatsappId,
-        replyMessageId,
-        attachment: record.attachment,
-      };
-    });
-
-    // Process messages similar to fetchMessages
-    setCurrentChat((prev) => {
-      if (prev.chatId !== threadId) {
-        return prev;
+  const handleMessagesUpdate = useCallback(
+    (messages: unknown[], threadId: string) => {
+      if (threadId !== chatId) {
+        return; // Ignore messages for other chats
       }
 
-      const repliesById = new Map<string, NonNullable<Message["replyTo"]>>();
+      const odooMessages = (messages as OdooMessageRecord[]).reverse(); // Backend returns newest first, reverse for chat display
+      const rawMessages: MessageWithReplyReference[] = odooMessages.map(
+        (record) => {
+          const timestamp = record.timestamp * 1000; // Convert seconds to milliseconds
+          const direction = record.direction ?? "incoming";
+          const status = (record.status ?? "").toLowerCase();
+          const messageText = record.body || "";
 
-      // Build reply metadata map from existing messages
-      prev.messages.forEach((message) => {
-        if (message.id) {
-          const meta = toReplyMetadata(message);
-          if (meta) {
-            repliesById.set(message.id, meta);
+          const deliveredStatuses = ["delivered", "read"];
+          const sentStatuses = ["sent", ...deliveredStatuses];
+          const userIdValue =
+            Array.isArray(record.create_uid) && record.create_uid.length > 0
+              ? record.create_uid[0]
+              : null;
+          const whatsappId =
+            typeof record.message_id === "string" ? record.message_id : null;
+          const replyTuple = Array.isArray(record.replied_message_id)
+            ? record.replied_message_id
+            : null;
+          const replyMessageId = replyTuple?.[0] ? String(replyTuple[0]) : null;
+
+          return {
+            id: record.id.toString(),
+            contactId: threadId,
+            message: messageText,
+            timestamp,
+            isSentFromUser: direction === "outgoing",
+            sent: sentStatuses.includes(status),
+            delivered: deliveredStatuses.includes(status),
+            read: status === "read",
+            userId: userIdValue ?? null,
+            whatsappId,
+            replyMessageId,
+            attachment: record.attachment,
+          };
+        }
+      );
+
+      // Process messages similar to fetchMessages
+      setCurrentChat((prev) => {
+        if (prev.chatId !== threadId) {
+          return prev;
+        }
+
+        const repliesById = new Map<string, NonNullable<Message["replyTo"]>>();
+
+        // Build reply metadata map from existing messages
+        prev.messages.forEach((message) => {
+          if (message.id) {
+            const meta = toReplyMetadata(message);
+            if (meta) {
+              repliesById.set(message.id, meta);
+            }
           }
+        });
+
+        // Also add reply metadata from raw messages (for newly arrived messages)
+        rawMessages.forEach((rawMessage) => {
+          if (rawMessage.id && rawMessage.whatsappId) {
+            repliesById.set(rawMessage.id, {
+              messageId: rawMessage.whatsappId,
+              message: rawMessage.message,
+              contactId: rawMessage.contactId,
+              senderIsUser: rawMessage.isSentFromUser,
+            });
+          }
+        });
+
+        const mappedMessages: Message[] = rawMessages.map((message) => {
+          const { replyMessageId, ...rest } = message;
+          const baseMessage = rest as Message;
+
+          if (!replyMessageId) {
+            return baseMessage;
+          }
+
+          const replyMetadata = repliesById.get(replyMessageId);
+          if (!replyMetadata) {
+            return baseMessage;
+          }
+
+          return {
+            ...baseMessage,
+            replyTo: replyMetadata,
+          };
+        });
+
+        // Handle message updates: merge new messages with existing ones
+        const existingMessagesMap = new Map(
+          prev.messages.map((m) => [m.id, m])
+        );
+        const updatedMessagesMap = new Map(existingMessagesMap);
+
+        let hasNewMessages = false;
+        let hasNewIncomingMessages = false;
+
+        mappedMessages.forEach((newMessage, index) => {
+          if (newMessage.id && existingMessagesMap.has(newMessage.id)) {
+            // Update existing message (e.g., status changes)
+            updatedMessagesMap.set(newMessage.id, {
+              ...existingMessagesMap.get(newMessage.id)!,
+              ...newMessage,
+              // Preserve optimistic properties if this is an update to an optimistic message
+              sent:
+                newMessage.sent || existingMessagesMap.get(newMessage.id)!.sent,
+              delivered:
+                newMessage.delivered ||
+                existingMessagesMap.get(newMessage.id)!.delivered,
+            } as Message);
+          } else if (newMessage.id && !existingMessagesMap.has(newMessage.id)) {
+            // Add new message - keep the replyMessageId from rawMessages for later resolution
+            const rawMessageWithReplyId = rawMessages[index];
+            updatedMessagesMap.set(newMessage.id, {
+              ...newMessage,
+              // Store replyMessageId as a custom property for resolution later
+              replyMessageId: rawMessageWithReplyId.replyMessageId,
+            } as MessageWithReplyReference);
+            hasNewMessages = true;
+            // Check if it's an incoming message (not from user)
+            if (!newMessage.isSentFromUser) {
+              hasNewIncomingMessages = true;
+            }
+          }
+        });
+
+        if (!hasNewMessages) {
+          return prev;
         }
-      });
 
-      // Also add reply metadata from raw messages (for newly arrived messages)
-      rawMessages.forEach((rawMessage) => {
-        if (rawMessage.id && rawMessage.whatsappId) {
-          repliesById.set(rawMessage.id, {
-            messageId: rawMessage.whatsappId,
-            message: rawMessage.message,
-            contactId: rawMessage.contactId,
-            senderIsUser: rawMessage.isSentFromUser,
-          });
+        const sortedMessages = Array.from(updatedMessagesMap.values()).sort(
+          (a, b) => a.timestamp - b.timestamp
+        ); // Still need sorting when merging SSE messages
+
+        // Rebuild reply metadata map with ALL messages (including newly merged ones)
+        const finalRepliesById = new Map<
+          string,
+          NonNullable<Message["replyTo"]>
+        >();
+        sortedMessages.forEach((message) => {
+          if (message.id && message.whatsappId) {
+            const meta = toReplyMetadata(message);
+            if (meta) {
+              finalRepliesById.set(message.id, meta);
+            }
+          }
+        });
+
+        // Re-map messages to ensure reply metadata is properly resolved
+        const updatedMessages = sortedMessages.map((message) => {
+          // If message already has replyTo, keep it
+          if (message.replyTo) {
+            return message;
+          }
+
+          // Otherwise, try to resolve it from the replyMessageId if it exists
+          const rawMessage = message as MessageWithReplyReference;
+          if (rawMessage.replyMessageId) {
+            const replyMetadata = finalRepliesById.get(
+              rawMessage.replyMessageId
+            );
+            if (replyMetadata) {
+              return {
+                ...message,
+                replyTo: replyMetadata,
+              };
+            }
+          }
+
+          return message;
+        });
+
+        // Store the preview update to be executed in useEffect
+        if (updatedMessages.length > 0) {
+          const latestMessage = updatedMessages[updatedMessages.length - 1];
+          pendingPreviewUpdateRef.current = {
+            threadId,
+            message: latestMessage.message,
+            timestamp: latestMessage.timestamp,
+          };
         }
-      });
 
-      const mappedMessages: Message[] = rawMessages.map((message) => {
-        const { replyMessageId, ...rest } = message;
-        const baseMessage = rest as Message;
-
-        if (!replyMessageId) {
-          return baseMessage;
-        }
-
-        const replyMetadata = repliesById.get(replyMessageId);
-        if (!replyMetadata) {
-          return baseMessage;
+        // If we received new incoming messages in the active chat, mark as read
+        if (hasNewIncomingMessages) {
+          pendingMarkAsReadRef.current = threadId;
         }
 
         return {
-          ...baseMessage,
-          replyTo: replyMetadata,
+          ...prev,
+          messages: updatedMessages,
         };
       });
-
-      // Handle message updates: merge new messages with existing ones
-      const existingMessagesMap = new Map(prev.messages.map(m => [m.id, m]));
-      const updatedMessagesMap = new Map(existingMessagesMap);
-
-      let hasNewMessages = false;
-      let hasNewIncomingMessages = false;
-
-      mappedMessages.forEach((newMessage, index) => {
-        if (newMessage.id && existingMessagesMap.has(newMessage.id)) {
-          // Update existing message (e.g., status changes)
-          updatedMessagesMap.set(newMessage.id, {
-            ...existingMessagesMap.get(newMessage.id)!,
-            ...newMessage,
-            // Preserve optimistic properties if this is an update to an optimistic message
-            sent: newMessage.sent || existingMessagesMap.get(newMessage.id)!.sent,
-            delivered: newMessage.delivered || existingMessagesMap.get(newMessage.id)!.delivered,
-          } as Message);
-        } else if (newMessage.id && !existingMessagesMap.has(newMessage.id)) {
-          // Add new message - keep the replyMessageId from rawMessages for later resolution
-          const rawMessageWithReplyId = rawMessages[index];
-          updatedMessagesMap.set(newMessage.id, {
-            ...newMessage,
-            // Store replyMessageId as a custom property for resolution later
-            replyMessageId: rawMessageWithReplyId.replyMessageId,
-          } as MessageWithReplyReference);
-          hasNewMessages = true;
-          // Check if it's an incoming message (not from user)
-          if (!newMessage.isSentFromUser) {
-            hasNewIncomingMessages = true;
-          }
-        }
-      });
-
-      if (!hasNewMessages) {
-        return prev;
-      }
-
-      const sortedMessages = Array.from(updatedMessagesMap.values())
-        .sort((a, b) => a.timestamp - b.timestamp); // Still need sorting when merging SSE messages
-
-      // Rebuild reply metadata map with ALL messages (including newly merged ones)
-      const finalRepliesById = new Map<string, NonNullable<Message["replyTo"]>>();
-      sortedMessages.forEach((message) => {
-        if (message.id && message.whatsappId) {
-          const meta = toReplyMetadata(message);
-          if (meta) {
-            finalRepliesById.set(message.id, meta);
-          }
-        }
-      });
-
-      // Re-map messages to ensure reply metadata is properly resolved
-      const updatedMessages = sortedMessages.map((message) => {
-        // If message already has replyTo, keep it
-        if (message.replyTo) {
-          return message;
-        }
-
-        // Otherwise, try to resolve it from the replyMessageId if it exists
-        const rawMessage = message as MessageWithReplyReference;
-        if (rawMessage.replyMessageId) {
-          const replyMetadata = finalRepliesById.get(rawMessage.replyMessageId);
-          if (replyMetadata) {
-            return {
-              ...message,
-              replyTo: replyMetadata,
-            };
-          }
-        }
-
-        return message;
-      });
-
-      // Store the preview update to be executed in useEffect
-      if (updatedMessages.length > 0) {
-        const latestMessage = updatedMessages[updatedMessages.length - 1];
-        pendingPreviewUpdateRef.current = {
-          threadId,
-          message: latestMessage.message,
-          timestamp: latestMessage.timestamp
-        };
-      }
-
-      // If we received new incoming messages in the active chat, mark as read
-      if (hasNewIncomingMessages) {
-        pendingMarkAsReadRef.current = threadId;
-      }
-
-      return {
-        ...prev,
-        messages: updatedMessages,
-      };
-    });
-  }, [chatId]);
+    },
+    [chatId]
+  );
 
   // Initialize SSE for current chat messages
   useSSE(
@@ -421,7 +443,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
 
       const searchParams = new URLSearchParams({
         threadId: chatId,
-        limit: "100",  // Load last 100 messages
+        limit: "100", // Load last 100 messages
       });
 
       // Determine which ID to use
@@ -432,7 +454,10 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
             ? null
             : latestMessageIdRef.current;
 
-      if (!replace && (effectiveLastId === null || typeof effectiveLastId === "undefined")) {
+      if (
+        !replace &&
+        (effectiveLastId === null || typeof effectiveLastId === "undefined")
+      ) {
         return;
       }
 
@@ -447,18 +472,20 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
       }
 
       try {
-        const response = await fetch(`/api/messages?${searchParams.toString()}`, {
-          headers: {
-            "x-session-id": sessionId,
-          },
-          signal,
-        });
+        const response = await fetch(
+          `/api/messages?${searchParams.toString()}`,
+          {
+            headers: {
+              "x-session-id": sessionId,
+            },
+            signal,
+          }
+        );
 
         if (!response.ok) {
           const errorBody = await response.json().catch(() => null);
           const message =
-            errorBody?.error ??
-            `Failed to fetch messages (${response.status})`;
+            errorBody?.error ?? `Failed to fetch messages (${response.status})`;
           reportApiError({ status: response.status, message });
           throw new Error(message);
         }
@@ -469,41 +496,43 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
           ? data.messages.reverse() // Backend returns newest first, reverse for chat display
           : [];
 
-        const rawMessages: MessageWithReplyReference[] = records.map((record) => {
-          const timestamp = record.timestamp * 1000; // Convert seconds to milliseconds
-          const direction = record.direction ?? "incoming";
-          const status = (record.status ?? "").toLowerCase();
-          const messageText = record.body || "";
+        const rawMessages: MessageWithReplyReference[] = records.map(
+          (record) => {
+            const timestamp = record.timestamp * 1000; // Convert seconds to milliseconds
+            const direction = record.direction ?? "incoming";
+            const status = (record.status ?? "").toLowerCase();
+            const messageText = record.body || "";
 
-          const deliveredStatuses = ["delivered", "read"];
-          const sentStatuses = ["sent", ...deliveredStatuses];
-          const userIdValue =
-            Array.isArray(record.create_uid) && record.create_uid.length > 0
-              ? record.create_uid[0]
+            const deliveredStatuses = ["delivered", "read"];
+            const sentStatuses = ["sent", ...deliveredStatuses];
+            const userIdValue =
+              Array.isArray(record.create_uid) && record.create_uid.length > 0
+                ? record.create_uid[0]
+                : null;
+            const whatsappId =
+              typeof record.message_id === "string" ? record.message_id : null;
+            const replyTuple = Array.isArray(record.replied_message_id)
+              ? record.replied_message_id
               : null;
-          const whatsappId =
-            typeof record.message_id === "string" ? record.message_id : null;
-          const replyTuple = Array.isArray(record.replied_message_id)
-            ? record.replied_message_id
-            : null;
-          const replyMessageId = replyTuple?.[0]
-            ? String(replyTuple[0])
-            : null;
-          return {
-            id: record.id.toString(),
-            contactId: chatId,
-            message: messageText,
-            timestamp,
-            isSentFromUser: direction === "outgoing",
-            sent: sentStatuses.includes(status),
-            delivered: deliveredStatuses.includes(status),
-            read: status === "read",
-            userId: userIdValue ?? null,
-            whatsappId,
-            replyMessageId,
-            attachment: record.attachment,
-          };
-        });
+            const replyMessageId = replyTuple?.[0]
+              ? String(replyTuple[0])
+              : null;
+            return {
+              id: record.id.toString(),
+              contactId: chatId,
+              message: messageText,
+              timestamp,
+              isSentFromUser: direction === "outgoing",
+              sent: sentStatuses.includes(status),
+              delivered: deliveredStatuses.includes(status),
+              read: status === "read",
+              userId: userIdValue ?? null,
+              whatsappId,
+              replyMessageId,
+              attachment: record.attachment,
+            };
+          }
+        );
 
         let nextLatestTimestamp: number | null | undefined;
         let nextLatestMessageId: number | null | undefined;
@@ -565,13 +594,11 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
           const incomingMessages = isInitialLoad
             ? mappedMessages
             : mappedMessages.filter(
-              (message) =>
-                !message.id || !existingIds.has(message.id)
-            );
+                (message) => !message.id || !existingIds.has(message.id)
+              );
 
           if (!isInitialLoad && incomingMessages.length === 0) {
-            nextLatestTimestamp =
-              latestMessageTimestampRef.current ?? null;
+            nextLatestTimestamp = latestMessageTimestampRef.current ?? null;
             nextLatestMessageId = latestMessageIdRef.current ?? null;
 
             return {
@@ -880,9 +907,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
                 id: messageId ? messageId.toString() : message.id,
                 whatsappId: whatsappId ?? message.whatsappId,
                 sent: true,
-                delivered: status
-                  ? deliveredStatuses.includes(status)
-                  : true,
+                delivered: status ? deliveredStatuses.includes(status) : true,
                 read: status ? readStatuses.includes(status) : false,
                 error: undefined,
                 // Keep the optimistic timestamp for consistent ordering
@@ -934,7 +959,16 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
         throw err;
       }
     },
-    [sessionId, currentChat, backendUserId, authBackendId, fetchMessages, updateThreadPreview, reportApiError, reportConnectionRestored]
+    [
+      sessionId,
+      currentChat,
+      backendUserId,
+      authBackendId,
+      fetchMessages,
+      updateThreadPreview,
+      reportApiError,
+      reportConnectionRestored,
+    ]
   );
 
   const sendAttachment = useCallback(
@@ -1082,7 +1116,9 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
 
         // Clean up the optimistic object URL
         setCurrentChat((prev) => {
-          const optimisticMessage = prev.messages.find(m => m.id === optimisticId);
+          const optimisticMessage = prev.messages.find(
+            (m) => m.id === optimisticId
+          );
           if (optimisticMessage?.attachment?.url) {
             URL.revokeObjectURL(optimisticMessage.attachment.url);
           }
@@ -1221,7 +1257,12 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
         Notification.requestPermission().catch(() => undefined);
       }
     }
-  }, [currentChat.chatId, currentChat.messages, currentChat.threadName, contacts]);
+  }, [
+    currentChat.chatId,
+    currentChat.messages,
+    currentChat.threadName,
+    contacts,
+  ]);
 
   return (
     <CurrentChatContext.Provider

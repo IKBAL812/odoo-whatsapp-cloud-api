@@ -12,10 +12,16 @@ import TabProvider from "./context/tab-provider";
 import AuthProvider from "./context/auth-provider";
 import { useAuth } from "./hooks/use-auth";
 import LoginScreen from "./components/auth/login-screen";
-import { TranslationProvider, useTranslations } from "./context/translation-provider";
+import {
+  TranslationProvider,
+  useTranslations,
+} from "./context/translation-provider";
 import ConnectionProvider from "./context/connection-provider";
 import ConnectionOverlay from "./components/connection-overlay";
-import { MobileNavigationProvider, useMobileNavigation } from "./context/mobile-navigation-provider";
+import {
+  MobileNavigationProvider,
+  useMobileNavigation,
+} from "./context/mobile-navigation-provider";
 import { useResponsive } from "./hooks/use-responsive";
 import { useChats } from "./hooks/use-chats";
 

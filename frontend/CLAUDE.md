@@ -54,6 +54,7 @@ function MyComponent() {
    - `src/app/locales/tr.json`
 
 2. Use nested structure:
+
 ```json
 {
   "chat": {
@@ -66,6 +67,7 @@ function MyComponent() {
 3. Access with dot notation: `t("chat.openInOdoo")`
 
 ### Translation File Locations
+
 - English: `src/app/locales/en.json`
 - Turkish: `src/app/locales/tr.json`
 
@@ -74,6 +76,7 @@ function MyComponent() {
 ### ⚠️ ALWAYS ask the backend developer before implementing features that depend on Odoo API!
 
 The backend developer will happily help you understand:
+
 - Available Odoo models and fields
 - Required parameters for API calls
 - Data structure returned from Odoo
@@ -82,6 +85,7 @@ The backend developer will happily help you understand:
 ### Odoo JSON-RPC Client
 
 Located in `src/app/lib/odoo/jsonrpc.ts`, provides:
+
 - `OdooClient`: Main client for JSON-RPC calls
 - `searchRead()`: Fetch records
 - `create()`, `write()`, `unlink()`: CRUD operations
@@ -90,6 +94,7 @@ Located in `src/app/lib/odoo/jsonrpc.ts`, provides:
 ### Environment Variables
 
 Required in `.env` or `.env.local`:
+
 ```bash
 ODOO_JSONRPC_HOST=localhost
 ODOO_JSONRPC_PORT=8069
@@ -107,6 +112,7 @@ API routes in `src/app/api/` act as a proxy to Odoo:
 4. Return JSON response
 
 Example:
+
 ```typescript
 const sessionId = request.headers.get("x-session-id");
 const odooClient = new OdooClient({ host, port, protocol });
@@ -122,6 +128,7 @@ This project supports **both desktop and mobile** devices. When adding or refact
 
 1. **Always test on both desktop and mobile** viewports
 2. Use the `useResponsive()` hook to detect screen size:
+
    ```typescript
    const { isMobile } = useResponsive();
 
@@ -134,6 +141,7 @@ This project supports **both desktop and mobile** devices. When adding or refact
    ```
 
 3. **Mobile-first Tailwind classes**:
+
    ```typescript
    // Mobile by default, desktop with md: prefix
    <div className="flex-col md:flex-row">
@@ -157,10 +165,18 @@ import { useSSE } from "@/app/hooks/use-sse";
 
 const { isConnected } = useSSE(
   {
-    onThreadsUpdate: (threads) => { /* handle update */ },
-    onMessagesUpdate: (messages, threadId) => { /* handle update */ },
-    onError: (error) => { /* handle error */ },
-    onReconnect: () => { /* connection restored */ },
+    onThreadsUpdate: (threads) => {
+      /* handle update */
+    },
+    onMessagesUpdate: (messages, threadId) => {
+      /* handle update */
+    },
+    onError: (error) => {
+      /* handle error */
+    },
+    onReconnect: () => {
+      /* connection restored */
+    },
   },
   {
     threadId: "123", // Optional: specific thread
@@ -172,6 +188,7 @@ const { isConnected } = useSSE(
 ### SSE Endpoint
 
 Located at `/api/events`, streams:
+
 - Thread updates every 5 seconds
 - Message updates every 2 seconds
 - Heartbeat every 30 seconds
@@ -183,6 +200,7 @@ Located at `/api/events`, streams:
 **DO NOT** try to implement everything at once. Follow this workflow:
 
 1. **Plan with TodoWrite tool**:
+
    ```typescript
    // Break down the task into small steps
    1. Add translation keys
@@ -215,15 +233,17 @@ Located at `/api/events`, streams:
   - Hover: `hover:bg-white/20`
 
 - **Common patterns**:
+
   ```typescript
   // Button
-  className="px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+  className =
+    "px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors";
 
   // Input
-  className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg"
+  className = "w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg";
 
   // Card
-  className="bg-white/10 rounded-lg p-4"
+  className = "bg-white/10 rounded-lg p-4";
   ```
 
 ## 🧩 State Management Patterns
@@ -243,6 +263,7 @@ The app uses multiple context providers for different concerns:
 ### Custom Hooks
 
 Always use custom hooks to access context:
+
 ```typescript
 import { useAuth } from "@/app/hooks/use-auth";
 import { useChats } from "@/app/hooks/use-chats";
@@ -252,6 +273,7 @@ import { useCurrentChat } from "@/app/hooks/use-current-chat";
 ## 🐛 Debugging Tips
 
 - **Console logs**: Use prefix tags for filtering
+
   ```typescript
   console.log("[SSE]", "Message received");
   console.log("[Contact Header Debug]", partnerId);
@@ -279,6 +301,7 @@ import { useCurrentChat } from "@/app/hooks/use-current-chat";
 ## 🧪 Common Patterns
 
 ### Message Component Pattern
+
 ```typescript
 export type Message = {
   id?: string;
@@ -292,6 +315,7 @@ export type Message = {
 ```
 
 ### API Route Pattern
+
 ```typescript
 export async function GET(request: NextRequest) {
   const sessionId = request.headers.get("x-session-id");
@@ -333,11 +357,13 @@ Claude, add Turkish translations for the new button feature
 ## 🚀 Deployment
 
 ### Production Build
+
 ```bash
 yarn build
 ```
 
 ### Docker Deployment
+
 ```bash
 # Build and start
 docker compose up -d --build
@@ -350,7 +376,9 @@ docker compose up -d --build --no-deps frontend
 ```
 
 ### Environment Variables in Production
+
 Set in `.env.production`:
+
 - `ODOO_JSONRPC_HOST`
 - `ODOO_JSONRPC_PORT`
 - `ODOO_JSONRPC_PROTOCOL`

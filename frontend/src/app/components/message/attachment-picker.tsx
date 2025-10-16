@@ -13,9 +13,9 @@ type AttachmentPickerProps = {
 const MAX_FILE_SIZE = 16 * 1024 * 1024; // 16MB limit (WhatsApp limit)
 
 const formatFileSize = (bytes: number): string => {
-  if (bytes === 0) return '0 B';
+  if (bytes === 0) return "0 B";
   const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const sizes = ["B", "KB", "MB", "GB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 };
@@ -24,7 +24,7 @@ export default function AttachmentPicker({
   onAttachmentSelect,
   disabled,
   externalFile,
-  onExternalFileProcessed
+  onExternalFileProcessed,
 }: AttachmentPickerProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [caption, setCaption] = useState("");
@@ -123,7 +123,10 @@ export default function AttachmentPicker({
 
       {/* Preview modal */}
       {selectedFile && (
-        <div className="fixed inset-0 bg-black/90 flex items-center justify-center p-4" style={{ zIndex: 10000 }}>
+        <div
+          className="fixed inset-0 bg-black/90 flex items-center justify-center p-4"
+          style={{ zIndex: 10000 }}
+        >
           <div className="bg-gray-900 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-white/10">
@@ -157,8 +160,12 @@ export default function AttachmentPicker({
                 <div className="flex items-center gap-3 bg-white/5 rounded-lg p-4 mb-4">
                   <File className="size-12 text-gray-400" weight="fill" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-white text-sm truncate">{selectedFile.name}</p>
-                    <p className="text-white/50 text-xs">{formatFileSize(selectedFile.size)}</p>
+                    <p className="text-white text-sm truncate">
+                      {selectedFile.name}
+                    </p>
+                    <p className="text-white/50 text-xs">
+                      {formatFileSize(selectedFile.size)}
+                    </p>
                   </div>
                 </div>
               )}

@@ -151,12 +151,12 @@ docker-compose up -d
 
 ## Environment Variables
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `ODOO_JSONRPC_PROTOCOL` | Protocol for Odoo connection | `https` or `http` |
-| `ODOO_JSONRPC_HOST` | Odoo server hostname/IP | `odoo.example.com` |
-| `ODOO_JSONRPC_PORT` | Odoo server port | `443`, `8069` |
-| `ODOO_JSONRPC_DATABASE` | Odoo database name | `production_db` |
+| Variable                | Description                  | Example            |
+| ----------------------- | ---------------------------- | ------------------ |
+| `ODOO_JSONRPC_PROTOCOL` | Protocol for Odoo connection | `https` or `http`  |
+| `ODOO_JSONRPC_HOST`     | Odoo server hostname/IP      | `odoo.example.com` |
+| `ODOO_JSONRPC_PORT`     | Odoo server port             | `443`, `8069`      |
+| `ODOO_JSONRPC_DATABASE` | Odoo database name           | `production_db`    |
 
 ## Health Check
 
@@ -218,7 +218,7 @@ docker-compose build --no-cache
    deploy:
      resources:
        limits:
-         cpus: '1.0'
+         cpus: "1.0"
          memory: 512M
    ```
 
@@ -240,12 +240,14 @@ docker logs --tail 100 -f odoo-whatsapp-frontend
 ## Backup
 
 Important files to backup:
+
 - `.env.production` (store securely, not in version control)
 - Custom configuration files
 
 ## Support
 
 For issues:
+
 1. Check logs: `docker logs odoo-whatsapp-frontend`
 2. Verify environment configuration
 3. Test Odoo connectivity

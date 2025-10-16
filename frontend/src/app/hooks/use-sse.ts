@@ -31,7 +31,7 @@ export const useSSE = (callbacks: SSECallbacks, options: SSEOptions = {}) => {
     threadId = null,
     enabled = true,
     reconnectInterval = 10000, // Increased from 5s to 10s
-    maxReconnectAttempts = 3,  // Reduced from 5 to 3
+    maxReconnectAttempts = 3, // Reduced from 5 to 3
   } = options;
 
   const { sessionId } = useAuth();
@@ -41,7 +41,7 @@ export const useSSE = (callbacks: SSECallbacks, options: SSEOptions = {}) => {
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const callbacksRef = useRef(callbacks);
-  
+
   // Update callbacks ref when callbacks change
   useEffect(() => {
     callbacksRef.current = callbacks;
@@ -99,7 +99,10 @@ export const useSSE = (callbacks: SSECallbacks, options: SSEOptions = {}) => {
               break;
             case "messages":
               if (update.data?.messages && update.data?.threadId) {
-                callbacksRef.current.onMessagesUpdate?.(update.data.messages, update.data.threadId);
+                callbacksRef.current.onMessagesUpdate?.(
+                  update.data.messages,
+                  update.data.threadId
+                );
               }
               break;
             case "heartbeat":
@@ -120,7 +123,11 @@ export const useSSE = (callbacks: SSECallbacks, options: SSEOptions = {}) => {
         eventSourceRef.current = null;
 
         // Attempt reconnection if within limits and still enabled
-        if (enabled && sessionId && reconnectAttemptsRef.current < maxReconnectAttempts) {
+        if (
+          enabled &&
+          sessionId &&
+          reconnectAttemptsRef.current < maxReconnectAttempts
+        ) {
           reconnectAttemptsRef.current++;
           setReconnectCount(reconnectAttemptsRef.current);
 
@@ -134,7 +141,6 @@ export const useSSE = (callbacks: SSECallbacks, options: SSEOptions = {}) => {
           }, reconnectInterval * reconnectAttemptsRef.current); // Exponential backoff
         }
       };
-
     } catch {
       setIsConnected(false);
     }

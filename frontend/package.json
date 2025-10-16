@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "vitest"
+    "test": "vitest",
+    "prettier": "prettier --check .",
+    "prettier:fix": "prettier --write .",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.8",
@@ -25,6 +28,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.3.2",
+    "prettier": "^3.6.2",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^1.6.0"

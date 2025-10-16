@@ -73,9 +73,7 @@ export default function ContactHeader() {
     const renderGroupContactNames = (): string => {
       return Object.values(group.contacts)
         .map((groupContact?: Contact) =>
-          groupContact?.id === id
-            ? t("common.you")
-            : groupContact?.displayName
+          groupContact?.id === id ? t("common.you") : groupContact?.displayName
         )
         .join(", ");
     };

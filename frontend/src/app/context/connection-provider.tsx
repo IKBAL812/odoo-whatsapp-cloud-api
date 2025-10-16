@@ -1,6 +1,12 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, PropsWithChildren } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  PropsWithChildren,
+} from "react";
 
 type ConnectionStatus = "connected" | "disconnected" | "session-expired";
 
@@ -12,7 +18,9 @@ type ConnectionContextType = {
   reportConnectionRestored: () => void;
 };
 
-const ConnectionContext = createContext<ConnectionContextType | undefined>(undefined);
+const ConnectionContext = createContext<ConnectionContextType | undefined>(
+  undefined
+);
 
 export const useConnection = () => {
   const context = useContext(ConnectionContext);
@@ -23,7 +31,8 @@ export const useConnection = () => {
 };
 
 export default function ConnectionProvider({ children }: PropsWithChildren) {
-  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("connected");
+  const [connectionStatus, setConnectionStatus] =
+    useState<ConnectionStatus>("connected");
 
   const reportApiError = useCallback((error: unknown) => {
     // Check if it's a network error or connection refused
@@ -33,10 +42,14 @@ export default function ConnectionProvider({ children }: PropsWithChildren) {
     }
 
     // Type narrowing for error objects
-    const err = error as { status?: number; cause?: { code?: string }; message?: string };
+    const err = error as {
+      status?: number;
+      cause?: { code?: string };
+      message?: string;
+    };
 
     // Check for ECONNREFUSED specifically
-    if (err?.cause?.code === 'ECONNREFUSED') {
+    if (err?.cause?.code === "ECONNREFUSED") {
       setConnectionStatus("disconnected");
       return;
     }

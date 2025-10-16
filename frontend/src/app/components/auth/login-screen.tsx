@@ -12,9 +12,7 @@ export default function LoginScreen() {
           <h1 className="text-3xl font-semibold text-white">
             {t("auth.title")}
           </h1>
-          <p className="mt-2 text-sm text-white/60">
-            {t("auth.subtitle")}
-          </p>
+          <p className="mt-2 text-sm text-white/60">{t("auth.subtitle")}</p>
         </header>
         <LoginForm />
       </div>

@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { OdooClient } from "@/app/lib/odoo/jsonrpc";
 
-const REQUIRED_ENV_VARS = ["ODOO_JSONRPC_HOST", "ODOO_JSONRPC_DATABASE"] as const;
+const REQUIRED_ENV_VARS = [
+  "ODOO_JSONRPC_HOST",
+  "ODOO_JSONRPC_DATABASE",
+] as const;
 
 const ensureEnv = () => {
   const missing = REQUIRED_ENV_VARS.filter((name) => !process.env[name]);
@@ -63,13 +66,7 @@ export async function POST(request: Request) {
       name?: string;
       user_context?: Record<string, unknown>;
       [key: string]: unknown;
-    }>(
-      "res.users",
-      "get_session_info",
-      [],
-      {},
-      false
-    );
+    }>("res.users", "get_session_info", [], {}, false);
 
     if (!sessionInfo || !sessionInfo.uid) {
       return NextResponse.json(

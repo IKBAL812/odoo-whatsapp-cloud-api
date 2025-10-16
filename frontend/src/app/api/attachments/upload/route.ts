@@ -38,10 +38,7 @@ export async function POST(request: NextRequest) {
     const file = formData.get("file");
 
     if (!file || !(file instanceof File)) {
-      return NextResponse.json(
-        { error: "File is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "File is required" }, { status: 400 });
     }
 
     // Create form data to forward to Odoo
@@ -70,7 +67,7 @@ export async function POST(request: NextRequest) {
     const response = await fetch(`${baseURL}/whatsapp/attachment/upload/`, {
       method: "POST",
       headers: {
-        "Cookie": `session_id=${sessionId}`,
+        Cookie: `session_id=${sessionId}`,
       },
       body: odooFormData,
     });
@@ -78,7 +75,9 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       const errorText = await response.text().catch(() => "Unknown error");
       return NextResponse.json(
-        { error: `Failed to upload attachment to Odoo: ${response.status} - ${errorText}` },
+        {
+          error: `Failed to upload attachment to Odoo: ${response.status} - ${errorText}`,
+        },
         { status: response.status }
       );
     }
@@ -94,7 +93,12 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to upload attachment" },
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to upload attachment",
+      },
       { status: 500 }
     );
   }

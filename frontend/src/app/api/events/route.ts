@@ -1,7 +1,10 @@
 import { NextRequest } from "next/server";
 import { OdooClient } from "@/app/lib/odoo/jsonrpc";
 
-const REQUIRED_ENV_VARS = ["ODOO_JSONRPC_HOST", "ODOO_JSONRPC_DATABASE"] as const;
+const REQUIRED_ENV_VARS = [
+  "ODOO_JSONRPC_HOST",
+  "ODOO_JSONRPC_DATABASE",
+] as const;
 
 const ensureEnv = () => {
   const missing = REQUIRED_ENV_VARS.filter((name) => !process.env[name]);
@@ -35,27 +38,26 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     return new Response(
       JSON.stringify({
-        error: error instanceof Error ? error.message : "Server configuration error",
+        error:
+          error instanceof Error ? error.message : "Server configuration error",
       }),
-      { 
+      {
         status: 500,
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json" },
       }
     );
   }
 
   // Get URL parameters
   const url = new URL(request.url);
-  const sessionId = request.headers.get("x-session-id") || url.searchParams.get("sessionId");
-  
+  const sessionId =
+    request.headers.get("x-session-id") || url.searchParams.get("sessionId");
+
   if (!sessionId) {
-    return new Response(
-      JSON.stringify({ error: "Missing Odoo session id" }),
-      { 
-        status: 401,
-        headers: { "Content-Type": "application/json" }
-      }
-    );
+    return new Response(JSON.stringify({ error: "Missing Odoo session id" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   const protocolEnv: "http" | "https" =
@@ -66,9 +68,9 @@ export async function GET(request: NextRequest) {
   if (typeof port !== "undefined" && Number.isNaN(port)) {
     return new Response(
       JSON.stringify({ error: "ODOO_JSONRPC_PORT must be a valid number" }),
-      { 
+      {
         status: 500,
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json" },
       }
     );
   }
@@ -81,29 +83,30 @@ export async function GET(request: NextRequest) {
 
   const sessionClient = odooClient.createSession(sessionId);
   const threadId = url.searchParams.get("threadId");
-  
+
   // Simple connection limiting
-  const connectionKey = `${sessionId}-${threadId || 'global'}`;
+  const connectionKey = `${sessionId}-${threadId || "global"}`;
   const currentConnections = activeConnections.get(connectionKey) || 0;
-  
-  if (currentConnections >= 3) { // Max 3 connections per session+thread
+
+  if (currentConnections >= 3) {
+    // Max 3 connections per session+thread
     return new Response(
       JSON.stringify({ error: "Too many active connections for this session" }),
-      { 
+      {
         status: 429,
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json" },
       }
     );
   }
-  
+
   // Track connection
   activeConnections.set(connectionKey, currentConnections + 1);
-  
+
   // Odoo format: YYYY-MM-DD HH:MM:SS
   const formatOdooDateTime = (date: Date) => {
-    return date.toISOString().replace('T', ' ').replace('Z', '').slice(0, 19);
+    return date.toISOString().replace("T", " ").replace("Z", "").slice(0, 19);
   };
-  
+
   // Start checking from 1 minute ago to catch any recent messages
   const startTime = new Date(Date.now() - 60000); // 1 minute buffer
   let lastThreadsCheck = formatOdooDateTime(startTime);
@@ -142,9 +145,9 @@ export async function GET(request: NextRequest) {
                   "phone_number",
                   "backend_id",
                   "write_date",
-                  "unread_count",  // NEW: Request unread count from backend
+                  "unread_count", // NEW: Request unread count from backend
                 ],
-                order: "last_message_date desc"
+                order: "last_message_date desc",
               }
             );
 
@@ -152,9 +155,9 @@ export async function GET(request: NextRequest) {
               sendSSEMessage({
                 type: "threads",
                 data: { threads: threadsResponse },
-                timestamp: now
+                timestamp: now,
               });
-              
+
               // Update timestamp to the latest message date from the response
               const latestThread = threadsResponse[0]; // Already sorted by last_message_date desc
               if (latestThread.last_message_date) {
@@ -172,7 +175,10 @@ export async function GET(request: NextRequest) {
 
             // If connection refused or network error, stop checking to avoid spamming logs
             const err = error as Error & { cause?: { code?: string } };
-            if (err?.cause?.code === 'ECONNREFUSED' || err?.message?.includes('fetch failed')) {
+            if (
+              err?.cause?.code === "ECONNREFUSED" ||
+              err?.message?.includes("fetch failed")
+            ) {
               clearInterval(intervalId);
               controller.close();
               return;
@@ -186,7 +192,7 @@ export async function GET(request: NextRequest) {
                 "whatsapp.message",
                 [
                   ["thread_id", "=", parseInt(threadId)],
-                  ["write_date", ">", lastMessagesCheck]
+                  ["write_date", ">", lastMessagesCheck],
                 ],
                 {
                   limit: 50,
@@ -208,17 +214,20 @@ export async function GET(request: NextRequest) {
               // Always update timestamp, regardless of results
               const currentMessageCheckTime = formatOdooDateTime(new Date());
 
-              if (Array.isArray(messagesResponse) && messagesResponse.length > 0) {
+              if (
+                Array.isArray(messagesResponse) &&
+                messagesResponse.length > 0
+              ) {
                 sendSSEMessage({
                   type: "messages",
-                  data: { 
+                  data: {
                     messages: messagesResponse,
-                    threadId: threadId 
+                    threadId: threadId,
                   },
-                  timestamp: now
+                  timestamp: now,
                 });
               }
-              
+
               // Update timestamp after successful check
               lastMessagesCheck = currentMessageCheckTime;
               consecutiveErrors = 0; // Reset error counter on success
@@ -227,7 +236,10 @@ export async function GET(request: NextRequest) {
 
               // If connection refused or network error, stop checking to avoid spamming logs
               const err = error as Error & { cause?: { code?: string } };
-              if (err?.cause?.code === 'ECONNREFUSED' || err?.message?.includes('fetch failed')) {
+              if (
+                err?.cause?.code === "ECONNREFUSED" ||
+                err?.message?.includes("fetch failed")
+              ) {
                 clearInterval(intervalId);
                 controller.close();
                 return;
@@ -240,7 +252,6 @@ export async function GET(request: NextRequest) {
             sendSSEMessage({ type: "heartbeat", timestamp: now });
             lastHeartbeat = now;
           }
-
         } catch {
           consecutiveErrors++;
 
@@ -260,7 +271,7 @@ export async function GET(request: NextRequest) {
       // Cleanup on connection close
       const cleanup = () => {
         clearInterval(intervalId);
-        
+
         // Decrement connection counter
         const connections = activeConnections.get(connectionKey) || 1;
         if (connections <= 1) {
@@ -268,7 +279,7 @@ export async function GET(request: NextRequest) {
         } else {
           activeConnections.set(connectionKey, connections - 1);
         }
-        
+
         try {
           controller.close();
         } catch {
@@ -288,7 +299,7 @@ export async function GET(request: NextRequest) {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
-      "Connection": "keep-alive",
+      Connection: "keep-alive",
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Headers": "Cache-Control, x-session-id",
     },

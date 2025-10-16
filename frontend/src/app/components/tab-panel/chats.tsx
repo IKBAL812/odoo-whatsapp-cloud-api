@@ -47,14 +47,16 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
     );
     const name =
       typeof chat.contactId === "string"
-        ? currentContact?.displayName ?? chat.threadName ?? "Unknown"
-        : chat.groupName ?? chat.threadName ?? "Unknown";
+        ? (currentContact?.displayName ?? chat.threadName ?? "Unknown")
+        : (chat.groupName ?? chat.threadName ?? "Unknown");
     // For non-active chats, prefer lastMessagePreview over messages array
     // since messages array only contains data for the currently active chat
-    const isCurrentChat = typeof chat.contactId === "string" && chat.contactId === contact?.id;
-    const lastMessage = isCurrentChat && chat.messages.length > 0
-      ? chat.messages[chat.messages.length - 1]
-      : undefined;
+    const isCurrentChat =
+      typeof chat.contactId === "string" && chat.contactId === contact?.id;
+    const lastMessage =
+      isCurrentChat && chat.messages.length > 0
+        ? chat.messages[chat.messages.length - 1]
+        : undefined;
     const messagePreview = getMetaMessage(chat, lastMessage);
     const lastMessageTimestamp =
       lastMessage?.timestamp ?? chat.lastMessageAt ?? null;
@@ -98,11 +100,7 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
       >
         <div className="col-span-1">
           {!chat.group ? (
-            <Profile
-              size="12"
-              url={currentContact?.contactAvatar}
-              alt={name}
-            />
+            <Profile size="12" url={currentContact?.contactAvatar} alt={name} />
           ) : (
             <Profile size="12">
               <div className="h-full w-full flex justify-center items-center bg-white/50">
@@ -148,7 +146,7 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
           {chat.unreadCount != null && chat.unreadCount > 0 && (
             <div className="flex justify-end items-center">
               <span className="bg-emerald-500 text-white text-xs font-bold rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center">
-                {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
+                {chat.unreadCount > 99 ? "99+" : chat.unreadCount}
               </span>
             </div>
           )}

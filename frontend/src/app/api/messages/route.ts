@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { OdooClient } from "@/app/lib/odoo/jsonrpc";
 
-const REQUIRED_ENV_VARS = ["ODOO_JSONRPC_HOST", "ODOO_JSONRPC_DATABASE"] as const;
+const REQUIRED_ENV_VARS = [
+  "ODOO_JSONRPC_HOST",
+  "ODOO_JSONRPC_DATABASE",
+] as const;
 
 const ensureEnv = () => {
   const missing = REQUIRED_ENV_VARS.filter((name) => !process.env[name]);
@@ -177,19 +180,17 @@ export async function POST(request: NextRequest) {
   try {
     payload = await request.json();
   } catch {
-    return NextResponse.json(
-      { error: "Invalid JSON body" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { threadId, phoneNumber, message, backendId, replyToMessageId } = payload as {
-    threadId?: number | string;
-    phoneNumber?: string;
-    message?: string;
-    backendId?: number;
-    replyToMessageId?: string;
-  };
+  const { threadId, phoneNumber, message, backendId, replyToMessageId } =
+    payload as {
+      threadId?: number | string;
+      phoneNumber?: string;
+      message?: string;
+      backendId?: number;
+      replyToMessageId?: string;
+    };
 
   const parsedThreadId =
     typeof threadId === "string" ? Number(threadId) : threadId;
@@ -208,10 +209,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (!message || typeof message !== "string" || message.trim().length === 0) {
-    return NextResponse.json(
-      { error: "message is required" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "message is required" }, { status: 400 });
   }
 
   const trimmedMessage = message.trim();
