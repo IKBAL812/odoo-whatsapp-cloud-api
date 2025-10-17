@@ -16,7 +16,8 @@ export default function ContactHeader() {
   const {
     profile: { id },
   } = useProfile();
-  const { contact, group, threadName, partnerId, partnerName } = useCurrentChat();
+  const { contact, group, threadName, partnerId, partnerName } =
+    useCurrentChat();
   const { t } = useTranslations();
   const { showChatList } = useMobileNavigation();
   const { isMobile } = useResponsive();
@@ -41,7 +42,7 @@ export default function ContactHeader() {
       return null;
     }
     return (
-      <p className="text-xs text-white/50">
+      <p className="text-xs text-[rgb(var(--text-secondary)/var(--text-secondary-opacity))]">
         {contact?.typing ? t("chat.statusTyping") : t("chat.statusOnline")}
       </p>
     );
@@ -60,7 +61,7 @@ export default function ContactHeader() {
         href={partnerUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors text-white text-sm font-medium"
+        className="flex items-center gap-2 px-3 py-2 bg-[rgb(var(--accent-primary))] hover:bg-[rgb(var(--status-success))] rounded-lg transition-colors text-white text-sm font-medium shadow-sm"
         title={t("chat.openInOdooTitle")}
       >
         <span>{t("chat.openInOdoo")}</span>
@@ -84,20 +85,28 @@ export default function ContactHeader() {
           {isMobile && (
             <button
               onClick={showChatList}
-              className="p-2 hover:bg-white/10 rounded-lg active:bg-white/20 transition-colors"
+              className="p-2 hover:bg-[rgb(var(--bg-secondary)/var(--bg-secondary-opacity))] rounded-lg active:bg-[rgb(var(--bg-secondary)/var(--bg-quaternary-opacity))] transition-colors"
               aria-label="Back to chat list"
             >
-              <ArrowLeftIcon className="size-6 text-white" weight="bold" />
+              <ArrowLeftIcon
+                className="size-6 text-[rgb(var(--text-primary))]"
+                weight="bold"
+              />
             </button>
           )}
           <Profile size="10">
-            <div className="h-full w-full flex justify-center items-center bg-white/50">
-              <UsersThreeIcon className="size-6 text-white" weight="fill" />
+            <div className="h-full w-full flex justify-center items-center bg-[rgb(var(--bg-secondary)/0.5)]">
+              <UsersThreeIcon
+                className="size-6 text-[rgb(var(--text-primary))]"
+                weight="fill"
+              />
             </div>
           </Profile>
           <div className="flex flex-col">
-            <p className="text-white">{group.name}</p>
-            <p className="text-white/50 text-xs">{renderGroupContactNames()}</p>
+            <p className="text-[rgb(var(--text-primary))]">{group.name}</p>
+            <p className="text-[rgb(var(--text-secondary)/var(--text-secondary-opacity))] text-xs">
+              {renderGroupContactNames()}
+            </p>
           </div>
         </div>
         <div>{renderChatOptions()}</div>
@@ -105,22 +114,28 @@ export default function ContactHeader() {
     );
   }
   return (
-    <div className="w-full h-fit bg-black z-50">
-      <div className="flex gap-4 h-full w-full bg-white/10 justify-between items-center p-3 px-4">
+    <div className="w-full h-fit bg-[rgb(var(--bg-primary))] z-50">
+      <div className="flex gap-4 h-full w-full bg-[rgb(var(--bg-secondary)/var(--bg-secondary-opacity))] justify-between items-center p-3 px-4">
         <div className="flex gap-4 justify-start items-center">
           {isMobile && (
             <button
               onClick={showChatList}
-              className="p-2 hover:bg-white/10 rounded-lg active:bg-white/20 transition-colors"
+              className="p-2 hover:bg-[rgb(var(--bg-secondary)/var(--bg-secondary-opacity))] rounded-lg active:bg-[rgb(var(--bg-secondary)/var(--bg-quaternary-opacity))] transition-colors"
               aria-label="Back to chat list"
             >
-              <ArrowLeftIcon className="size-6 text-white" weight="bold" />
+              <ArrowLeftIcon
+                className="size-6 text-[rgb(var(--text-primary))]"
+                weight="bold"
+              />
             </button>
           )}
           <Profile size="10" url={contact?.contactAvatar} />
           <div className="flex flex-col">
-            <p className="text-white">
-              {partnerName ?? contact?.displayName ?? threadName ?? t("chatList.title")}
+            <p className="text-[rgb(var(--text-primary))]">
+              {partnerName ??
+                contact?.displayName ??
+                threadName ??
+                t("chatList.title")}
             </p>
             {renderContactStatus()}
           </div>

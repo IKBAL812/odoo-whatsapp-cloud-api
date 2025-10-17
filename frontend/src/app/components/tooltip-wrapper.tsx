@@ -46,8 +46,10 @@ export default function TooltipWrapper({
       className={`${
         isProfile ? "p-1" : "p-2"
       } flex justify-center items-center ${
-        selected ? "bg-gray-700/90" : "bg-transparent"
-      } hover:bg-gray-700/90 rounded-full outline-none cursor-pointer relative`}
+        selected
+          ? "bg-[rgb(var(--bg-tooltip)/var(--bg-tooltip-opacity))]"
+          : "bg-transparent"
+      } hover:bg-[rgb(var(--bg-tooltip)/var(--bg-tooltip-opacity))] rounded-full outline-none cursor-pointer relative`}
       onClick={onClick}
       onMouseOver={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
@@ -56,7 +58,7 @@ export default function TooltipWrapper({
       {children}
       {showTooltip && isHovering && (
         <div
-          className={`absolute ${getOffset()} bg-white text-xs font-semibold py-1 px-2 rounded-full capitalize z-50`}
+          className={`absolute ${getOffset()} bg-[rgb(var(--text-primary))] text-[rgb(var(--bg-primary))] text-xs font-semibold py-1 px-2 rounded-full capitalize z-50`}
           style={tooltipPositionStyles()}
         >
           {tab}

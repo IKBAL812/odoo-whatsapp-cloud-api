@@ -119,16 +119,19 @@ export default function DragDropZone({
 
       {/* Drag overlay */}
       {isDragging && (
-        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[9999] pointer-events-none">
-          <div className="bg-emerald-600/20 border-2 border-emerald-500 border-dashed rounded-2xl p-12 flex flex-col items-center gap-4">
-            <div className="bg-emerald-600/30 rounded-full p-6">
-              <Upload className="size-16 text-emerald-400" weight="bold" />
+        <div className="absolute inset-0 bg-[rgb(var(--bg-primary)/0.8)] backdrop-blur-sm flex items-center justify-center z-[9999] pointer-events-none">
+          <div className="bg-[rgb(var(--accent-primary)/0.2)] border-2 border-[rgb(var(--accent-primary))] border-dashed rounded-2xl p-12 flex flex-col items-center gap-4">
+            <div className="bg-[rgb(var(--accent-primary)/0.3)] rounded-full p-6">
+              <Upload
+                className="size-16 text-[rgb(var(--accent-primary))]"
+                weight="bold"
+              />
             </div>
             <div className="text-center">
-              <p className="text-white text-xl font-semibold mb-2">
+              <p className="text-[rgb(var(--text-primary))] text-xl font-semibold mb-2">
                 Drop files here
               </p>
-              <p className="text-white/70 text-sm">
+              <p className="text-[rgb(var(--text-secondary)/var(--text-secondary-opacity))] text-sm">
                 Images, videos, documents up to 16MB
               </p>
             </div>

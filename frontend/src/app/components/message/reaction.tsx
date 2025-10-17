@@ -52,7 +52,7 @@ export default function Reaction({ isSentFromUser, onReply }: ReactionProps) {
               transition: { type: "spring", bounce: 0.5, duration: 0.5 },
             },
           }}
-          className="bg-black overflow-hidden rounded-full absolute z-50 -top-16"
+          className="bg-[rgb(var(--bg-primary))] overflow-hidden rounded-full absolute z-50 -top-16"
         >
           <motion.div
             variants={{
@@ -70,7 +70,7 @@ export default function Reaction({ isSentFromUser, onReply }: ReactionProps) {
             }}
             initial="hidden"
             animate="show"
-            className="bg-white/15 text-white flex w-auto justify-between items-center gap-2 p-2 px-4"
+            className="bg-[rgb(var(--bg-secondary)/var(--bg-secondary-opacity))] text-[rgb(var(--text-primary))] flex w-auto justify-between items-center gap-2 p-2 px-4"
           >
             {reactions.map((reaction: string, index) => (
               <motion.p
@@ -83,7 +83,7 @@ export default function Reaction({ isSentFromUser, onReply }: ReactionProps) {
             ))}
             <PlusCircleIcon
               weight="duotone"
-              className="size-8 cursor-pointer"
+              className="size-8 cursor-pointer text-[rgb(var(--text-secondary))]"
             />
           </motion.div>
         </motion.div>
@@ -102,7 +102,7 @@ export default function Reaction({ isSentFromUser, onReply }: ReactionProps) {
       {onReply && (
         <button
           type="button"
-          className="text-white/40 hover:text-white transition"
+          className="text-[rgb(var(--text-secondary)/var(--text-tertiary-opacity))] hover:text-[rgb(var(--text-primary))] transition"
           onClick={handleReplyClick}
         >
           <ArrowBendUpLeftIcon className="size-4" weight="bold" />
@@ -111,7 +111,7 @@ export default function Reaction({ isSentFromUser, onReply }: ReactionProps) {
       {reactionMenuOpen && renderReactionMenu()}
       <SmileyIcon
         weight="regular"
-        className="size-5 text-white/40 cursor-pointer"
+        className="size-5 text-[rgb(var(--text-secondary)/var(--text-tertiary-opacity))] cursor-pointer"
         onClick={handleEmojiClick}
       />
     </div>
