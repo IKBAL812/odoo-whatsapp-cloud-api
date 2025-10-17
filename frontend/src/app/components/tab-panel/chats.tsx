@@ -109,9 +109,9 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
             </Profile>
           )}
         </div>
-        <div className="col-span-3 flex flex-col justify-center items-start w-full">
-          <p className="text-white truncate">{name}</p>
-          <div className="flex justify-start items-center gap-1 w-full">
+        <div className="col-span-4 flex flex-col justify-center items-start w-full min-w-0">
+          <p className="text-white truncate w-full text-left">{name}</p>
+          <div className="flex justify-start items-center gap-1 w-full min-w-0">
             {lastMessage && <MessageStatusIcon message={lastMessage} />}
             <p
               className={`text-sm ${
@@ -130,7 +130,7 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
             </p>
           </div>
         </div>
-        <div className="col-span-2 flex flex-col justify-center items-end gap-1">
+        <div className="col-span-1 flex flex-col justify-center items-end gap-1">
           {lastMessageTimestamp && (
             <p
               className={`text-xs font-semibold ${
