@@ -64,6 +64,7 @@ export type Chat = {
   phoneNumber?: string | null;
   backendId?: number | null;
   partnerId?: number | null; // Partner ID for opening in Odoo
+  partnerName?: string | null; // Partner display name from Odoo
   lastMessagePreview?: string;
   lastMessageAt?: number | null;
   unreadCount?: number; // NEW: Unread message count from backend
@@ -177,12 +178,17 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
 
             const hasUnread = newUnreadCount > 0;
 
+            // Extract partner ID and display name from Odoo tuple
             const partnerId =
               Array.isArray(thread.partner_id) && thread.partner_id.length > 0
                 ? thread.partner_id[0]
                 : typeof thread.partner_id === "number"
                   ? thread.partner_id
                   : null;
+            const partnerName =
+              Array.isArray(thread.partner_id) && thread.partner_id.length > 1
+                ? thread.partner_id[1]
+                : null;
 
             existingChatsMap.set(threadId, {
               ...existingChat,
@@ -191,6 +197,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
               lastMessageAt: newTimestamp,
               threadName: thread.name || existingChat.threadName,
               partnerId: partnerId ?? existingChat.partnerId,
+              partnerName: partnerName ?? existingChat.partnerName,
               unreadCount: newUnreadCount, // Update unread count
               read: !hasUnread, // Mark as read if no unread messages
             });
@@ -204,12 +211,17 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
             // For new chats, set baseline without notifying (they're new to the list)
             lastNotifiedUnreadCountRef.current.set(threadId, newUnreadCount);
 
+            // Extract partner ID and display name from Odoo tuple
             const partnerId =
               Array.isArray(thread.partner_id) && thread.partner_id.length > 0
                 ? thread.partner_id[0]
                 : typeof thread.partner_id === "number"
                   ? thread.partner_id
                   : null;
+            const partnerName =
+              Array.isArray(thread.partner_id) && thread.partner_id.length > 1
+                ? thread.partner_id[1]
+                : null;
 
             existingChatsMap.set(threadId, {
               id: threadId,
@@ -218,6 +230,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
               phoneNumber: thread.phone_number || null,
               backendId: thread.backend_id || null,
               partnerId,
+              partnerName,
               lastMessagePreview: thread.last_message_preview || "",
               lastMessageAt: newTimestamp,
               unreadCount: newUnreadCount, // Set unread count
@@ -401,12 +414,19 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
             : typeof thread.backend_id === "number"
               ? thread.backend_id
               : (authBackendId ?? null);
+
+        // Extract partner ID and display name from Odoo tuple
         const partnerId =
           Array.isArray(thread.partner_id) && thread.partner_id.length > 0
             ? thread.partner_id[0]
             : typeof thread.partner_id === "number"
               ? thread.partner_id
               : null;
+        const partnerName =
+          Array.isArray(thread.partner_id) && thread.partner_id.length > 1
+            ? thread.partner_id[1]
+            : null;
+
         const phoneNumber = thread.phone_number;
         const unreadCount = thread.unread_count || 0;
 
@@ -430,6 +450,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
           phoneNumber,
           backendId,
           partnerId,
+          partnerName,
           lastMessagePreview: preview,
           lastMessageAt: timestamp,
           unreadCount, // Include unread count
