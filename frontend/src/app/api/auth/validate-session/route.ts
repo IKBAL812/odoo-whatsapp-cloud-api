@@ -56,11 +56,11 @@ export async function POST(request: Request) {
   });
 
   try {
-    // Create a session client with the provided session ID
-    const session = odooClient.createSession(sessionId.trim());
+    // Create a session client with the provided session ID (initially without context)
+    const tempSession = odooClient.createSession(sessionId.trim());
 
     // Validate the session by calling ir.http's session_info method
-    const sessionInfo = await session.call<{
+    const sessionInfo = await tempSession.call<{
       uid?: number;
       username?: string;
       name?: string;
@@ -80,7 +80,13 @@ export async function POST(request: Request) {
       );
     }
 
-    // Try to initialize WhatsApp backend
+    // Create a new session with the proper user_context from session_info
+    const session = odooClient.createSession(
+      sessionId.trim(),
+      sessionInfo.user_context || {}
+    );
+
+    // Try to initialize WhatsApp backend with the proper context
     let backend = null;
     try {
       backend = await session.call(

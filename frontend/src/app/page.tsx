@@ -24,6 +24,9 @@ import {
 } from "./context/mobile-navigation-provider";
 import { useResponsive } from "./hooks/use-responsive";
 import { useChats } from "./hooks/use-chats";
+import TabSyncProvider from "./context/tab-sync-provider";
+import { useTabSync } from "./hooks/use-tab-sync";
+import SessionBlockedOverlay from "./components/session-blocked-overlay";
 
 function ResponsiveLayout() {
   const { isMobile, isInitialized } = useResponsive();
@@ -96,6 +99,16 @@ function AppShell() {
   );
 }
 
+function TabSyncGuard() {
+  const { isBlocked } = useTabSync();
+
+  if (isBlocked) {
+    return <SessionBlockedOverlay />;
+  }
+
+  return null;
+}
+
 function AuthenticatedApp() {
   const { isAuthenticated, isCheckingAuth } = useAuth();
   const { t } = useTranslations();
@@ -112,17 +125,24 @@ function AuthenticatedApp() {
     return <LoginScreen />;
   }
 
-  return <AppShell />;
+  return (
+    <>
+      <TabSyncGuard />
+      <AppShell />
+    </>
+  );
 }
 
 export default function Home() {
   return (
     <TranslationProvider>
-      <AuthProvider>
-        <ConnectionProvider>
-          <AuthenticatedApp />
-        </ConnectionProvider>
-      </AuthProvider>
+      <TabSyncProvider>
+        <AuthProvider>
+          <ConnectionProvider>
+            <AuthenticatedApp />
+          </ConnectionProvider>
+        </AuthProvider>
+      </TabSyncProvider>
     </TranslationProvider>
   );
 }

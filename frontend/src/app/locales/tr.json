@@ -84,5 +84,12 @@
     "retry": "Tekrar Dene",
     "login": "Giriş Yap",
     "checking": "Bağlantı kontrol ediliyor..."
+  },
+  "sessionSync": {
+    "blocked": {
+      "title": "WhatsApp başka bir sekmede aktif",
+      "message": "WhatsApp'ı bu sekmede kullanmak için diğer sekmeyi kapatın veya bu sayfayı yenileyin.",
+      "footer": "Diğer sekme kapatılırsa bu sekme otomatik olarak aktif hale gelecektir."
+    }
   }
 }
