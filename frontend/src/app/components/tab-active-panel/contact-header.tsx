@@ -16,7 +16,7 @@ export default function ContactHeader() {
   const {
     profile: { id },
   } = useProfile();
-  const { contact, group, threadName, partnerId } = useCurrentChat();
+  const { contact, group, threadName, partnerId, partnerName } = useCurrentChat();
   const { t } = useTranslations();
   const { showChatList } = useMobileNavigation();
   const { isMobile } = useResponsive();
@@ -120,7 +120,7 @@ export default function ContactHeader() {
           <Profile size="10" url={contact?.contactAvatar} />
           <div className="flex flex-col">
             <p className="text-white">
-              {contact?.displayName ?? threadName ?? t("chatList.title")}
+              {partnerName ?? contact?.displayName ?? threadName ?? t("chatList.title")}
             </p>
             {renderContactStatus()}
           </div>

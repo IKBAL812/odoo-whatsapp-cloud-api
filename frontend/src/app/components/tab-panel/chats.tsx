@@ -47,7 +47,7 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
     );
     const name =
       typeof chat.contactId === "string"
-        ? (currentContact?.displayName ?? chat.threadName ?? "Unknown")
+        ? (chat.partnerName ?? currentContact?.displayName ?? chat.threadName ?? "Unknown")
         : (chat.groupName ?? chat.threadName ?? "Unknown");
     // For non-active chats, prefer lastMessagePreview over messages array
     // since messages array only contains data for the currently active chat
