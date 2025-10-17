@@ -59,14 +59,19 @@ export async function POST(request: Request) {
     // Create a session client with the provided session ID
     const session = odooClient.createSession(sessionId.trim());
 
-    // Validate the session by making a simple call to get session info
+    // Validate the session by calling ir.http's session_info method
     const sessionInfo = await session.call<{
       uid?: number;
       username?: string;
       name?: string;
+      partner_display_name?: string;
       user_context?: Record<string, unknown>;
+      db?: string;
+      server_version?: string;
+      company_id?: number;
+      partner_id?: number;
       [key: string]: unknown;
-    }>("res.users", "get_session_info", [], {}, false);
+    }>("ir.http", "session_info", [[]], {}, false);
 
     if (!sessionInfo || !sessionInfo.uid) {
       return NextResponse.json(
