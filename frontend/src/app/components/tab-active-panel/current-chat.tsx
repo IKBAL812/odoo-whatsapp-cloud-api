@@ -156,7 +156,7 @@ export default function CurrentChat() {
 
           <div
             ref={scrollContainerRef}
-            className="relative flex-1 min-h-0 w-full overflow-y-auto"
+            className="relative flex-1 min-h-0 w-full overflow-y-auto custom-scrollbar"
           >
             <div className="min-h-full flex flex-col justify-end">
               <div className="p-4 md:p-4 px-3 md:px-4 flex flex-col gap-2">

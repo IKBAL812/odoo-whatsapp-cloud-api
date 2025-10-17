@@ -16,6 +16,46 @@ body {
   display: none; /* Chrome, Safari, and Opera */
 }
 
+/* Custom Scrollbar Styles - Cross-Browser Compatible */
+.custom-scrollbar {
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+  scrollbar-gutter: stable;
+}
+
+/* Webkit browsers (Chrome, Safari, Edge, Opera) */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.35);
+  background-clip: padding-box;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:active {
+  background: rgba(16, 185, 129, 0.6); /* emerald-500 with opacity */
+  background-clip: padding-box;
+}
+
+/* Corner (where horizontal and vertical scrollbars meet) */
+.custom-scrollbar::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 .background-custom {
   background-color: #ffffff;
   opacity: 0.03;

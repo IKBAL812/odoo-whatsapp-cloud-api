@@ -140,7 +140,7 @@ export default function AttachmentPicker({
             </div>
 
             {/* Preview area */}
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
               {error && (
                 <div className="bg-red-500/20 border border-red-500 text-red-200 px-4 py-2 rounded mb-4">
                   {error}

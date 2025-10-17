@@ -168,13 +168,13 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
   };
 
   return (
-    <section className="w-full h-full min-h-0 flex flex-col gap-3 p-4 relative">
-      <section className="w-full flex justify-between items-center">
+    <section className="w-full h-full min-h-0 flex flex-col gap-3 relative">
+      <section className="w-full flex justify-between items-center px-4 pt-4">
         <p className="text-white text-2xl font-semibold capitalize">
           {t(`navigation.${selectedTab}`)}
         </p>
       </section>
-      <section className="w-full flex flex-col gap-1">
+      <section className="w-full flex flex-col gap-1 px-4">
         <div className="flex justify-start items-center text-white gap-2">
           {[Filters.ALL, Filters.UNREAD].map((f: string) => (
             <button
@@ -191,7 +191,7 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
           ))}
         </div>
       </section>
-      <section className="w-full flex-1 min-h-0 overflow-y-auto flex flex-col gap-1">
+      <section className="w-full flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col gap-1 px-4 pb-4">
         {renderChats()}
       </section>
     </section>
