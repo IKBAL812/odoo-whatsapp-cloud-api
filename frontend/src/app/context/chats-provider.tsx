@@ -150,7 +150,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
           if (existingChat) {
             // Update existing chat, preserving important data like messages
             const newTimestamp = thread.last_message_date
-              ? new Date(thread.last_message_date).getTime()
+              ? new Date(thread.last_message_date + "Z").getTime()
               : existingChat.lastMessageAt;
 
             const newUnreadCount = thread.unread_count ?? 0;
@@ -197,7 +197,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
           } else {
             // Add new chat
             const newTimestamp = thread.last_message_date
-              ? new Date(thread.last_message_date).getTime()
+              ? new Date(thread.last_message_date + "Z").getTime()
               : Date.now();
             const newUnreadCount = thread.unread_count ?? 0;
 
@@ -393,7 +393,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
         const chatId = String(thread.id);
         const preview = thread.last_message_preview ?? "";
         const timestamp = thread.last_message_date
-          ? new Date(thread.last_message_date).getTime()
+          ? new Date(thread.last_message_date + "Z").getTime()
           : null;
         const backendId =
           Array.isArray(thread.backend_id) && thread.backend_id.length > 0
