@@ -164,6 +164,24 @@ class WhatsAppCloudAPIWebhookController(http.Controller):
             "timestamp": int(message.get("timestamp")),
         }
 
+        # Handle reaction-specific fields
+        if msg_type == "reaction":
+            reaction_data = message.get("reaction") or {}
+            reaction_emoji = reaction_data.get("emoji", "")
+            # Find the message being reacted to
+            reacted_msg_id = reaction_data.get("message_id")
+            if reacted_msg_id:
+                reacted_message = message_model.search(
+                    [
+                        ("backend_id", "=", backend.id),
+                        ("message_id", "=", reacted_msg_id),
+                    ],
+                    limit=1,
+                )
+                if reacted_message:
+                    reacted_message.write({"reaction_emoji": reaction_emoji})
+                    return
+
         if existing:
             existing.write(msg_vals)
             message_record = existing
@@ -181,7 +199,7 @@ class WhatsAppCloudAPIWebhookController(http.Controller):
     def _map_message_type(self, msg_type_raw):
         if msg_type_raw in {"image", "video", "audio", "document", "sticker"}:
             return "media"
-        if msg_type_raw in {"text", "interactive", "template", "status"}:
+        if msg_type_raw in {"text", "interactive", "template", "status", "reaction"}:
             return msg_type_raw
         return "unknown"
 
@@ -192,6 +210,10 @@ class WhatsAppCloudAPIWebhookController(http.Controller):
         if msg_type_raw in {"image", "video", "audio", "document", "sticker"}:
             data = message.get(msg_type_raw) or {}
             return data.get("caption") or data.get("filename")
+        if msg_type_raw == "reaction":
+            reaction_data = message.get("reaction") or {}
+            emoji = reaction_data.get("emoji", "")
+            return f"Reacted with {emoji}" if emoji else "Removed reaction"
         interactive = message.get("interactive") or {}
         if interactive:
             for key in ("list_reply", "button_reply"):

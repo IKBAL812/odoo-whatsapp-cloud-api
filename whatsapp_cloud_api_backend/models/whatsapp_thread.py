@@ -189,8 +189,17 @@ class WhatsAppThread(models.Model):
         if extra_vals:
             vals.update(extra_vals)
 
-        message_record = self.env["whatsapp.message"].sudo().create(vals)
-        self._register_message(message_record)
+        if message_type == "reaction":
+            message_record = (
+                self.env["whatsapp.message"]
+                .sudo()
+                .search([("message_id", "=", base_payload["reaction"]["message_id"])])
+            )
+            if message_record:
+                message_record.write({"reaction_emoji": body})
+        else:
+            message_record = self.env["whatsapp.message"].sudo().create(vals)
+            self._register_message(message_record)
         return {
             "message_id": message_record.id,
             "whatsapp_id": message_record.message_id,

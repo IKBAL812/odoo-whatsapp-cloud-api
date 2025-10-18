@@ -101,6 +101,8 @@ class WhatsAppMessage(models.Model):
         help="Reference to the message this message is replying to, if any.",
     )
 
+    reaction_emoji = fields.Char()
+
     timestamp = fields.Integer(
         required=True,
     )
