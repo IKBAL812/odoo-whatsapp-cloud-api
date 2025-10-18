@@ -100,6 +100,9 @@ ODOO_JSONRPC_HOST=localhost
 ODOO_JSONRPC_PORT=8069
 ODOO_JSONRPC_PROTOCOL=http
 ODOO_JSONRPC_DATABASE=your_database
+
+# Webhook secret for real-time updates (generate with: openssl rand -hex 32)
+ODOO_WEBHOOK_SECRET=your_webhook_secret_key_here
 ```
 
 ### API Routes Structure
@@ -154,9 +157,38 @@ This project supports **both desktop and mobile** devices. When adding or refact
 
 5. **Mobile Navigation Provider**: Use `useMobileNavigation()` for chat list toggling
 
-## 🔄 Real-Time Updates with SSE
+## 🔄 Real-Time Updates with Webhooks + SSE
 
-The project uses Server-Sent Events for real-time message and thread updates:
+The project uses a webhook-driven architecture with Server-Sent Events (SSE) for real-time message and thread updates.
+
+### Architecture Overview
+
+```
+Odoo Backend → Webhook → Next.js → EventBroadcaster → SSE Streams → Frontend
+```
+
+**How it works**:
+1. Odoo sends webhooks when messages/threads are created or updated
+2. Next.js webhook endpoint validates signature and broadcasts to active SSE connections
+3. Frontend receives updates instantly (0-500ms latency)
+4. Heartbeat checks for missed webhooks every 30s
+5. User refresh (F5) always fetches latest data via REST API
+
+### Webhook Events
+
+The system supports 3 webhook event types:
+
+1. **`thread.created`** - New conversation started
+2. **`thread.updated`** - Thread metadata changed (name, unread count, last message preview)
+3. **`message.created`** - New message received or sent
+
+### Webhook Endpoint
+
+**Location**: `/api/webhooks/whatsapp`
+
+**Security**: HMAC-SHA256 signature verification using `ODOO_WEBHOOK_SECRET`
+
+**Health Check**: `GET /api/webhooks/whatsapp` returns active channels and listener count
 
 ### SSE Hook Usage
 
@@ -187,11 +219,42 @@ const { isConnected } = useSSE(
 
 ### SSE Endpoint
 
-Located at `/api/events`, streams:
+Located at `/api/events`, provides:
 
-- Thread updates every 5 seconds
-- Message updates every 2 seconds
-- Heartbeat every 30 seconds
+- **Webhook event streaming** - Instant updates when webhooks arrive
+- **Heartbeat** - Every 30 seconds with drift detection
+- **Drift detection** - Compares `write_date` to detect missed webhooks
+- **Auto-sync** - Sends `sync_required` event if drift detected, triggering REST API refresh
+
+### Event Broadcasting System
+
+**Location**: `src/app/lib/events/broadcaster.ts`
+
+In-memory pub/sub system for single-instance deployments. For multi-instance (horizontal scaling), replace with Redis pub/sub.
+
+**Channels**:
+- `threads` - Global thread events (thread.created, thread.updated)
+- `messages` - Global message events
+- `messages:${threadId}` - Thread-specific message events
+
+### Configuring Odoo Webhooks
+
+**Ask your backend developer to configure Odoo to send webhooks to the frontend.**
+
+Required webhook URL (add to Odoo configuration):
+```bash
+# Local development
+http://localhost:3000/api/webhooks/whatsapp
+
+# Production
+https://your-domain.com/api/webhooks/whatsapp
+```
+
+The backend must send webhooks for:
+- `whatsapp.thread` model: `create()` and `write()` triggers
+- `whatsapp.message` model: `create()` and `write()` triggers
+
+See "Backend Webhook Integration" section below for payload structure and signature generation.
 
 ## 🏗️ Development Workflow
 

@@ -59,6 +59,15 @@ class WhatsAppBackend(models.Model):
         default=lambda self: self.env.company,
     )
 
+    frontend_webhook_url = fields.Char(
+        string="Frontend Webhook URL",
+        help="URL to send WhatsApp thread and message updates to the frontend.",
+    )
+    frontend_webhook_secret = fields.Char(
+        string="Frontend Webhook Secret",
+        help="Secret token to authenticate frontend webhook requests.",
+    )
+
     # -------------------------------------------------------------------------
     # WhatsApp Cloud API helpers
     # -------------------------------------------------------------------------

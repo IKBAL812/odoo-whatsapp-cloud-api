@@ -3,6 +3,7 @@
 from odoo import api, fields, models
 
 from ..controllers.main import WP_ATTACHMENT_DOWNLOAD_PATH
+from .frontend_webhook import WebhookSender
 
 
 class WhatsAppMessage(models.Model):
@@ -124,6 +125,11 @@ class WhatsAppMessage(models.Model):
         )
     ]
 
+    def send_webhook_payload(self, event_type):
+        """Send the message data to the frontend webhook."""
+        for message in self:
+            WebhookSender.send_message_webhook_payload(message, event_type)
+
     @api.model_create_multi
     def create(self, vals_list):
         res = super().create(vals_list)
@@ -143,6 +149,9 @@ class WhatsAppMessage(models.Model):
                 )
                 ReadStatus |= status
             record.read_status_ids = [(6, 0, ReadStatus.ids)]
+
+        # Send webhook payload for message creation
+        res.with_delay().send_webhook_payload("message.created")
 
         return res
 
