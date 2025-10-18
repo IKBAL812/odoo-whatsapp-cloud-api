@@ -66,11 +66,17 @@ export default function ChatMessage({ message }: ChatMessageProps) {
 
   if (group) {
     const contact = getContact(message.contactId);
+    // Use contact ID as seed for incoming messages
+    const contactSeed = contact?.id ? parseInt(contact.id, 10) : undefined;
     return (
       <div className="flex flex-col gap-1">
         <div className="flex items-start gap-2 w-max">
           {!message.isSentFromUser && (
-            <Profile url={contact?.contactAvatar} alt={contact?.displayName} />
+            <Profile
+              url={contact?.contactAvatar}
+              alt={contact?.displayName}
+              seed={contactSeed}
+            />
           )}
           <div className="group rounded-lg overflow-hidden bg-[rgb(var(--bg-primary))] z-20 relative">
             <div
@@ -121,8 +127,11 @@ export default function ChatMessage({ message }: ChatMessageProps) {
               )}
             </div>
           </div>
-          {message.isSentFromUser && outgoingAvatar && (
-            <Profile url={outgoingAvatar ?? undefined} />
+          {message.isSentFromUser && (
+            <Profile
+              url={outgoingAvatar ?? undefined}
+              seed={senderUser?.id}
+            />
           )}
         </div>
         {message.error && (
@@ -187,8 +196,11 @@ export default function ChatMessage({ message }: ChatMessageProps) {
             )}
           </div>
         </div>
-        {message.isSentFromUser && outgoingAvatar && (
-          <Profile url={outgoingAvatar ?? undefined} />
+        {message.isSentFromUser && (
+          <Profile
+            url={outgoingAvatar ?? undefined}
+            seed={senderUser?.id}
+          />
         )}
       </div>
       {message.error && (

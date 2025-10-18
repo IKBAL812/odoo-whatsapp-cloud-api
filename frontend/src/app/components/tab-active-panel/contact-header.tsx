@@ -16,14 +16,14 @@ export default function ContactHeader() {
   const {
     profile: { id },
   } = useProfile();
-  const { contact, group, threadName, partnerId, partnerName } =
+  const { contact, group, threadName, partnerId, partnerName, partnerAvatar, hasAvatar } =
     useCurrentChat();
   const { t } = useTranslations();
   const { showChatList } = useMobileNavigation();
   const { isMobile } = useResponsive();
   const [odooBaseUrl, setOdooBaseUrl] = useState<string | null>(null);
 
-  // Fetch Odoo base URL
+  // Fetch Odoo base URL for opening partner in Odoo
   useEffect(() => {
     fetch("/api/config")
       .then((res) => res.json())
@@ -129,7 +129,15 @@ export default function ContactHeader() {
               />
             </button>
           )}
-          <Profile size="10" url={contact?.contactAvatar} />
+          <Profile
+            size="10"
+            url={
+              hasAvatar
+                ? (partnerAvatar ?? contact?.contactAvatar ?? undefined)
+                : undefined
+            }
+            seed={partnerId ?? undefined}
+          />
           <div className="flex flex-col">
             <p className="text-[rgb(var(--text-primary))]">
               {partnerName ??

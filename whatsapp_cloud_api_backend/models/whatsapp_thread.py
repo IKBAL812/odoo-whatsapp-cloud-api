@@ -51,6 +51,11 @@ class WhatsAppThread(models.Model):
         compute="_compute_unread_count",
     )
 
+    has_avatar = fields.Boolean(
+        compute="_compute_has_avatar",
+        string="Has Avatar",
+    )
+
     _sql_constraints = [
         (
             "whatsapp_thread_unique",
@@ -58,6 +63,17 @@ class WhatsAppThread(models.Model):
             "A thread already exists for this backend and phone number.",
         )
     ]
+
+    @api.depends("partner_id", "partner_id.avatar_256")
+    def _compute_has_avatar(self):
+        """Compute whether the partner has an actual avatar image"""
+        for record in self:
+            if record.partner_id:
+                # Check if partner has an actual avatar (not auto-generated)
+                partner = record.partner_id.with_context(whatsapp_connector=True)
+                record.has_avatar = bool(partner.avatar_256)
+            else:
+                record.has_avatar = False
 
     def _compute_unread_count(self):
         """Compute unread count for each thread."""

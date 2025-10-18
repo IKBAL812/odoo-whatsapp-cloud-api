@@ -88,6 +88,9 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
               threadName: chat.threadName ?? chat.groupName ?? null,
               phoneNumber: chat.phoneNumber ?? null,
               backendId: chat.backendId ?? null,
+              partnerId: chat.partnerId ?? null,
+              partnerName: chat.partnerName ?? null,
+              partnerAvatar: chat.partnerAvatar ?? null,
             });
           }
           // Navigate to active chat view on mobile
@@ -103,7 +106,18 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
       >
         <div className="col-span-1">
           {!chat.group ? (
-            <Profile size="12" url={currentContact?.contactAvatar} alt={name} />
+            <Profile
+              size="12"
+              url={
+                chat.hasAvatar
+                  ? (chat.partnerAvatar ??
+                    currentContact?.contactAvatar ??
+                    undefined)
+                  : undefined
+              }
+              alt={name}
+              seed={chat.partnerId ?? undefined}
+            />
           ) : (
             <Profile size="12">
               <div className="h-full w-full flex justify-center items-center bg-[rgb(var(--bg-secondary)/0.5)]">

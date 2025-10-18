@@ -9,6 +9,7 @@ import {
 import { useAuth } from "../hooks/use-auth";
 import { useSSE } from "../hooks/use-sse";
 import { useConnection } from "./connection-provider";
+import { buildPartnerAvatarUrl } from "../lib/odoo/avatar-url";
 
 export enum Filters {
   ALL = "all",
@@ -66,6 +67,8 @@ export type Chat = {
   backendId?: number | null;
   partnerId?: number | null; // Partner ID for opening in Odoo
   partnerName?: string | null; // Partner display name from Odoo
+  partnerAvatar?: string | null; // Partner avatar URL from Odoo
+  hasAvatar?: boolean; // NEW: Whether partner has an actual avatar image
   lastMessagePreview?: string;
   lastMessageAt?: number | null;
   unreadCount?: number; // NEW: Unread message count from backend
@@ -109,6 +112,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
   const isFetchingRef = useRef(false);
   const notificationAudioRef = useRef<HTMLAudioElement | null>(null);
   const lastNotifiedUnreadCountRef = useRef<Map<string, number>>(new Map()); // threadId -> last notified unread count
+  const [odooBaseUrl, setOdooBaseUrl] = useState<string | null>(null);
 
   // Initialize notification audio
   useEffect(() => {
@@ -116,6 +120,20 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
       return;
     }
     notificationAudioRef.current = new Audio("/notification.mp3");
+  }, []);
+
+  // Fetch Odoo base URL for avatar generation
+  useEffect(() => {
+    fetch("/api/config")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.odooBaseUrl) {
+          setOdooBaseUrl(data.odooBaseUrl);
+        }
+      })
+      .catch(() => {
+        // Silently fail - avatars just won't display
+      });
   }, []);
 
   // SSE callbacks for real-time thread updates
@@ -132,6 +150,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
         partner_id?: [number, string] | number | null | false;
         write_date: string;
         unread_count?: number; // NEW: Unread count from backend
+        has_avatar?: boolean; // NEW: Whether partner has an actual avatar image
       }>;
 
       // Track if any thread has a genuinely new message for notifications
@@ -191,6 +210,14 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
                 ? thread.partner_id[1]
                 : null;
 
+            // Always build partner avatar URL if we have partnerId and odooBaseUrl
+            // The component will decide whether to use it based on hasAvatar flag
+            const hasAvatar = thread.has_avatar === true;
+            const partnerAvatar =
+              partnerId && odooBaseUrl
+                ? buildPartnerAvatarUrl(odooBaseUrl, partnerId, sessionId)
+                : null;
+
             existingChatsMap.set(threadId, {
               ...existingChat,
               lastMessagePreview:
@@ -199,6 +226,9 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
               threadName: thread.name || existingChat.threadName,
               partnerId: partnerId ?? existingChat.partnerId,
               partnerName: partnerName ?? existingChat.partnerName,
+              // Keep existing avatar URL if new one is null (odooBaseUrl not loaded yet)
+              partnerAvatar: partnerAvatar !== null ? partnerAvatar : existingChat.partnerAvatar,
+              hasAvatar: hasAvatar, // Update avatar availability flag
               unreadCount: newUnreadCount, // Update unread count
               read: !hasUnread, // Mark as read if no unread messages
             });
@@ -224,6 +254,14 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
                 ? thread.partner_id[1]
                 : null;
 
+            // Always build partner avatar URL if we have partnerId and odooBaseUrl
+            // The component will decide whether to use it based on hasAvatar flag
+            const hasAvatar = thread.has_avatar === true;
+            const partnerAvatar =
+              partnerId && odooBaseUrl
+                ? buildPartnerAvatarUrl(odooBaseUrl, partnerId, sessionId)
+                : null;
+
             existingChatsMap.set(threadId, {
               id: threadId,
               contactId: thread.phone_number || "",
@@ -232,6 +270,8 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
               backendId: thread.backend_id || null,
               partnerId,
               partnerName,
+              partnerAvatar,
+              hasAvatar, // Include avatar availability flag
               lastMessagePreview: thread.last_message_preview || "",
               lastMessageAt: newTimestamp,
               unreadCount: newUnreadCount, // Set unread count
@@ -288,7 +328,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
         }
       }
     },
-    [filter]
+    [filter, odooBaseUrl, sessionId]
   );
 
   // Initialize SSE connection for threads
@@ -399,6 +439,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
     backend_id?: [number, string] | number | null | false;
     partner_id?: [number, string] | number | null | false;
     unread_count?: number; // NEW: Unread count from backend
+    has_avatar?: boolean; // NEW: Whether partner has an actual avatar image
   };
 
   const transformThreads = useCallback(
@@ -428,6 +469,14 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
             ? thread.partner_id[1]
             : null;
 
+        // Always build partner avatar URL if we have partnerId and odooBaseUrl
+        // The component will decide whether to use it based on hasAvatar flag
+        const hasAvatar = thread.has_avatar === true;
+        const partnerAvatar =
+          partnerId && odooBaseUrl
+            ? buildPartnerAvatarUrl(odooBaseUrl, partnerId, sessionId)
+            : null;
+
         const phoneNumber = thread.phone_number;
         const unreadCount = thread.unread_count || 0;
 
@@ -452,6 +501,8 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
           backendId,
           partnerId,
           partnerName,
+          partnerAvatar,
+          hasAvatar, // Include avatar availability flag
           lastMessagePreview: preview,
           lastMessageAt: timestamp,
           unreadCount, // Include unread count
@@ -462,7 +513,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
         };
       });
     },
-    [authBackendId]
+    [authBackendId, odooBaseUrl, sessionId]
   );
 
   const fetchThreads = useCallback(
