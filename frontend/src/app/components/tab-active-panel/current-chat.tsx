@@ -5,7 +5,6 @@ import { useCurrentChat } from "@/app/hooks/use-current-chat";
 import Reaction from "../message/reaction";
 import ContactHeader from "./contact-header";
 import ChatMessage from "./chat-message";
-import MessageReactions from "./message-reactions";
 import AttachmentPicker from "../message/attachment-picker";
 import DragDropZone from "../message/drag-drop-zone";
 import { useTranslations } from "@/app/context/translation-provider";
@@ -19,6 +18,7 @@ export default function CurrentChat() {
     isLoading,
     sendMessage,
     sendAttachment,
+    sendReaction,
     isSending,
     replyTo,
     cancelReply,
@@ -204,6 +204,11 @@ export default function CurrentChat() {
                                 ? () => startReply(message)
                                 : undefined
                             }
+                            onReaction={
+                              message.whatsappId
+                                ? (emoji) => sendReaction(message, emoji)
+                                : undefined
+                            }
                           />
                         )}
                         <ChatMessage message={message} />
@@ -215,13 +220,25 @@ export default function CurrentChat() {
                                 ? () => startReply(message)
                                 : undefined
                             }
+                            onReaction={
+                              message.whatsappId
+                                ? (emoji) => sendReaction(message, emoji)
+                                : undefined
+                            }
                           />
                         )}
-                        {message.reactions?.length && (
-                          <MessageReactions
-                            reactions={message.reactions}
-                            isSentFromUser={message.isSentFromUser}
-                          />
+                        {message.reactionEmoji && (
+                          <div
+                            className={`absolute z-20 -bottom-4 ${
+                              message.isSentFromUser ? "right-3" : "left-3"
+                            }`}
+                          >
+                            <div className="flex justify-center items-center rounded-xl overflow-hidden bg-black">
+                              <p className="text-xs rounded-xl border-[1px] border-white/25 bg-white/20 px-1.5 py-0.5">
+                                {message.reactionEmoji}
+                              </p>
+                            </div>
+                          </div>
                         )}
                       </div>
                     </div>

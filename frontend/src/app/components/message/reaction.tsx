@@ -16,9 +16,14 @@ const reactions = ["👍🏼", "❤️", "😂", "😮", "🥲", "🙏🏻"];
 type ReactionProps = {
   isSentFromUser: boolean;
   onReply?: () => void;
+  onReaction?: (emoji: string) => void;
 };
 
-export default function Reaction({ isSentFromUser, onReply }: ReactionProps) {
+export default function Reaction({
+  isSentFromUser,
+  onReply,
+  onReaction,
+}: ReactionProps) {
   const [showReactionEmoji, setShowReactionEmoji] = useState(false);
   const [reactionMenuOpen, setReactionMenuOpen] = useState(false);
 
@@ -37,6 +42,16 @@ export default function Reaction({ isSentFromUser, onReply }: ReactionProps) {
   const handleReplyClick = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
     onReply?.();
+  };
+
+  const handleReactionClick = (
+    event: MouseEvent<HTMLParagraphElement>,
+    emoji: string
+  ) => {
+    event.stopPropagation();
+    onReaction?.(emoji);
+    setReactionMenuOpen(false);
+    setShowReactionEmoji(false);
   };
 
   const renderReactionMenu = () => {
@@ -77,6 +92,7 @@ export default function Reaction({ isSentFromUser, onReply }: ReactionProps) {
                 variants={item}
                 className="text-3xl cursor-pointer"
                 key={index}
+                onClick={(e) => handleReactionClick(e, reaction)}
               >
                 {reaction}
               </motion.p>

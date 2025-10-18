@@ -25,6 +25,7 @@ type OdooMessageRecord = {
   message_id?: string | null;
   replied_message_id?: false | [number, string] | null;
   timestamp: number;
+  reaction_emoji?: string | false | null;
 };
 
 export async function GET(request: NextRequest) {
@@ -129,6 +130,7 @@ export async function GET(request: NextRequest) {
           "replied_message_id",
           "write_date",
           "timestamp",
+          "reaction_emoji",
         ],
       }
     );

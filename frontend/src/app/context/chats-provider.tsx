@@ -47,6 +47,7 @@ export type Message = {
   userId?: number | null;
   whatsappId?: string | null;
   attachment?: Attachment;
+  reactionEmoji?: string | null;
   replyTo?: {
     messageId: string;
     message: string;

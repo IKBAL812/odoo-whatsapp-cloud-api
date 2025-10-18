@@ -9,7 +9,7 @@ export default function MessageReactions({
 }) {
   return (
     <div
-      className={`absolute z-20 -bottom-4 ${
+      className={`absolute z-20 -bottom-4 flex gap-1 ${
         isSentFromUser ? "right-3" : "left-3"
       }`}
     >
@@ -20,6 +20,9 @@ export default function MessageReactions({
         >
           <p className="text-xs rounded-xl border-[1px] border-[rgb(var(--border-primary)/var(--border-primary-opacity))] bg-[rgb(var(--bg-secondary)/var(--bg-secondary-opacity))] px-1 py-0.5">
             {reaction.emoji}
+            {reaction.count > 1 && (
+              <span className="ml-0.5">{reaction.count}</span>
+            )}
           </p>
         </div>
       ))}

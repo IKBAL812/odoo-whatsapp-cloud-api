@@ -44,6 +44,7 @@ export type CurrentChat = CurrentChatData & {
   loadCurrentChat: (chat: Partial<CurrentChatData>) => void;
   sendMessage: (content: string) => Promise<void>;
   sendAttachment: (file: File, caption?: string) => Promise<void>;
+  sendReaction: (message: Message, emoji: string) => Promise<void>;
   startReply: (message: Message) => void;
   cancelReply: () => void;
 };
@@ -63,6 +64,7 @@ type OdooMessageRecord = {
   create_uid: [number, string];
   replied_message_id?: false | [number, string] | null;
   timestamp: number;
+  reaction_emoji?: string | false | null;
   attachment?: {
     id: number;
     name: string;
@@ -176,6 +178,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
       }
 
       const odooMessages = (messages as OdooMessageRecord[]).reverse(); // Backend returns newest first, reverse for chat display
+
       const rawMessages: MessageWithReplyReference[] = odooMessages.map(
         (record) => {
           const timestamp = record.timestamp * 1000; // Convert seconds to milliseconds
@@ -195,6 +198,10 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
             ? record.replied_message_id
             : null;
           const replyMessageId = replyTuple?.[0] ? String(replyTuple[0]) : null;
+          const reactionEmoji =
+            typeof record.reaction_emoji === "string"
+              ? record.reaction_emoji
+              : null;
 
           return {
             id: record.id.toString(),
@@ -209,6 +216,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
             whatsappId,
             replyMessageId,
             attachment: record.attachment,
+            reactionEmoji,
           };
         }
       );
@@ -519,6 +527,11 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
             const replyMessageId = replyTuple?.[0]
               ? String(replyTuple[0])
               : null;
+            const reactionEmoji =
+              typeof record.reaction_emoji === "string"
+                ? record.reaction_emoji
+                : null;
+
             return {
               id: record.id.toString(),
               contactId: chatId,
@@ -532,6 +545,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
               whatsappId,
               replyMessageId,
               attachment: record.attachment,
+              reactionEmoji,
             };
           }
         );
@@ -1204,6 +1218,75 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
     ]
   );
 
+  const sendReaction = useCallback(
+    async (message: Message, emoji: string) => {
+      if (!sessionId) {
+        throw new Error("You are not authenticated");
+      }
+      if (!message.whatsappId) {
+        throw new Error("Cannot react to this message (missing WhatsApp ID)");
+      }
+
+      const fallbackPhone =
+        currentChat.phoneNumber ??
+        extractDigits(currentChat.threadName) ??
+        extractDigits(currentChat.contact?.displayName);
+
+      if (!fallbackPhone) {
+        throw new Error("Unable to determine the recipient phone number");
+      }
+
+      const backendId = currentChat.backendId ?? authBackendId ?? undefined;
+
+      try {
+        const response = await fetch("/api/messages/send-reaction", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-session-id": sessionId,
+          },
+          body: JSON.stringify({
+            phoneNumber: fallbackPhone,
+            emoji,
+            whatsappMessageId: message.whatsappId,
+            backendId,
+          }),
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          const errorMessage =
+            typeof data?.error === "string"
+              ? data.error
+              : "Failed to send reaction";
+          reportApiError({ status: response.status, message: errorMessage });
+          throw new Error(errorMessage);
+        }
+
+        reportConnectionRestored();
+
+        // Optimistically update the message with the reaction
+        setCurrentChat((prev) => ({
+          ...prev,
+          messages: prev.messages.map((m) =>
+            m.id === message.id ? { ...m, reactionEmoji: emoji } : m
+          ),
+        }));
+      } catch (error) {
+        const err = error as Error;
+        reportApiError(error);
+        throw err;
+      }
+    },
+    [
+      sessionId,
+      currentChat,
+      authBackendId,
+      reportApiError,
+      reportConnectionRestored,
+    ]
+  );
+
   const startReply = useCallback((message: Message) => {
     if (!message.whatsappId) {
       return;
@@ -1281,6 +1364,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
         loadCurrentChat,
         sendMessage,
         sendAttachment,
+        sendReaction,
         startReply,
         cancelReply,
       }}
