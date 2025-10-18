@@ -18,6 +18,7 @@ from odoo import http
 
 WP_ATTACHMENT_DOWNLOAD_PATH = "/whatsapp/attachment/download/"
 WP_ATTACHMENT_UPLOAD_PATH = "/whatsapp/attachment/upload/"
+WP_PROFILE_PICTURE_PATH = "/whatsapp/partner/profile_picture/"
 
 
 class WhatsAppCloudAPIBackendController(http.Controller):
@@ -72,3 +73,30 @@ class WhatsAppCloudAPIBackendController(http.Controller):
         )
         # Just return uploaded attachment ID for simplicity
         return http.request.make_response(f"{attachment.id}", status=200)
+
+    @http.route(
+        WP_PROFILE_PICTURE_PATH + "<int:partner_id>",
+        type="http",
+        auth="user",
+        methods=["GET"],
+        csrf=False,
+    )
+    def serve_profile_picture(self, partner_id, **kwargs):
+        Partner = http.request.env["res.partner"].sudo()
+        partner = Partner.browse(partner_id)
+
+        if not partner.exists():
+            return http.request.not_found()
+        if not partner.with_context(whatsapp_connector=True).avatar_256:
+            return http.request.not_found()
+
+        filecontent = base64.b64decode(partner.avatar_256)
+        headers = [
+            ("Content-Type", "image/png"),
+            ("Content-Length", len(filecontent)),
+            (
+                "Content-Disposition",
+                f'inline; filename="partner_{partner_id}_profile_picture.png"',
+            ),
+        ]
+        return http.request.make_response(filecontent, headers)

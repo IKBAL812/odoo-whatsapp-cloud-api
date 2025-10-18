@@ -16,7 +16,7 @@ import { useTheme } from "../hooks/use-theme";
 
 export default function TabIcons() {
   const {
-    profile: { avatarUrl },
+    profile: { avatarUrl, id },
   } = useProfile();
   const { selectedTab, selectTab, topTabs } = useTab();
   const { logout } = useAuth();
@@ -79,7 +79,7 @@ export default function TabIcons() {
             }`}
             aria-label={t("navigation.profile")}
           >
-            <Profile url={avatarUrl} size="6" />
+            <Profile url={avatarUrl} size="6" seed={id ? parseInt(id, 10) : undefined} />
             <span className="text-xs capitalize">
               {t("navigation.profile")}
             </span>
@@ -143,7 +143,7 @@ export default function TabIcons() {
           tab={t("navigation.profile")}
           onClick={() => selectTab("profile")}
         >
-          <Profile url={avatarUrl} />
+          <Profile url={avatarUrl} seed={id ? parseInt(id, 10) : undefined} />
         </TooltipWrapper>
       </section>
     </section>

@@ -69,6 +69,7 @@ export async function GET(request: NextRequest) {
         "write_date",
         "unread_count", // NEW: Request unread count from backend
         "partner_id", // Partner ID for opening in Odoo
+        "has_avatar", // NEW: Whether partner has an actual avatar image
       ],
       order: "write_date desc",
     });

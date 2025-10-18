@@ -36,6 +36,8 @@ export type CurrentChatData = {
   backendId: number | null;
   partnerId: number | null;
   partnerName: string | null;
+  partnerAvatar: string | null;
+  hasAvatar: boolean;
   isSending: boolean;
   replyTo: Message | null;
 };
@@ -145,6 +147,8 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
     backendId: null,
     partnerId: null,
     partnerName: null,
+    partnerAvatar: null,
+    hasAvatar: false,
     isSending: false,
     replyTo: null,
   });
@@ -689,6 +693,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
         phoneNumber: null,
         backendId: null,
         partnerId: null,
+        hasAvatar: false,
         replyTo: null,
       }));
       latestMessageTimestampRef.current = null;
@@ -738,6 +743,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
             typeof chat.partnerName === "string"
               ? chat.partnerName
               : prev.partnerName,
+          hasAvatar: chat.hasAvatar === true,
         }));
       } else {
         const groupContacts: CurrentChatContacts = {};
@@ -771,6 +777,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
             typeof chat.partnerName === "string"
               ? chat.partnerName
               : prev.partnerName,
+          hasAvatar: chat.hasAvatar === true,
         }));
       }
     }
