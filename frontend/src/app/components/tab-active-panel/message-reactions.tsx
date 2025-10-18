@@ -16,9 +16,9 @@ export default function MessageReactions({
       {reactions.map((reaction: ReactionType, index: number) => (
         <div
           key={index}
-          className="flex justify-center items-center rounded-xl overflow-hidden bg-black"
+          className="flex justify-center items-center rounded-xl overflow-hidden bg-[rgb(var(--bg-primary))]"
         >
-          <p className="text-xs rounded-xl border-[1px] border-white/25 bg-white/20 px-1 py-0.5">
+          <p className="text-xs rounded-xl border-[1px] border-[rgb(var(--border-primary)/var(--border-primary-opacity))] bg-[rgb(var(--bg-secondary)/var(--bg-secondary-opacity))] px-1 py-0.5">
             {reaction.emoji}
           </p>
         </div>

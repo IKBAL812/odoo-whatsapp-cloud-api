@@ -10,11 +10,11 @@ import AttachmentDisplay from "../message/attachment";
 
 const getRandomContactColor = (): string => {
   const colors = [
-    "text-pink-400",
-    "text-sky-300",
-    "text-teal-300",
-    "text-amber-300",
-    "text-green-300",
+    "text-[rgb(var(--status-error))]",
+    "text-[rgb(var(--status-info))]",
+    "text-[rgb(var(--accent-primary))]",
+    "text-[rgb(var(--status-success))]",
+    "text-[rgb(var(--status-warning))]",
   ];
   const max = Math.floor(colors.length - 1);
   const min = Math.ceil(0);
@@ -57,7 +57,7 @@ export default function ChatMessage({ message }: ChatMessageProps) {
       ? t("common.you")
       : (getContact(message.replyTo.contactId)?.displayName ?? t("common.you"));
     return (
-      <div className="bg-black/40 border-l-2 border-emerald-500 px-2 py-1 rounded text-white/70 text-xs w-full mb-1">
+      <div className="bg-[rgb(var(--bg-reply-preview)/var(--bg-reply-preview-opacity))] border-l-2 border-[rgb(var(--accent-primary))] px-2 py-1 rounded text-[rgb(var(--text-secondary)/var(--text-tertiary-opacity))] text-xs w-full mb-1">
         <p className="font-semibold truncate">{name}</p>
         <p className="truncate">{message.replyTo.message}</p>
       </div>
@@ -72,10 +72,12 @@ export default function ChatMessage({ message }: ChatMessageProps) {
           {!message.isSentFromUser && (
             <Profile url={contact?.contactAvatar} alt={contact?.displayName} />
           )}
-          <div className="group rounded-lg overflow-hidden bg-black z-20 relative">
+          <div className="group rounded-lg overflow-hidden bg-[rgb(var(--bg-primary))] z-20 relative">
             <div
               className={`flex flex-col justify-center items-start px-2 p-1.5 gap-1 ${
-                message.isSentFromUser ? "bg-emerald-900" : "bg-white/20"
+                message.isSentFromUser
+                  ? "bg-[rgb(var(--bg-chat-outgoing))]"
+                  : "bg-[rgb(var(--bg-chat-incoming)/var(--bg-chat-incoming-opacity))]"
               }`}
             >
               {!message.isSentFromUser && (
@@ -96,8 +98,10 @@ export default function ChatMessage({ message }: ChatMessageProps) {
               )}
               {shouldShowMessageText && (
                 <div className="flex justify-between items-end gap-2">
-                  <p className="text-white text-sm">{message.message}</p>
-                  <p className="text-white/80 text-xs">
+                  <p className="text-[rgb(var(--text-primary))] text-sm">
+                    {message.message}
+                  </p>
+                  <p className="text-[rgb(var(--text-message-time)/var(--text-message-time-opacity))] text-xs">
                     {formatTime(message.timestamp, locale)}
                   </p>
                   {message.isSentFromUser && (
@@ -107,7 +111,7 @@ export default function ChatMessage({ message }: ChatMessageProps) {
               )}
               {!shouldShowMessageText && (
                 <div className="flex items-center gap-2 mt-1">
-                  <p className="text-white/80 text-xs">
+                  <p className="text-[rgb(var(--text-message-time)/var(--text-message-time-opacity))] text-xs">
                     {formatTime(message.timestamp, locale)}
                   </p>
                   {message.isSentFromUser && (
@@ -123,7 +127,7 @@ export default function ChatMessage({ message }: ChatMessageProps) {
         </div>
         {message.error && (
           <p
-            className={`text-xs text-red-400 px-2 ${
+            className={`text-xs text-[rgb(var(--status-error))] px-2 ${
               message.isSentFromUser ? "text-right self-end" : "text-left"
             }`}
           >
@@ -141,10 +145,12 @@ export default function ChatMessage({ message }: ChatMessageProps) {
           message.isSentFromUser ? "justify-end" : "justify-start"
         } items-end gap-2`}
       >
-        <div className="group rounded-lg bg-black z-10 overflow-hidden w-max relative">
+        <div className="group rounded-lg bg-[rgb(var(--bg-primary))] z-10 overflow-hidden w-max relative">
           <div
             className={`flex flex-col justify-between items-end px-2 p-1.5 gap-2 ${
-              message.isSentFromUser ? "bg-emerald-900" : "bg-white/20"
+              message.isSentFromUser
+                ? "bg-[rgb(var(--bg-chat-outgoing))]"
+                : "bg-[rgb(var(--bg-chat-incoming)/var(--bg-chat-incoming-opacity))]"
             }`}
           >
             {renderReplyPreview()}
@@ -158,10 +164,10 @@ export default function ChatMessage({ message }: ChatMessageProps) {
             )}
             {shouldShowMessageText && (
               <div className="flex items-end gap-2">
-                <p className="text-white text-sm max-w-xs break-words">
+                <p className="text-[rgb(var(--text-primary))] text-sm max-w-xs break-words">
                   {message.message}
                 </p>
-                <p className="text-white/80 text-xs">
+                <p className="text-[rgb(var(--text-message-time)/var(--text-message-time-opacity))] text-xs">
                   {formatTime(message.timestamp, locale)}
                 </p>
                 {message.isSentFromUser && (
@@ -171,7 +177,7 @@ export default function ChatMessage({ message }: ChatMessageProps) {
             )}
             {!shouldShowMessageText && (
               <div className="flex items-center gap-2 mt-1">
-                <p className="text-white/80 text-xs">
+                <p className="text-[rgb(var(--text-message-time)/var(--text-message-time-opacity))] text-xs">
                   {formatTime(message.timestamp, locale)}
                 </p>
                 {message.isSentFromUser && (
@@ -187,7 +193,7 @@ export default function ChatMessage({ message }: ChatMessageProps) {
       </div>
       {message.error && (
         <p
-          className={`text-xs text-red-400 px-2 ${
+          className={`text-xs text-[rgb(var(--status-error))] px-2 ${
             message.isSentFromUser ? "text-right self-end" : "text-left"
           }`}
         >

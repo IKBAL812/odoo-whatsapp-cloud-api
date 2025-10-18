@@ -57,7 +57,9 @@
     "profile": "Profile",
     "github": "Github",
     "logout": "Logout",
-    "language": "Language"
+    "language": "Language",
+    "darkTheme": "Dark Theme",
+    "lightTheme": "Light Theme"
   },
   "newChat": {
     "title": "New Chat",

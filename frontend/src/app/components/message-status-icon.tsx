@@ -23,14 +23,30 @@ export default function MessageStatusIcon({
   } else {
     if (message.read) {
       if (blueTickEnabled) {
-        return <ChecksIcon className={`${size} text-blue-400`} />;
+        return (
+          <ChecksIcon className={`${size} text-[rgb(var(--status-info))]`} />
+        );
       }
-      return <ChecksIcon className={`${size} text-white/40`} />;
+      return (
+        <ChecksIcon
+          className={`${size} text-[rgb(var(--text-message-time)/var(--text-message-time-opacity))]`}
+        />
+      );
     } else if (message.delivered) {
-      return <ChecksIcon className={`${size} text-white/40`} />;
+      return (
+        <ChecksIcon
+          className={`${size} text-[rgb(var(--text-message-time)/var(--text-message-time-opacity))]`}
+        />
+      );
     } else if (message.sent) {
-      return <CheckIcon className="size-4 text-white/40" />;
+      return (
+        <CheckIcon className="size-4 text-[rgb(var(--text-message-time)/var(--text-message-time-opacity))]" />
+      );
     }
-    return <WarningCircleIcon className={`${size} text-white/40`} />;
+    return (
+      <WarningCircleIcon
+        className={`${size} text-[rgb(var(--text-message-time)/var(--text-message-time-opacity))]`}
+      />
+    );
   }
 }

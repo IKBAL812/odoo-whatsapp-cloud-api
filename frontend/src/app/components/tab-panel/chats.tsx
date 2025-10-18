@@ -47,7 +47,10 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
     );
     const name =
       typeof chat.contactId === "string"
-        ? (chat.partnerName ?? currentContact?.displayName ?? chat.threadName ?? "Unknown")
+        ? (chat.partnerName ??
+          currentContact?.displayName ??
+          chat.threadName ??
+          "Unknown")
         : (chat.groupName ?? chat.threadName ?? "Unknown");
     // For non-active chats, prefer lastMessagePreview over messages array
     // since messages array only contains data for the currently active chat
@@ -92,9 +95,9 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
             showActiveChat();
           }
         }}
-        className={`outline-none grid grid-cols-6 w-full gap-4 p-3 md:p-2.5 hover:bg-white/10 rounded-xl cursor-pointer active:bg-white/20 transition-colors ${
+        className={`outline-none grid grid-cols-6 w-full gap-4 p-3 md:p-2.5 hover:bg-[rgb(var(--bg-secondary)/var(--bg-secondary-opacity))] rounded-xl cursor-pointer active:bg-[rgb(var(--bg-secondary)/var(--bg-quaternary-opacity))] transition-colors ${
           typeof chat.contactId === "string" && chat.contactId === contact?.id
-            ? "bg-white/10"
+            ? "bg-[rgb(var(--bg-secondary)/var(--bg-secondary-opacity))]"
             : ""
         }`}
       >
@@ -103,24 +106,29 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
             <Profile size="12" url={currentContact?.contactAvatar} alt={name} />
           ) : (
             <Profile size="12">
-              <div className="h-full w-full flex justify-center items-center bg-white/50">
-                <UsersThreeIcon className="size-7 text-white" weight="fill" />
+              <div className="h-full w-full flex justify-center items-center bg-[rgb(var(--bg-secondary)/0.5)]">
+                <UsersThreeIcon
+                  className="size-7 text-[rgb(var(--text-primary))]"
+                  weight="fill"
+                />
               </div>
             </Profile>
           )}
         </div>
         <div className="col-span-4 flex flex-col justify-center items-start w-full min-w-0">
-          <p className="text-white truncate w-full text-left">{name}</p>
+          <p className="text-[rgb(var(--text-primary))] truncate w-full text-left">
+            {name}
+          </p>
           <div className="flex justify-start items-center gap-1 w-full min-w-0">
             {lastMessage && <MessageStatusIcon message={lastMessage} />}
             <p
               className={`text-sm ${
                 chat.read || isSentFromUser
-                  ? "text-white/55"
-                  : "text-white font-semibold"
+                  ? "text-[rgb(var(--text-secondary)/var(--text-secondary-opacity))]"
+                  : "text-[rgb(var(--text-primary))] font-semibold"
               } whitespace-nowrap truncate text-ellipsis overflow-hidden ${
                 contact?.typing && lastMessage
-                  ? "text-emerald-500 font-medium"
+                  ? "text-[rgb(var(--accent-primary))] font-medium"
                   : ""
               }`}
             >
@@ -135,8 +143,8 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
             <p
               className={`text-xs font-semibold ${
                 chat.read || isSentFromUser
-                  ? "text-white/55"
-                  : "text-emerald-400"
+                  ? "text-[rgb(var(--text-secondary)/var(--text-secondary-opacity))]"
+                  : "text-[rgb(var(--accent-active))]"
               }`}
             >
               {formattedDate}
@@ -145,7 +153,7 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
           {/* Unread badge - only show if count > 0 */}
           {chat.unreadCount != null && chat.unreadCount > 0 && (
             <div className="flex justify-end items-center">
-              <span className="bg-emerald-500 text-white text-xs font-bold rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center">
+              <span className="bg-[rgb(var(--accent-primary))] text-white text-xs font-bold rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center">
                 {chat.unreadCount > 99 ? "99+" : chat.unreadCount}
               </span>
             </div>
@@ -158,7 +166,7 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
   const renderChats = () => {
     if (isLoading) {
       return (
-        <div className="w-full h-full flex justify-center items-center text-white/50">
+        <div className="w-full h-full flex justify-center items-center text-[rgb(var(--text-secondary)/var(--text-secondary-opacity))]">
           {t("chat.loading")}
         </div>
       );
@@ -170,20 +178,20 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
   return (
     <section className="w-full h-full min-h-0 flex flex-col gap-3 relative">
       <section className="w-full flex justify-between items-center px-4 pt-4">
-        <p className="text-white text-2xl font-semibold capitalize">
+        <p className="text-[rgb(var(--text-primary))] text-2xl font-semibold capitalize">
           {t(`navigation.${selectedTab}`)}
         </p>
       </section>
       <section className="w-full flex flex-col gap-1 px-4">
-        <div className="flex justify-start items-center text-white gap-2">
+        <div className="flex justify-start items-center text-[rgb(var(--text-primary))] gap-2">
           {[Filters.ALL, Filters.UNREAD].map((f: string) => (
             <button
               key={f}
               className={`${
                 f === filter
-                  ? "bg-green-700/30 text-green-100 border-green-600/30"
-                  : "border-white/20 hover:bg-white/10"
-              } text-sm p-2 px-4 md:p-1 md:px-3 border-[1px] rounded-full cursor-pointer capitalize active:bg-white/20 transition-colors`}
+                  ? "bg-[rgb(var(--accent-primary)/0.3)] text-[rgb(var(--text-primary))] border-[rgb(var(--accent-primary)/0.3)]"
+                  : "border-[rgb(var(--border-primary)/var(--border-primary-opacity))] hover:bg-[rgb(var(--bg-secondary)/var(--bg-secondary-opacity))]"
+              } text-sm p-2 px-4 md:p-1 md:px-3 border-[1px] rounded-full cursor-pointer capitalize active:bg-[rgb(var(--bg-secondary)/var(--bg-quaternary-opacity))] transition-colors`}
               onClick={() => updateFilter(f)}
             >
               {t(`chat.filters.${f}`)}

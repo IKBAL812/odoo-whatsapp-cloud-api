@@ -16,6 +16,7 @@ import {
   TranslationProvider,
   useTranslations,
 } from "./context/translation-provider";
+import { ThemeProvider } from "./context/theme-provider";
 import ConnectionProvider from "./context/connection-provider";
 import ConnectionOverlay from "./components/connection-overlay";
 import {
@@ -115,8 +116,10 @@ function AuthenticatedApp() {
 
   if (isCheckingAuth) {
     return (
-      <section className="min-h-screen w-full flex items-center justify-center bg-black text-white">
-        <p className="text-lg text-white/70">{t("app.loadingWorkspace")}</p>
+      <section className="min-h-screen w-full flex items-center justify-center bg-[rgb(var(--bg-primary))] text-[rgb(var(--text-primary))]">
+        <p className="text-lg text-[rgb(var(--text-secondary)/var(--text-tertiary-opacity))]">
+          {t("app.loadingWorkspace")}
+        </p>
       </section>
     );
   }
@@ -136,13 +139,15 @@ function AuthenticatedApp() {
 export default function Home() {
   return (
     <TranslationProvider>
-      <TabSyncProvider>
-        <AuthProvider>
-          <ConnectionProvider>
-            <AuthenticatedApp />
-          </ConnectionProvider>
-        </AuthProvider>
-      </TabSyncProvider>
+      <ThemeProvider>
+        <TabSyncProvider>
+          <AuthProvider>
+            <ConnectionProvider>
+              <AuthenticatedApp />
+            </ConnectionProvider>
+          </AuthProvider>
+        </TabSyncProvider>
+      </ThemeProvider>
     </TranslationProvider>
   );
 }

@@ -114,7 +114,7 @@ export default function AttachmentPicker({
           type="button"
           onClick={handleButtonClick}
           disabled={disabled}
-          className="text-white/60 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed p-2"
+          className="text-[rgb(var(--text-secondary))] hover:text-[rgb(var(--text-primary))] disabled:opacity-50 disabled:cursor-not-allowed p-2"
           title="Attach file"
         >
           <Paperclip className="size-5" weight="bold" />
@@ -124,16 +124,18 @@ export default function AttachmentPicker({
       {/* Preview modal */}
       {selectedFile && (
         <div
-          className="fixed inset-0 bg-black/90 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-[rgb(var(--bg-overlay)/var(--bg-overlay-opacity))] flex items-center justify-center p-4"
           style={{ zIndex: 10000 }}
         >
-          <div className="bg-gray-900 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="bg-[rgb(var(--bg-primary))] rounded-lg max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-white/10">
-              <h3 className="text-white font-semibold">Send Attachment</h3>
+            <div className="flex items-center justify-between p-4 border-b border-[rgb(var(--border-primary)/var(--border-primary-opacity))]">
+              <h3 className="text-[rgb(var(--text-primary))] font-semibold">
+                Send Attachment
+              </h3>
               <button
                 onClick={handleCancel}
-                className="text-white/60 hover:text-white"
+                className="text-[rgb(var(--text-secondary))] hover:text-[rgb(var(--text-primary))]"
               >
                 <X className="size-6" weight="bold" />
               </button>
@@ -142,7 +144,7 @@ export default function AttachmentPicker({
             {/* Preview area */}
             <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
               {error && (
-                <div className="bg-red-500/20 border border-red-500 text-red-200 px-4 py-2 rounded mb-4">
+                <div className="bg-[rgb(var(--status-error)/0.2)] border border-[rgb(var(--status-error))] text-[rgb(var(--status-error))] px-4 py-2 rounded mb-4">
                   {error}
                 </div>
               )}
@@ -157,13 +159,16 @@ export default function AttachmentPicker({
                   />
                 </div>
               ) : (
-                <div className="flex items-center gap-3 bg-white/5 rounded-lg p-4 mb-4">
-                  <File className="size-12 text-gray-400" weight="fill" />
+                <div className="flex items-center gap-3 bg-[rgb(var(--bg-secondary)/var(--bg-secondary-opacity))] rounded-lg p-4 mb-4">
+                  <File
+                    className="size-12 text-[rgb(var(--text-secondary))]"
+                    weight="fill"
+                  />
                   <div className="flex-1 min-w-0">
-                    <p className="text-white text-sm truncate">
+                    <p className="text-[rgb(var(--text-primary))] text-sm truncate">
                       {selectedFile.name}
                     </p>
-                    <p className="text-white/50 text-xs">
+                    <p className="text-[rgb(var(--text-secondary)/var(--text-secondary-opacity))] text-xs">
                       {formatFileSize(selectedFile.size)}
                     </p>
                   </div>
@@ -172,30 +177,30 @@ export default function AttachmentPicker({
 
               {/* Caption input */}
               <div>
-                <label className="text-white/70 text-sm mb-2 block">
+                <label className="text-[rgb(var(--text-secondary)/var(--text-tertiary-opacity))] text-sm mb-2 block">
                   Caption (optional)
                 </label>
                 <textarea
                   value={caption}
                   onChange={(e) => setCaption(e.target.value)}
                   placeholder="Add a caption..."
-                  className="w-full bg-white/10 text-white placeholder-white/50 border border-white/20 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                  className="w-full bg-[rgb(var(--bg-input)/var(--bg-input-opacity))] text-[rgb(var(--text-primary))] placeholder-[rgb(var(--text-secondary))] border border-[rgb(var(--border-primary)/var(--border-primary-opacity))] rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[rgb(var(--accent-primary))] resize-none"
                   rows={3}
                 />
               </div>
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-end gap-3 p-4 border-t border-white/10">
+            <div className="flex items-center justify-end gap-3 p-4 border-t border-[rgb(var(--border-primary)/var(--border-primary-opacity))]">
               <button
                 onClick={handleCancel}
-                className="px-4 py-2 text-white/70 hover:text-white transition"
+                className="px-4 py-2 text-[rgb(var(--text-secondary))] hover:text-[rgb(var(--text-primary))] transition"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSend}
-                className="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-2 bg-[rgb(var(--accent-primary))] hover:bg-[rgb(var(--status-success))] text-white rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={!!error}
               >
                 Send

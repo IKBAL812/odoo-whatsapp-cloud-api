@@ -22,7 +22,7 @@ export default function Profile({
     if (url && url.length > 0) {
       return (
         <div
-          className={`${sizeClass} bg-amber-300 flex justify-center items-center`}
+          className={`${sizeClass} bg-[rgb(var(--accent-primary)/0.3)] flex justify-center items-center`}
         >
           <Image
             src={url}
@@ -35,8 +35,11 @@ export default function Profile({
       );
     }
     return (
-      <div className="w-full h-full bg-gray-400 overflow-hidden flex justify-center items-center">
-        <UserIcon className={`text-white size-8`} weight="fill" />
+      <div className="w-full h-full bg-[rgb(var(--text-secondary))] overflow-hidden flex justify-center items-center">
+        <UserIcon
+          className={`text-[rgb(var(--bg-primary))] size-8`}
+          weight="fill"
+        />
       </div>
     );
   };

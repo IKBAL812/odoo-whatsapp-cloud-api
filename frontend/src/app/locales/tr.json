@@ -57,7 +57,9 @@
     "profile": "Profil",
     "github": "Github",
     "logout": "Çıkış",
-    "language": "Dil"
+    "language": "Dil",
+    "darkTheme": "Koyu Tema",
+    "lightTheme": "Açık Tema"
   },
   "newChat": {
     "title": "Yeni sohbet",

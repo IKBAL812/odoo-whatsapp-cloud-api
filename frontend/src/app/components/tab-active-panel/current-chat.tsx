@@ -121,7 +121,7 @@ export default function CurrentChat() {
 
   if (!chatId) {
     return (
-      <section className="w-full h-full text-white flex justify-center items-center">
+      <section className="w-full h-full text-[rgb(var(--text-primary))] flex justify-center items-center">
         {t("app.selectChatPrompt")}
       </section>
     );
@@ -161,7 +161,9 @@ export default function CurrentChat() {
             <div className="min-h-full flex flex-col justify-end">
               <div className="p-4 md:p-4 px-3 md:px-4 flex flex-col gap-2">
                 {isLoading && (
-                  <div className="text-white">{t("chat.loading")}</div>
+                  <div className="text-[rgb(var(--text-primary))]">
+                    {t("chat.loading")}
+                  </div>
                 )}
                 {annotatedMessages.map((item) => {
                   if (item.type === "label") {
@@ -170,8 +172,8 @@ export default function CurrentChat() {
                         key={`label-${item.key}`}
                         className="w-full flex justify-center items-center"
                       >
-                        <div className="rounded-full overflow-hidden bg-black z-20 w-fit">
-                          <p className="bg-white/20 text-white/55 h-full w-full text-xs p-1 px-2">
+                        <div className="rounded-full overflow-hidden bg-[rgb(var(--bg-primary))] z-20 w-fit">
+                          <p className="bg-[rgb(var(--bg-secondary)/var(--bg-secondary-opacity))] text-[rgb(var(--text-secondary)/var(--text-secondary-opacity))] h-full w-full text-xs p-1 px-2">
                             {formatDayLabel(item.day)}
                           </p>
                         </div>
@@ -231,9 +233,9 @@ export default function CurrentChat() {
 
           <section className="w-full z-50 p-4">
             {replyTo && (
-              <div className="bg-white/5 border-l-2 border-emerald-500 px-3 py-2 rounded-lg mb-2 flex justify-between items-start gap-3">
+              <div className="bg-[rgb(var(--bg-input)/var(--bg-input-opacity))] border-l-2 border-[rgb(var(--accent-primary))] px-3 py-2 rounded-lg mb-2 flex justify-between items-start gap-3">
                 <div className="flex flex-col">
-                  <p className="text-xs text-emerald-200 font-semibold">
+                  <p className="text-xs text-[rgb(var(--accent-primary))] font-semibold">
                     {t("chatInput.replyingTo", {
                       name: replyTo.isSentFromUser
                         ? t("common.you")
@@ -241,21 +243,24 @@ export default function CurrentChat() {
                             ?.displayName ?? ""),
                     })}
                   </p>
-                  <p className="text-xs text-white/70 max-w-xs truncate">
+                  <p className="text-xs text-[rgb(var(--text-secondary)/var(--text-tertiary-opacity))] max-w-xs truncate">
                     {replyTo.message}
                   </p>
                 </div>
                 <button
                   type="button"
-                  className="text-white/60 hover:text-white p-2 active:bg-white/10 rounded-lg transition-colors"
+                  className="text-[rgb(var(--text-secondary))] hover:text-[rgb(var(--text-primary))] p-2 active:bg-[rgb(var(--bg-secondary)/var(--bg-secondary-opacity))] rounded-lg transition-colors"
                   onClick={cancelReply}
                 >
                   <XCircleIcon className="size-5 md:size-4" weight="bold" />
                 </button>
               </div>
             )}
-            <form onSubmit={handleSubmit} className="bg-black rounded-full">
-              <div className="bg-white/15 rounded-full flex items-center gap-2">
+            <form
+              onSubmit={handleSubmit}
+              className="bg-[rgb(var(--bg-primary))] rounded-full"
+            >
+              <div className="bg-[rgb(var(--bg-input)/var(--bg-input-opacity))] rounded-full flex items-center gap-2">
                 <AttachmentPicker
                   onAttachmentSelect={handleAttachmentSelect}
                   disabled={isSending}
@@ -264,7 +269,7 @@ export default function CurrentChat() {
                 />
                 <input
                   ref={inputRef}
-                  className="flex-1 outline-none p-3 px-4 md:p-3 text-white placeholder-white/60 caret-green-400 text-sm md:text-sm bg-transparent"
+                  className="flex-1 outline-none p-3 px-4 md:p-3 text-[rgb(var(--text-primary))] placeholder-[rgb(var(--text-secondary))] caret-[rgb(var(--accent-primary))] text-sm md:text-sm bg-transparent"
                   placeholder={t("chatInput.placeholder")}
                   value={messageText}
                   onChange={(event) => {
@@ -278,14 +283,16 @@ export default function CurrentChat() {
                 <button
                   type="submit"
                   disabled={isSending || messageText.trim().length === 0}
-                  className="text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed transition rounded-full px-5 py-2.5 md:px-4 md:py-2 mr-2"
+                  className="text-sm font-semibold text-white bg-[rgb(var(--accent-primary))] hover:bg-[rgb(var(--status-success))] active:bg-[rgb(var(--accent-primary)/0.8)] disabled:opacity-60 disabled:cursor-not-allowed transition rounded-full px-5 py-2.5 md:px-4 md:py-2 mr-2"
                 >
                   {isSending ? t("chatInput.sending") : t("chatInput.send")}
                 </button>
               </div>
             </form>
             {sendError && (
-              <p className="text-xs text-red-400 mt-2 px-2">{sendError}</p>
+              <p className="text-xs text-[rgb(var(--status-error))] mt-2 px-2">
+                {sendError}
+              </p>
             )}
           </section>
         </div>
