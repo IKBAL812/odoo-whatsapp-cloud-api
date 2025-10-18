@@ -367,9 +367,9 @@ export default function CurrentChat() {
             )}
             <form
               onSubmit={handleSubmit}
-              className="bg-[rgb(var(--bg-primary))] rounded-3xl"
+              className="bg-[rgb(var(--bg-primary))]"
             >
-              <div className="bg-[rgb(var(--bg-input)/var(--bg-input-opacity))] rounded-3xl flex items-end gap-2 py-1">
+              <div className="bg-[rgb(var(--bg-input)/var(--bg-input-opacity))] rounded-3xl flex items-end gap-2 py-2">
                 <AttachmentPicker
                   onAttachmentSelect={handleAttachmentSelect}
                   disabled={isSending}
@@ -399,7 +399,7 @@ export default function CurrentChat() {
                 </button>
                 <textarea
                   ref={textareaRef}
-                  className={`flex-1 outline-none p-3 px-4 md:p-3 text-[rgb(var(--text-primary))] placeholder-[rgb(var(--text-secondary))] caret-[rgb(var(--accent-primary))] text-sm md:text-sm bg-transparent resize-none overflow-hidden ${
+                  className={`flex-1 outline-none p-3 px-4 md:p-3 text-[rgb(var(--text-primary))] placeholder-[rgb(var(--text-secondary))] caret-[rgb(var(--accent-primary))] text-sm md:text-sm bg-transparent resize-none overflow-y-auto custom-scrollbar min-h-[44px] max-h-[120px] transition-[height] duration-150 ease-out ${
                     isTypingAnimation ? "animate-pulse" : ""
                   }`}
                   placeholder={
@@ -417,22 +417,20 @@ export default function CurrentChat() {
                   onKeyDown={(event) => {
                     if (event.key === "Enter" && !event.shiftKey) {
                       event.preventDefault();
-                      if (!isSending && messageText.trim().length > 0) {
-                        handleSubmit(
-                          event as unknown as FormEvent<HTMLFormElement>
-                        );
+                      const form = event.currentTarget.form;
+                      if (form && !isSending && messageText.trim().length > 0) {
+                        form.requestSubmit();
                       }
                     }
                   }}
                   disabled={isSending || isTypingAnimation}
                   readOnly={isTypingAnimation}
                   rows={1}
-                  style={{ minHeight: "42px", maxHeight: "200px" }}
                 />
                 <button
                   type="submit"
                   disabled={isSending || messageText.trim().length === 0}
-                  className="text-sm font-semibold text-white bg-[rgb(var(--accent-primary))] hover:bg-[rgb(var(--status-success))] active:bg-[rgb(var(--accent-primary)/0.8)] disabled:opacity-60 disabled:cursor-not-allowed transition rounded-full px-5 py-2.5 md:px-4 md:py-2 mr-2"
+                  className="text-sm font-semibold text-white bg-[rgb(var(--accent-primary))] hover:bg-[rgb(var(--status-success))] active:bg-[rgb(var(--accent-primary)/0.8)] disabled:opacity-60 disabled:cursor-not-allowed transition rounded-full px-5 py-2.5 md:px-4 md:py-2 mr-2 mb-2"
                 >
                   {isSending ? t("chatInput.sending") : t("chatInput.send")}
                 </button>
