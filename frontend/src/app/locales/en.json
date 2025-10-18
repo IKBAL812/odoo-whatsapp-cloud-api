@@ -40,7 +40,10 @@
     "send": "Send",
     "sending": "Sending...",
     "sendError": "Failed to send the message",
-    "replyingTo": "Replying to {{name}}"
+    "replyingTo": "Replying to {{name}}",
+    "aiImprove": "Improve with AI",
+    "aiImproving": "Improving...",
+    "aiImproveError": "Failed to improve text with AI"
   },
   "chatList": {
     "title": "Chats",

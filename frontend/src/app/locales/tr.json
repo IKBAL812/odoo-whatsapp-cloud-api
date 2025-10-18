@@ -40,7 +40,10 @@
     "send": "Gönder",
     "sending": "Gönderiliyor...",
     "sendError": "Mesaj gönderilemedi",
-    "replyingTo": "{{name}} kişisine yanıt veriliyor"
+    "replyingTo": "{{name}} kişisine yanıt veriliyor",
+    "aiImprove": "Yapay zeka ile iyileştir",
+    "aiImproving": "İyileştiriliyor...",
+    "aiImproveError": "Metin yapay zeka ile iyileştirilemedi"
   },
   "chatList": {
     "title": "Sohbetler",

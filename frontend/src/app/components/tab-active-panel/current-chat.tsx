@@ -9,7 +9,7 @@ import AttachmentPicker from "../message/attachment-picker";
 import DragDropZone from "../message/drag-drop-zone";
 import { useTranslations } from "@/app/context/translation-provider";
 import { useContacts } from "@/app/hooks/use-contacts";
-import { XCircleIcon } from "@phosphor-icons/react";
+import { XCircleIcon, Sparkle } from "@phosphor-icons/react";
 
 export default function CurrentChat() {
   const {
@@ -27,6 +27,7 @@ export default function CurrentChat() {
   const [messageText, setMessageText] = useState("");
   const [sendError, setSendError] = useState<string | null>(null);
   const [droppedFile, setDroppedFile] = useState<File | null>(null);
+  const [isAiImproving, setIsAiImproving] = useState(false);
   const { t } = useTranslations();
   const { contacts } = useContacts();
 
@@ -87,6 +88,37 @@ export default function CurrentChat() {
 
   const handleDroppedFileProcessed = () => {
     setDroppedFile(null);
+  };
+
+  const handleAiImprove = async () => {
+    setIsAiImproving(true);
+    setSendError(null);
+
+    try {
+      const response = await fetch("/api/ai/improve-text", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messages: messages.slice(-10), // Last 10 messages
+          currentText: messageText.trim(),
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to improve text");
+      }
+
+      const data = await response.json();
+      setMessageText(data.improvedText);
+    } catch (error) {
+      const err = error as Error;
+      setSendError(err.message || t("chatInput.aiImproveError"));
+    } finally {
+      setIsAiImproving(false);
+    }
   };
 
   const annotatedMessages = useMemo(() => {
@@ -284,6 +316,18 @@ export default function CurrentChat() {
                   externalFile={droppedFile}
                   onExternalFileProcessed={handleDroppedFileProcessed}
                 />
+                <button
+                  type="button"
+                  onClick={handleAiImprove}
+                  disabled={isAiImproving || isSending || messages.length === 0}
+                  className="text-[rgb(var(--text-secondary))] hover:text-[rgb(var(--accent-primary))] disabled:opacity-40 disabled:cursor-not-allowed transition-colors p-2 active:scale-95"
+                  title={t("chatInput.aiImprove")}
+                >
+                  <Sparkle
+                    className="size-5 md:size-5"
+                    weight={isAiImproving ? "fill" : "regular"}
+                  />
+                </button>
                 <input
                   ref={inputRef}
                   className="flex-1 outline-none p-3 px-4 md:p-3 text-[rgb(var(--text-primary))] placeholder-[rgb(var(--text-secondary))] caret-[rgb(var(--accent-primary))] text-sm md:text-sm bg-transparent"
