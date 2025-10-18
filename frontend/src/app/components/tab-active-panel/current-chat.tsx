@@ -105,21 +105,11 @@ export default function CurrentChat() {
     setDroppedFile(null);
   };
 
-  const typeText = async (text: string, speed: number = 15) => {
-    setIsTypingAnimation(true);
-    setMessageText("");
-
-    for (let i = 0; i <= text.length; i++) {
-      setMessageText(text.slice(0, i));
-      await new Promise((resolve) => setTimeout(resolve, speed));
-    }
-
-    setIsTypingAnimation(false);
-  };
-
   const handleAiImprove = async () => {
     setIsAiImproving(true);
+    setIsTypingAnimation(true);
     setSendError(null);
+    setMessageText("");
 
     try {
       const response = await fetch("/api/ai/improve-text", {
@@ -134,17 +124,60 @@ export default function CurrentChat() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to improve text");
+        throw new Error("Failed to improve text");
       }
 
-      const data = await response.json();
-      await typeText(data.improvedText);
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error("Response body is not readable");
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let accumulatedText = "";
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          // Append new chunk to buffer
+          buffer += decoder.decode(value, { stream: true });
+
+          // Process complete lines from buffer
+          while (true) {
+            const lineEnd = buffer.indexOf("\n");
+            if (lineEnd === -1) break;
+
+            const line = buffer.slice(0, lineEnd).trim();
+            buffer = buffer.slice(lineEnd + 1);
+
+            if (line.startsWith("data: ")) {
+              const data = line.slice(6);
+              if (data === "[DONE]") break;
+
+              try {
+                const parsed = JSON.parse(data);
+                const content = parsed.content;
+                if (content) {
+                  accumulatedText += content;
+                  setMessageText(accumulatedText);
+                }
+              } catch {
+                // Ignore invalid JSON
+              }
+            }
+          }
+        }
+      } finally {
+        reader.cancel();
+      }
     } catch (error) {
       const err = error as Error;
       setSendError(err.message || t("chatInput.aiImproveError"));
     } finally {
       setIsAiImproving(false);
+      setIsTypingAnimation(false);
     }
   };
 

@@ -93,8 +93,8 @@ ${conversationContext}
 
 Please generate an appropriate response message based on this conversation.`;
 
-    // Call OpenAI API
-    const completion = await openai.chat.completions.create({
+    // Call OpenAI API with streaming
+    const stream = await openai.chat.completions.create({
       model: getOpenAIModel(),
       messages: [
         {
@@ -108,20 +108,36 @@ Please generate an appropriate response message based on this conversation.`;
       ],
       temperature: 0.7,
       max_tokens: 500,
+      stream: true,
     });
 
-    const improvedText = completion.choices[0]?.message?.content?.trim();
+    // Create a readable stream for the response
+    const encoder = new TextEncoder();
+    const readableStream = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const chunk of stream) {
+            const content = chunk.choices[0]?.delta?.content;
+            if (content) {
+              const data = `data: ${JSON.stringify({ content })}\n\n`;
+              controller.enqueue(encoder.encode(data));
+            }
+          }
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          controller.close();
+        } catch (error) {
+          console.error("Streaming error:", error);
+          controller.error(error);
+        }
+      },
+    });
 
-    if (!improvedText) {
-      return NextResponse.json(
-        { error: "Failed to generate improved text" },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({
-      improvedText,
-      usage: completion.usage,
+    return new Response(readableStream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      },
     });
   } catch (error) {
     console.error("AI improve text error:", error);
