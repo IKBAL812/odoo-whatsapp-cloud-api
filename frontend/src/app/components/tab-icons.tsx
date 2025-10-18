@@ -79,7 +79,11 @@ export default function TabIcons() {
             }`}
             aria-label={t("navigation.profile")}
           >
-            <Profile url={avatarUrl} size="6" seed={id ? parseInt(id, 10) : undefined} />
+            <Profile
+              url={avatarUrl}
+              size="6"
+              seed={id ? parseInt(id, 10) : undefined}
+            />
             <span className="text-xs capitalize">
               {t("navigation.profile")}
             </span>

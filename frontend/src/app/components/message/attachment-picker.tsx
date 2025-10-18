@@ -97,7 +97,7 @@ export default function AttachmentPicker({
   };
 
   return (
-    <div className="relative">
+    <div className="relative ms-2">
       {/* Hidden file input */}
       <input
         ref={fileInputRef}

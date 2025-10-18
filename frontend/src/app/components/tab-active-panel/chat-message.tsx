@@ -128,10 +128,7 @@ export default function ChatMessage({ message }: ChatMessageProps) {
             </div>
           </div>
           {message.isSentFromUser && (
-            <Profile
-              url={outgoingAvatar ?? undefined}
-              seed={senderUser?.id}
-            />
+            <Profile url={outgoingAvatar ?? undefined} seed={senderUser?.id} />
           )}
         </div>
         {message.error && (
@@ -197,10 +194,7 @@ export default function ChatMessage({ message }: ChatMessageProps) {
           </div>
         </div>
         {message.isSentFromUser && (
-          <Profile
-            url={outgoingAvatar ?? undefined}
-            seed={senderUser?.id}
-          />
+          <Profile url={outgoingAvatar ?? undefined} seed={senderUser?.id} />
         )}
       </div>
       {message.error && (
