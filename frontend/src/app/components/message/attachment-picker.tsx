@@ -114,10 +114,10 @@ export default function AttachmentPicker({
           type="button"
           onClick={handleButtonClick}
           disabled={disabled}
-          className="text-[rgb(var(--text-secondary))] hover:text-[rgb(var(--text-primary))] disabled:opacity-50 disabled:cursor-not-allowed p-2"
+          className="text-[rgb(var(--text-secondary))] hover:text-[rgb(var(--accent-primary))] disabled:opacity-50 disabled:cursor-not-allowed transition-colors p-2 mb-1"
           title="Attach file"
         >
-          <Paperclip className="size-5" weight="bold" />
+          <Paperclip className="size-5 md:size-5" weight="bold" />
         </button>
       )}
 
