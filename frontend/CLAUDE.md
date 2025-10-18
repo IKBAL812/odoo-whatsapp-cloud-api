@@ -218,6 +218,8 @@ Located at `/api/events`, streams:
    - Test responsiveness
 
 3. **Test each piece before moving on**:
+   - Does it work in dark theme?
+   - Does it work in light theme?
    - Does it work on desktop?
    - Does it work on mobile?
    - Are all texts translatable?
@@ -226,25 +228,145 @@ Located at `/api/events`, streams:
 ## 🎨 Styling Guidelines
 
 - **Tailwind utility classes** for all styling
-- **Color scheme**: Dark theme with purple accents
-  - Background: `bg-black`, `bg-white/10`
-  - Text: `text-white`, `text-white/50`
-  - Accent: Purple tones
-  - Hover: `hover:bg-white/20`
+- **Theme system**: CSS variables defined in `globals.css`
+- **ALWAYS use CSS variables** for colors to support both dark and light themes
 
-- **Common patterns**:
+## 🌓 Dark/Light Theme System (CRITICAL)
 
-  ```typescript
-  // Button
-  className =
-    "px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors";
+### ⚠️ ALWAYS use theme-aware CSS variables when adding or modifying UI elements
 
-  // Input
-  className = "w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg";
+The application supports **both dark and light themes** with user preference persisted in localStorage. The theme is managed through CSS variables that automatically adapt based on the `data-theme` attribute on the root element.
 
-  // Card
-  className = "bg-white/10 rounded-lg p-4";
-  ```
+### Theme Provider
+
+Use the `useTheme` hook to access or control the theme:
+
+```typescript
+import { useTheme } from "@/app/hooks/use-theme";
+
+function MyComponent() {
+  const { theme, setTheme, toggleTheme } = useTheme();
+
+  return (
+    <button onClick={toggleTheme}>
+      Current theme: {theme}
+    </button>
+  );
+}
+```
+
+### CSS Variables Pattern
+
+**CRITICAL**: All colors MUST use CSS variables from `src/app/globals.css`. These variables automatically change when the theme switches.
+
+**Tailwind syntax for CSS variables**:
+
+```typescript
+// Background with opacity
+className="bg-[rgb(var(--bg-secondary)/var(--bg-secondary-opacity))]"
+
+// Solid background
+className="bg-[rgb(var(--bg-primary))]"
+
+// Text color
+className="text-[rgb(var(--text-primary))]"
+
+// Border
+className="border-[rgb(var(--border-primary)/var(--border-primary-opacity))]"
+```
+
+### Available CSS Variables
+
+Refer to `src/app/globals.css` for the complete list. Common variables include:
+
+**Backgrounds**:
+
+- `--bg-primary` - Main background (black in dark, white in light)
+- `--bg-secondary` / `--bg-secondary-opacity` - Secondary surfaces
+- `--bg-sidebar` / `--bg-sidebar-opacity` - Sidebar background
+- `--bg-chat-outgoing` - Outgoing message bubbles
+- `--bg-chat-incoming` / `--bg-chat-incoming-opacity` - Incoming message bubbles
+- `--bg-input` / `--bg-input-opacity` - Input fields
+- `--bg-button-secondary` / `--bg-button-secondary-opacity` - Secondary buttons
+
+**Text**:
+
+- `--text-primary` - Primary text (white in dark, black in light)
+- `--text-secondary` / `--text-secondary-opacity` - Secondary/muted text
+- `--text-message-time` / `--text-message-time-opacity` - Timestamps
+
+**Borders**:
+
+- `--border-primary` / `--border-primary-opacity` - Primary borders
+- `--border-secondary` / `--border-secondary-opacity` - Secondary borders
+
+**Accents**:
+
+- `--accent-primary` - Primary accent color (emerald green)
+- `--accent-active` - Active state
+- `--accent-hover` / `--accent-hover-opacity` - Hover state
+
+**Status**:
+
+- `--status-error` - Error messages
+- `--status-success` - Success messages
+- `--status-info` - Info messages
+
+### Common Patterns
+
+```typescript
+// ✅ CORRECT: Using CSS variables
+// Button
+className="px-3 py-2 bg-[rgb(var(--bg-button-secondary)/var(--bg-button-secondary-opacity))] hover:bg-[rgb(var(--accent-hover)/var(--accent-hover-opacity))] rounded-lg transition-colors"
+
+// Input
+className="w-full px-4 py-2 bg-[rgb(var(--bg-input)/var(--bg-input-opacity))] border border-[rgb(var(--border-primary)/var(--border-primary-opacity))] rounded-lg text-[rgb(var(--text-primary))]"
+
+// Card/Panel
+className="bg-[rgb(var(--bg-secondary)/var(--bg-secondary-opacity))] rounded-lg p-4"
+
+// Primary text
+className="text-[rgb(var(--text-primary))]"
+
+// Secondary/muted text
+className="text-[rgb(var(--text-secondary)/var(--text-secondary-opacity))]"
+
+// ❌ WRONG: Hard-coded colors (will not adapt to theme)
+className="bg-black text-white"
+className="bg-white/10 text-white/50"
+className="border-gray-300"
+```
+
+### Testing Themes
+
+When implementing or modifying UI components, ALWAYS test both themes:
+
+1. **Test in dark mode** (default theme)
+2. **Test in light mode** (toggle via theme switcher in app)
+3. **Verify all colors use CSS variables** (not hard-coded)
+4. **Check hover/active states** work in both themes
+5. **Verify transitions** between themes are smooth
+
+### Adding New CSS Variables
+
+If you need a new color that doesn't exist:
+
+1. Add it to **both** theme sections in `src/app/globals.css`:
+   - `:root[data-theme="dark"]`
+   - `:root[data-theme="light"]`
+
+2. Use RGB values without `rgb()` wrapper:
+
+   ```css
+   --my-new-color: 255 255 255;
+   --my-new-color-opacity: 0.5;
+   ```
+
+3. Use in components:
+
+   ```typescript
+   className="bg-[rgb(var(--my-new-color)/var(--my-new-color-opacity))]"
+   ```
 
 ## 🧩 State Management Patterns
 
@@ -257,8 +379,9 @@ The app uses multiple context providers for different concerns:
 3. **CurrentChatProvider**: Active chat and messages
 4. **ContactsProvider**: Contact list
 5. **TranslationProvider**: i18n support
-6. **ConnectionProvider**: Connection status and errors
-7. **MobileNavigationProvider**: Mobile UI state
+6. **ThemeProvider**: Dark/light theme management
+7. **ConnectionProvider**: Connection status and errors
+8. **MobileNavigationProvider**: Mobile UI state
 
 ### Custom Hooks
 
@@ -268,6 +391,8 @@ Always use custom hooks to access context:
 import { useAuth } from "@/app/hooks/use-auth";
 import { useChats } from "@/app/hooks/use-chats";
 import { useCurrentChat } from "@/app/hooks/use-current-chat";
+import { useTheme } from "@/app/hooks/use-theme";
+import { useTranslations } from "@/app/context/translation-provider";
 ```
 
 ## 🐛 Debugging Tips
@@ -340,18 +465,24 @@ export async function GET(request: NextRequest) {
 ```
 Claude, add a new feature to display message reactions. Make sure:
 1. All text is translatable
-2. Works on both mobile and desktop
-3. Ask me about the Odoo API structure first
-4. Work piece by piece
+2. All colors use CSS variables
+3. Works in both dark and light themes
+4. Works on both mobile and desktop
+5. Ask me about the Odoo API structure first
+6. Work piece by piece
 
 Claude, refactor the chat header to show user status. Remember to:
 - Use the translation system for all text
+- Use CSS variables for all colors
+- Test in both dark and light themes
 - Test responsive design
 - Ask about Odoo fields before starting
 
 Claude, fix this TypeScript error in contact-header.tsx
 
 Claude, add Turkish translations for the new button feature
+
+Claude, I added a new button but it doesn't look good in light theme. Can you fix it?
 ```
 
 ## 🚀 Deployment
@@ -390,6 +521,9 @@ Before committing any changes, verify:
 
 - [ ] All user-facing text uses `t()` translation function
 - [ ] Added translations to both `en.json` and `tr.json`
+- [ ] All colors use CSS variables (no hard-coded colors)
+- [ ] Tested in dark theme
+- [ ] Tested in light theme
 - [ ] Tested on mobile viewport (< 768px)
 - [ ] Tested on desktop viewport (>= 768px)
 - [ ] No TypeScript errors (`yarn build` succeeds)
@@ -401,10 +535,11 @@ Before committing any changes, verify:
 ## 🎯 Key Principles (Summary)
 
 1. **Translations**: Always use `t()` for user-facing text
-2. **Backend Communication**: Ask before implementing Odoo-dependent features
-3. **Package Manager**: Use `yarn` exclusively
-4. **Usability**: Mobile and desktop support is mandatory
-5. **Incremental Development**: Work piece by piece, test frequently
+2. **Theme Support**: Always use CSS variables for colors, test both dark and light themes
+3. **Backend Communication**: Ask before implementing Odoo-dependent features
+4. **Package Manager**: Use `yarn` exclusively
+5. **Usability**: Mobile and desktop support is mandatory
+6. **Incremental Development**: Work piece by piece, test frequently
 
 ---
 
