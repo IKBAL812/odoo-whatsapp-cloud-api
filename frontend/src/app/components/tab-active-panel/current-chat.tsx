@@ -9,7 +9,7 @@ import AttachmentPicker from "../message/attachment-picker";
 import DragDropZone from "../message/drag-drop-zone";
 import { useTranslations } from "@/app/context/translation-provider";
 import { useContacts } from "@/app/hooks/use-contacts";
-import { XCircleIcon } from "@phosphor-icons/react";
+import { XCircleIcon, Sparkle } from "@phosphor-icons/react";
 
 export default function CurrentChat() {
   const {
@@ -27,6 +27,8 @@ export default function CurrentChat() {
   const [messageText, setMessageText] = useState("");
   const [sendError, setSendError] = useState<string | null>(null);
   const [droppedFile, setDroppedFile] = useState<File | null>(null);
+  const [isAiImproving, setIsAiImproving] = useState(false);
+  const [isTypingAnimation, setIsTypingAnimation] = useState(false);
   const { t } = useTranslations();
   const { contacts } = useContacts();
 
@@ -36,7 +38,7 @@ export default function CurrentChat() {
   }, [chatId]);
 
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Auto-scroll to bottom on initial load and new messages
   useEffect(() => {
@@ -45,6 +47,20 @@ export default function CurrentChat() {
       container.scrollTop = container.scrollHeight;
     }
   }, [messages.length, isLoading]);
+
+  // Auto-resize textarea based on content
+  const adjustTextareaHeight = () => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = "auto";
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
+    }
+  };
+
+  // Adjust height when messageText changes
+  useEffect(() => {
+    adjustTextareaHeight();
+  }, [messageText]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -57,9 +73,9 @@ export default function CurrentChat() {
       await sendMessage(trimmed);
       setMessageText("");
       setSendError(null);
-      // Refocus the input after sending
+      // Refocus the textarea after sending
       setTimeout(() => {
-        inputRef.current?.focus();
+        textareaRef.current?.focus();
       }, 0);
     } catch (error) {
       const err = error as Error;
@@ -87,6 +103,49 @@ export default function CurrentChat() {
 
   const handleDroppedFileProcessed = () => {
     setDroppedFile(null);
+  };
+
+  const typeText = async (text: string, speed: number = 15) => {
+    setIsTypingAnimation(true);
+    setMessageText("");
+
+    for (let i = 0; i <= text.length; i++) {
+      setMessageText(text.slice(0, i));
+      await new Promise((resolve) => setTimeout(resolve, speed));
+    }
+
+    setIsTypingAnimation(false);
+  };
+
+  const handleAiImprove = async () => {
+    setIsAiImproving(true);
+    setSendError(null);
+
+    try {
+      const response = await fetch("/api/ai/improve-text", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messages: messages.slice(-10), // Last 10 messages
+          currentText: messageText.trim(),
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to improve text");
+      }
+
+      const data = await response.json();
+      await typeText(data.improvedText);
+    } catch (error) {
+      const err = error as Error;
+      setSendError(err.message || t("chatInput.aiImproveError"));
+    } finally {
+      setIsAiImproving(false);
+    }
   };
 
   const annotatedMessages = useMemo(() => {
@@ -275,19 +334,46 @@ export default function CurrentChat() {
             )}
             <form
               onSubmit={handleSubmit}
-              className="bg-[rgb(var(--bg-primary))] rounded-full"
+              className="bg-[rgb(var(--bg-primary))] rounded-3xl"
             >
-              <div className="bg-[rgb(var(--bg-input)/var(--bg-input-opacity))] rounded-full flex items-center gap-2">
+              <div className="bg-[rgb(var(--bg-input)/var(--bg-input-opacity))] rounded-3xl flex items-end gap-2 py-1">
                 <AttachmentPicker
                   onAttachmentSelect={handleAttachmentSelect}
                   disabled={isSending}
                   externalFile={droppedFile}
                   onExternalFileProcessed={handleDroppedFileProcessed}
                 />
-                <input
-                  ref={inputRef}
-                  className="flex-1 outline-none p-3 px-4 md:p-3 text-[rgb(var(--text-primary))] placeholder-[rgb(var(--text-secondary))] caret-[rgb(var(--accent-primary))] text-sm md:text-sm bg-transparent"
-                  placeholder={t("chatInput.placeholder")}
+                <button
+                  type="button"
+                  onClick={handleAiImprove}
+                  disabled={isAiImproving || isSending || messages.length === 0}
+                  className={`text-[rgb(var(--text-secondary))] hover:text-[rgb(var(--accent-primary))] disabled:opacity-40 disabled:cursor-not-allowed transition-all p-2 mb-1 active:scale-95 ${
+                    isAiImproving
+                      ? "animate-pulse text-[rgb(var(--accent-primary))]"
+                      : ""
+                  }`}
+                  title={t("chatInput.aiImprove")}
+                >
+                  <Sparkle
+                    className={`size-5 md:size-5 transition-transform ${
+                      isAiImproving ? "animate-spin" : ""
+                    }`}
+                    weight={isAiImproving ? "fill" : "regular"}
+                    style={
+                      isAiImproving ? { animationDuration: "2s" } : undefined
+                    }
+                  />
+                </button>
+                <textarea
+                  ref={textareaRef}
+                  className={`flex-1 outline-none p-3 px-4 md:p-3 text-[rgb(var(--text-primary))] placeholder-[rgb(var(--text-secondary))] caret-[rgb(var(--accent-primary))] text-sm md:text-sm bg-transparent resize-none overflow-hidden ${
+                    isTypingAnimation ? "animate-pulse" : ""
+                  }`}
+                  placeholder={
+                    isTypingAnimation
+                      ? t("chatInput.aiImproving")
+                      : t("chatInput.placeholder")
+                  }
                   value={messageText}
                   onChange={(event) => {
                     if (sendError) {
@@ -295,7 +381,20 @@ export default function CurrentChat() {
                     }
                     setMessageText(event.target.value);
                   }}
-                  disabled={isSending}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && !event.shiftKey) {
+                      event.preventDefault();
+                      if (!isSending && messageText.trim().length > 0) {
+                        handleSubmit(
+                          event as unknown as FormEvent<HTMLFormElement>
+                        );
+                      }
+                    }
+                  }}
+                  disabled={isSending || isTypingAnimation}
+                  readOnly={isTypingAnimation}
+                  rows={1}
+                  style={{ minHeight: "42px", maxHeight: "200px" }}
                 />
                 <button
                   type="submit"
