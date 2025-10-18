@@ -448,10 +448,7 @@ export default function CurrentChat() {
                 </button>
               </div>
             )}
-            <form
-              onSubmit={handleSubmit}
-              className="bg-[rgb(var(--bg-primary))]"
-            >
+            <form onSubmit={handleSubmit}>
               <div className="bg-[rgb(var(--bg-input)/var(--bg-input-opacity))] rounded-3xl flex items-end gap-2 py-2">
                 <AttachmentPicker
                   onAttachmentSelect={handleAttachmentSelect}
@@ -544,11 +541,7 @@ export default function CurrentChat() {
                 <button
                   type="submit"
                   disabled={isSending || messageText.trim().length === 0}
-<<<<<<< HEAD
-                  className="text-sm font-semibold text-white bg-[rgb(var(--accent-primary))] hover:bg-[rgb(var(--status-success))] active:bg-[rgb(var(--accent-primary)/0.8)] disabled:opacity-60 disabled:cursor-not-allowed transition rounded-full px-5 py-2.5 md:px-4 md:py-2 mr-2 mb-2"
-=======
-                  className="text-sm font-semibold text-white bg-[rgb(var(--accent-primary))] hover:bg-[rgb(var(--status-success))] active:bg-[rgb(var(--accent-primary)/0.8)] disabled:opacity-60 disabled:cursor-not-allowed transition rounded-full md:mb-1 px-5 py-2.5 md:px-4 md:py-2 mr-2"
->>>>>>> 77eadc4 ([IMP] frontend: translation with AI and better prompts)
+                  className="text-sm font-semibold text-white bg-[rgb(var(--accent-primary))] hover:bg-[rgb(var(--status-success))] active:bg-[rgb(var(--accent-primary)/0.8)] disabled:opacity-60 disabled:cursor-not-allowed transition rounded-full px-5 py-2.5 md:px-4 mr-2 mb-1"
                 >
                   {isSending ? t("chatInput.sending") : t("chatInput.send")}
                 </button>
