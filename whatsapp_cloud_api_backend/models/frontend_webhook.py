@@ -6,6 +6,8 @@ import time
 
 import requests
 
+from ..controllers.main import WP_ATTACHMENT_DOWNLOAD_PATH
+
 _logger = logging.getLogger(__name__)
 
 
@@ -90,6 +92,23 @@ class WebhookSender:
     @staticmethod
     def send_message_webhook_payload(message, event_type):
         """Send webhook payload for a WhatsApp message event."""
+        # Build attachment data with full metadata (mimetype, url, file_size)
+        attachment_data = False
+        attachment_full_data = None
+        if message.attachment_id:
+            base_url = (
+                message.env["ir.config_parameter"].sudo().get_param("web.base.url")
+            )
+            attachment_data = [message.attachment_id.id, message.attachment_id.name]
+            attachment_full_data = {
+                "id": message.attachment_id.id,
+                "name": message.attachment_id.name,
+                "mimetype": message.attachment_id.mimetype,
+                "url": f"""{base_url}{WP_ATTACHMENT_DOWNLOAD_PATH}
+                {message.attachment_id.id}""",
+                "file_size": message.attachment_id.file_size,
+            }
+
         payload = {
             "event_type": event_type,
             "data": {
@@ -97,11 +116,8 @@ class WebhookSender:
                 "body": message.body,
                 "status": message.status,
                 "direction": message.direction,
-                "attachment_id": (
-                    [message.attachment_id.id, message.attachment_id.name]
-                    if message.attachment_id
-                    else False
-                ),
+                "attachment_id": attachment_data,
+                "attachment": attachment_full_data,
                 "message_id": message.message_id,
                 "replied_message_id": (
                     [
