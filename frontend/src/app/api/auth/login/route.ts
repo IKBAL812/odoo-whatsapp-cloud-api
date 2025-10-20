@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { OdooClient } from "@/app/lib/odoo/jsonrpc";
+import { sessionCache } from "@/app/lib/session-cache";
 
 const REQUIRED_ENV_VARS = [
   "ODOO_JSONRPC_HOST",
@@ -64,15 +65,26 @@ export async function POST(request: Request) {
 
     let backend = null;
     try {
-      backend = await session.call(
-        "whatsapp.backend",
-        "initialize_web",
-        [[]],
-        {},
-        false
-      );
-    } catch {
-      // Failed to initialize WhatsApp backend
+      backend = await session.call<{
+        backend_id?: number;
+        backend_ids?: number[];
+        user_id?: number;
+        language?: string;
+        company_id?: number;
+        users?: Array<{ id: number; name: string; image_url?: string }>;
+      }>("whatsapp.backend", "initialize_web", [[]], {}, false);
+
+      // Store backend_ids in server-side cache for secure SSE access control
+      if (backend && Array.isArray(backend.backend_ids)) {
+        sessionCache.set(sessionId, backend.backend_ids);
+      } else {
+        console.warn(
+          `[Login] No backend_ids returned from initialize_web for session ${sessionId}`
+        );
+      }
+    } catch (error) {
+      console.error("[Login] Failed to initialize WhatsApp backend:", error);
+      // Failed to initialize WhatsApp backend - not critical for login
     }
 
     return NextResponse.json({

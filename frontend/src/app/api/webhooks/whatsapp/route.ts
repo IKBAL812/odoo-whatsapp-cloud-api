@@ -5,10 +5,7 @@ import { eventBroadcaster } from "@/app/lib/events/broadcaster";
 /**
  * Webhook Event Types
  */
-type WebhookEventType =
-  | "thread.created"
-  | "thread.updated"
-  | "message.created";
+type WebhookEventType = "thread.created" | "thread.updated" | "message.created";
 
 /**
  * Webhook Payload Structure
@@ -116,10 +113,7 @@ export async function POST(request: NextRequest) {
 
   if (!checkRateLimit(clientIp)) {
     console.warn(`[Webhook] Rate limit exceeded for IP: ${clientIp}`);
-    return NextResponse.json(
-      { error: "Rate limit exceeded" },
-      { status: 429 }
-    );
+    return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
   }
 
   // 3. Verify signature

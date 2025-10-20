@@ -65,12 +65,8 @@ export default function Profile({
 
   const renderDefaultAvatar = () => {
     // Use colored background if seed is provided
-    const bgStyle = backgroundColor
-      ? { backgroundColor }
-      : undefined;
-    const bgClass = backgroundColor
-      ? ""
-      : "bg-[rgb(var(--text-secondary))]";
+    const bgStyle = backgroundColor ? { backgroundColor } : undefined;
+    const bgClass = backgroundColor ? "" : "bg-[rgb(var(--text-secondary))]";
 
     return (
       <div

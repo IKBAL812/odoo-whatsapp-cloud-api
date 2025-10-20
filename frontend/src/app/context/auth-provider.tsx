@@ -20,6 +20,7 @@ type AuthContextValue = {
   sessionId: string | null;
   user: OdooLoginResult | null;
   backendId: number | null;
+  backendIds: number[];
   backendUserId: number | null;
   backendUsers: BackendUser[];
   backendUsersById: Record<number, BackendUser>;
@@ -45,6 +46,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [user, setUser] = useState<OdooLoginResult | null>(null);
   const [backendId, setBackendId] = useState<number | null>(null);
+  const [backendIds, setBackendIds] = useState<number[]>([]);
   const [backendUserId, setBackendUserId] = useState<number | null>(null);
   const [backendUsers, setBackendUsers] = useState<BackendUser[]>([]);
   const [status, setStatus] = useState<AuthStatus>("checking");
@@ -60,6 +62,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
     const storedBackend = window.localStorage.getItem(SESSION_BACKEND_KEY);
 
     if (storedSession) {
+      // Load cached data immediately for faster UI
       setSessionId(storedSession);
       if (storedUser) {
         try {
@@ -72,11 +75,15 @@ export default function AuthProvider({ children }: PropsWithChildren) {
         try {
           const parsed = JSON.parse(storedBackend) as {
             backendId?: number | null;
+            backendIds?: number[];
             backendUserId?: number | null;
             backendUsers?: BackendUser[];
           };
           setBackendId(
             typeof parsed.backendId === "number" ? parsed.backendId : null
+          );
+          setBackendIds(
+            Array.isArray(parsed.backendIds) ? parsed.backendIds : []
           );
           setBackendUserId(
             typeof parsed.backendUserId === "number"
@@ -91,10 +98,18 @@ export default function AuthProvider({ children }: PropsWithChildren) {
         }
       }
       setStatus("authenticated");
+
+      // Revalidate session in background to refresh server-side cache
+      // This ensures session cache is populated after server restart or frontend deployment
+      loginWithSessionId(storedSession).catch(() => {
+        // Session validation failed - user will be logged out
+        console.log("[Auth] Session revalidation failed on mount");
+      });
     } else {
       setStatus("unauthenticated");
     }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps - only run on mount
 
   const persistSession = useCallback(
     (
@@ -102,6 +117,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
       sessionUser: OdooLoginResult | null,
       backendMeta?: {
         backendId?: number | null;
+        backendIds?: number[];
         backendUserId?: number | null;
         backendUsers?: BackendUser[];
       }
@@ -123,6 +139,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
           SESSION_BACKEND_KEY,
           JSON.stringify({
             backendId: backendMeta.backendId ?? null,
+            backendIds: backendMeta.backendIds ?? [],
             backendUserId: backendMeta.backendUserId ?? null,
             backendUsers: backendMeta.backendUsers ?? [],
           })
@@ -170,6 +187,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
         const backendMeta = data?.backend as
           | {
               backend_id?: number;
+              backend_ids?: number[];
               user_id?: number;
               users?: { id: number; name: string; image_url?: string | null }[];
             }
@@ -194,16 +212,21 @@ export default function AuthProvider({ children }: PropsWithChildren) {
           typeof backendMeta?.backend_id === "number"
             ? backendMeta?.backend_id
             : null;
+        const resolvedBackendIds = Array.isArray(backendMeta?.backend_ids)
+          ? backendMeta.backend_ids
+          : [];
         const resolvedBackendUserId =
           typeof backendMeta?.user_id === "number"
             ? backendMeta?.user_id
             : null;
 
         setBackendId(resolvedBackendId);
+        setBackendIds(resolvedBackendIds);
         setBackendUserId(resolvedBackendUserId);
         setBackendUsers(backendUsersList);
         persistSession(newSessionId, sessionUser, {
           backendId: resolvedBackendId,
+          backendIds: resolvedBackendIds,
           backendUserId: resolvedBackendUserId,
           backendUsers: backendUsersList,
         });
@@ -212,6 +235,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
         setSessionId(null);
         setUser(null);
         setBackendId(null);
+        setBackendIds([]);
         setBackendUserId(null);
         setBackendUsers([]);
         clearPersistedSession();
@@ -250,6 +274,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
         const backendMeta = data?.backend as
           | {
               backend_id?: number;
+              backend_ids?: number[];
               user_id?: number;
               users?: { id: number; name: string; image_url?: string | null }[];
             }
@@ -270,16 +295,21 @@ export default function AuthProvider({ children }: PropsWithChildren) {
           typeof backendMeta?.backend_id === "number"
             ? backendMeta?.backend_id
             : null;
+        const resolvedBackendIds = Array.isArray(backendMeta?.backend_ids)
+          ? backendMeta.backend_ids
+          : [];
         const resolvedBackendUserId =
           typeof backendMeta?.user_id === "number"
             ? backendMeta?.user_id
             : null;
 
         setBackendId(resolvedBackendId);
+        setBackendIds(resolvedBackendIds);
         setBackendUserId(resolvedBackendUserId);
         setBackendUsers(backendUsersList);
         persistSession(providedSessionId, sessionUser, {
           backendId: resolvedBackendId,
+          backendIds: resolvedBackendIds,
           backendUserId: resolvedBackendUserId,
           backendUsers: backendUsersList,
         });
@@ -288,6 +318,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
         setSessionId(null);
         setUser(null);
         setBackendId(null);
+        setBackendIds([]);
         setBackendUserId(null);
         setBackendUsers([]);
         clearPersistedSession();
@@ -304,6 +335,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
     setSessionId(null);
     setUser(null);
     setBackendId(null);
+    setBackendIds([]);
     setBackendUserId(null);
     setBackendUsers([]);
     clearPersistedSession();
@@ -315,6 +347,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
       sessionId,
       user,
       backendId,
+      backendIds,
       backendUserId,
       backendUsers,
       backendUsersById: backendUsers.reduce<Record<number, BackendUser>>(
@@ -335,6 +368,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
       sessionId,
       user,
       backendId,
+      backendIds,
       backendUserId,
       backendUsers,
       status,

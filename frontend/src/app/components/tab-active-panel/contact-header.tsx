@@ -16,8 +16,15 @@ export default function ContactHeader() {
   const {
     profile: { id },
   } = useProfile();
-  const { contact, group, threadName, partnerId, partnerName, partnerAvatar, hasAvatar } =
-    useCurrentChat();
+  const {
+    contact,
+    group,
+    threadName,
+    partnerId,
+    partnerName,
+    partnerAvatar,
+    hasAvatar,
+  } = useCurrentChat();
   const { t } = useTranslations();
   const { showChatList } = useMobileNavigation();
   const { isMobile } = useResponsive();

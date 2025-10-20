@@ -227,7 +227,10 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
               partnerId: partnerId ?? existingChat.partnerId,
               partnerName: partnerName ?? existingChat.partnerName,
               // Keep existing avatar URL if new one is null (odooBaseUrl not loaded yet)
-              partnerAvatar: partnerAvatar !== null ? partnerAvatar : existingChat.partnerAvatar,
+              partnerAvatar:
+                partnerAvatar !== null
+                  ? partnerAvatar
+                  : existingChat.partnerAvatar,
               hasAvatar: hasAvatar, // Update avatar availability flag
               unreadCount: newUnreadCount, // Update unread count
               read: !hasUnread, // Mark as read if no unread messages

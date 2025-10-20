@@ -168,6 +168,7 @@ Odoo Backend → Webhook → Next.js → EventBroadcaster → SSE Streams → Fr
 ```
 
 **How it works**:
+
 1. Odoo sends webhooks when messages/threads are created or updated
 2. Next.js webhook endpoint validates signature and broadcasts to active SSE connections
 3. Frontend receives updates instantly (0-500ms latency)
@@ -233,6 +234,7 @@ Located at `/api/events`, provides:
 In-memory pub/sub system for single-instance deployments. For multi-instance (horizontal scaling), replace with Redis pub/sub.
 
 **Channels**:
+
 - `threads` - Global thread events (thread.created, thread.updated)
 - `messages` - Global message events
 - `messages:${threadId}` - Thread-specific message events
@@ -242,6 +244,7 @@ In-memory pub/sub system for single-instance deployments. For multi-instance (ho
 **Ask your backend developer to configure Odoo to send webhooks to the frontend.**
 
 Required webhook URL (add to Odoo configuration):
+
 ```bash
 # Local development
 http://localhost:3000/api/webhooks/whatsapp
@@ -251,6 +254,7 @@ https://your-domain.com/api/webhooks/whatsapp
 ```
 
 The backend must send webhooks for:
+
 - `whatsapp.thread` model: `create()` and `write()` triggers
 - `whatsapp.message` model: `create()` and `write()` triggers
 
@@ -326,16 +330,16 @@ function MyComponent() {
 
 ```typescript
 // Background with opacity
-className="bg-[rgb(var(--bg-secondary)/var(--bg-secondary-opacity))]"
+className = "bg-[rgb(var(--bg-secondary)/var(--bg-secondary-opacity))]";
 
 // Solid background
-className="bg-[rgb(var(--bg-primary))]"
+className = "bg-[rgb(var(--bg-primary))]";
 
 // Text color
-className="text-[rgb(var(--text-primary))]"
+className = "text-[rgb(var(--text-primary))]";
 
 // Border
-className="border-[rgb(var(--border-primary)/var(--border-primary-opacity))]"
+className = "border-[rgb(var(--border-primary)/var(--border-primary-opacity))]";
 ```
 
 ### Available CSS Variables
@@ -380,24 +384,27 @@ Refer to `src/app/globals.css` for the complete list. Common variables include:
 ```typescript
 // ✅ CORRECT: Using CSS variables
 // Button
-className="px-3 py-2 bg-[rgb(var(--bg-button-secondary)/var(--bg-button-secondary-opacity))] hover:bg-[rgb(var(--accent-hover)/var(--accent-hover-opacity))] rounded-lg transition-colors"
+className =
+  "px-3 py-2 bg-[rgb(var(--bg-button-secondary)/var(--bg-button-secondary-opacity))] hover:bg-[rgb(var(--accent-hover)/var(--accent-hover-opacity))] rounded-lg transition-colors";
 
 // Input
-className="w-full px-4 py-2 bg-[rgb(var(--bg-input)/var(--bg-input-opacity))] border border-[rgb(var(--border-primary)/var(--border-primary-opacity))] rounded-lg text-[rgb(var(--text-primary))]"
+className =
+  "w-full px-4 py-2 bg-[rgb(var(--bg-input)/var(--bg-input-opacity))] border border-[rgb(var(--border-primary)/var(--border-primary-opacity))] rounded-lg text-[rgb(var(--text-primary))]";
 
 // Card/Panel
-className="bg-[rgb(var(--bg-secondary)/var(--bg-secondary-opacity))] rounded-lg p-4"
+className =
+  "bg-[rgb(var(--bg-secondary)/var(--bg-secondary-opacity))] rounded-lg p-4";
 
 // Primary text
-className="text-[rgb(var(--text-primary))]"
+className = "text-[rgb(var(--text-primary))]";
 
 // Secondary/muted text
-className="text-[rgb(var(--text-secondary)/var(--text-secondary-opacity))]"
+className = "text-[rgb(var(--text-secondary)/var(--text-secondary-opacity))]";
 
 // ❌ WRONG: Hard-coded colors (will not adapt to theme)
-className="bg-black text-white"
-className="bg-white/10 text-white/50"
-className="border-gray-300"
+className = "bg-black text-white";
+className = "bg-white/10 text-white/50";
+className = "border-gray-300";
 ```
 
 ### Testing Themes
@@ -428,7 +435,7 @@ If you need a new color that doesn't exist:
 3. Use in components:
 
    ```typescript
-   className="bg-[rgb(var(--my-new-color)/var(--my-new-color-opacity))]"
+   className = "bg-[rgb(var(--my-new-color)/var(--my-new-color-opacity))]";
    ```
 
 ## 🧩 State Management Patterns
