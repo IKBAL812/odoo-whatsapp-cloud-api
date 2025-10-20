@@ -150,6 +150,7 @@ class WhatsAppBackend(models.Model):
         files = {"file": (attachment.name, file_data, attachment.mimetype)}
         data = {
             "messaging_product": "whatsapp",
+            "type": attachment.mimetype,
         }
 
         try:
