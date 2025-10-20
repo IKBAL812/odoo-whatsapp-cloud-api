@@ -57,24 +57,30 @@ export async function POST(request: NextRequest) {
 
     // Default system prompt if not provided
     const defaultSystemPrompt = hasCurrentText
-      ? `You are a helpful assistant that improves text messages for clarity, grammar, and professionalism while maintaining the original intent and tone. The user will provide you with:
+      ? `You are a helpful assistant that improves WhatsApp messages. The user will provide you with:
 1. Recent conversation context (last 10 messages)
 2. A draft message they want to improve
 
-Your task is to:
-- Fix any grammar, spelling, or punctuation errors
-- Improve clarity and readability
-- Maintain the original tone and intent
-- Keep the message as simple and short as possible
-- Keep the message concise and natural
+IMPORTANT RULES:
+- This is for WhatsApp - keep it SHORT and casual
+- Maximum 1-2 sentences (prefer 1 sentence)
+- Fix grammar, spelling, and punctuation errors
+- Make it clear and readable
+- Keep the SAME tone and intent as the original
+- DO NOT make it formal unless the original was formal
+- DO NOT add extra information or explanations
+- DO NOT make it longer than the original unless necessary for clarity
 - Return ONLY the improved message text, nothing else`
-      : `You are a helpful assistant that generates contextual message replies based on conversation history. The user will provide you with recent conversation context (last 10 messages).
+      : `You are a helpful assistant that generates WhatsApp message replies based on conversation history. The user will provide you with recent conversation context (last 10 messages).
 
-Your task is to:
-- Analyze the conversation flow and context
-- Generate a natural, appropriate response that continues the conversation
+IMPORTANT RULES:
+- This is for WhatsApp - keep it SHORT and casual
+- Maximum 1-2 sentences (prefer 1 sentence)
+- Generate a natural, appropriate response
 - Match the tone and style of the user's previous messages
-- Keep the message concise and conversational
+- Keep it conversational and friendly
+- DO NOT write long paragraphs
+- DO NOT be overly formal or verbose
 - Return ONLY the generated message text, nothing else`;
 
     const finalSystemPrompt = systemPrompt || defaultSystemPrompt;
@@ -93,8 +99,8 @@ ${conversationContext}
 
 Please generate an appropriate response message based on this conversation.`;
 
-    // Call OpenAI API
-    const completion = await openai.chat.completions.create({
+    // Call OpenAI API with streaming
+    const stream = await openai.chat.completions.create({
       model: getOpenAIModel(),
       messages: [
         {
@@ -108,20 +114,36 @@ Please generate an appropriate response message based on this conversation.`;
       ],
       temperature: 0.7,
       max_tokens: 500,
+      stream: true,
     });
 
-    const improvedText = completion.choices[0]?.message?.content?.trim();
+    // Create a readable stream for the response
+    const encoder = new TextEncoder();
+    const readableStream = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const chunk of stream) {
+            const content = chunk.choices[0]?.delta?.content;
+            if (content) {
+              const data = `data: ${JSON.stringify({ content })}\n\n`;
+              controller.enqueue(encoder.encode(data));
+            }
+          }
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          controller.close();
+        } catch (error) {
+          console.error("Streaming error:", error);
+          controller.error(error);
+        }
+      },
+    });
 
-    if (!improvedText) {
-      return NextResponse.json(
-        { error: "Failed to generate improved text" },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({
-      improvedText,
-      usage: completion.usage,
+    return new Response(readableStream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      },
     });
   } catch (error) {
     console.error("AI improve text error:", error);

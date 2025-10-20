@@ -43,7 +43,9 @@
     "replyingTo": "{{name}} kişisine yanıt veriliyor",
     "aiImprove": "Yapay zeka ile iyileştir",
     "aiImproving": "İyileştiriliyor...",
-    "aiImproveError": "Metin yapay zeka ile iyileştirilemedi"
+    "aiImproveError": "Metin yapay zeka ile iyileştirilemedi",
+    "translate": "Müşteri diline çevir",
+    "translateError": "Metin çevrilemedi"
   },
   "chatList": {
     "title": "Sohbetler",

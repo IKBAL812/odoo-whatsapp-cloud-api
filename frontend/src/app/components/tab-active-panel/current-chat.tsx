@@ -9,7 +9,7 @@ import AttachmentPicker from "../message/attachment-picker";
 import DragDropZone from "../message/drag-drop-zone";
 import { useTranslations } from "@/app/context/translation-provider";
 import { useContacts } from "@/app/hooks/use-contacts";
-import { XCircleIcon, Sparkle } from "@phosphor-icons/react";
+import { XCircleIcon, Sparkle, TranslateIcon } from "@phosphor-icons/react";
 
 export default function CurrentChat() {
   const {
@@ -28,6 +28,7 @@ export default function CurrentChat() {
   const [sendError, setSendError] = useState<string | null>(null);
   const [droppedFile, setDroppedFile] = useState<File | null>(null);
   const [isAiImproving, setIsAiImproving] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
   const [isTypingAnimation, setIsTypingAnimation] = useState(false);
   const { t } = useTranslations();
   const { contacts } = useContacts();
@@ -105,21 +106,11 @@ export default function CurrentChat() {
     setDroppedFile(null);
   };
 
-  const typeText = async (text: string, speed: number = 15) => {
-    setIsTypingAnimation(true);
-    setMessageText("");
-
-    for (let i = 0; i <= text.length; i++) {
-      setMessageText(text.slice(0, i));
-      await new Promise((resolve) => setTimeout(resolve, speed));
-    }
-
-    setIsTypingAnimation(false);
-  };
-
   const handleAiImprove = async () => {
     setIsAiImproving(true);
+    setIsTypingAnimation(true);
     setSendError(null);
+    setMessageText("");
 
     try {
       const response = await fetch("/api/ai/improve-text", {
@@ -134,17 +125,142 @@ export default function CurrentChat() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to improve text");
+        throw new Error("Failed to improve text");
       }
 
-      const data = await response.json();
-      await typeText(data.improvedText);
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error("Response body is not readable");
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let accumulatedText = "";
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          // Append new chunk to buffer
+          buffer += decoder.decode(value, { stream: true });
+
+          // Process complete lines from buffer
+          while (true) {
+            const lineEnd = buffer.indexOf("\n");
+            if (lineEnd === -1) break;
+
+            const line = buffer.slice(0, lineEnd).trim();
+            buffer = buffer.slice(lineEnd + 1);
+
+            if (line.startsWith("data: ")) {
+              const data = line.slice(6);
+              if (data === "[DONE]") break;
+
+              try {
+                const parsed = JSON.parse(data);
+                const content = parsed.content;
+                if (content) {
+                  accumulatedText += content;
+                  setMessageText(accumulatedText);
+                }
+              } catch {
+                // Ignore invalid JSON
+              }
+            }
+          }
+        }
+      } finally {
+        reader.cancel();
+      }
     } catch (error) {
       const err = error as Error;
       setSendError(err.message || t("chatInput.aiImproveError"));
     } finally {
       setIsAiImproving(false);
+      setIsTypingAnimation(false);
+    }
+  };
+
+  const handleTranslate = async () => {
+    if (!messageText.trim()) {
+      return;
+    }
+
+    setIsTranslating(true);
+    setIsTypingAnimation(true);
+    setSendError(null);
+    const originalText = messageText;
+    setMessageText("");
+
+    try {
+      const response = await fetch("/api/ai/translate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messages: messages.slice(-10), // Last 10 messages
+          currentText: originalText,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to translate text");
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error("Response body is not readable");
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let accumulatedText = "";
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          // Append new chunk to buffer
+          buffer += decoder.decode(value, { stream: true });
+
+          // Process complete lines from buffer
+          while (true) {
+            const lineEnd = buffer.indexOf("\n");
+            if (lineEnd === -1) break;
+
+            const line = buffer.slice(0, lineEnd).trim();
+            buffer = buffer.slice(lineEnd + 1);
+
+            if (line.startsWith("data: ")) {
+              const data = line.slice(6);
+              if (data === "[DONE]") break;
+
+              try {
+                const parsed = JSON.parse(data);
+                const content = parsed.content;
+                if (content) {
+                  accumulatedText += content;
+                  setMessageText(accumulatedText);
+                }
+              } catch {
+                // Ignore invalid JSON
+              }
+            }
+          }
+        }
+      } finally {
+        reader.cancel();
+      }
+    } catch (error) {
+      const err = error as Error;
+      setSendError(err.message || t("chatInput.translateError"));
+      setMessageText(originalText); // Restore original text on error
+    } finally {
+      setIsTranslating(false);
+      setIsTypingAnimation(false);
     }
   };
 
@@ -332,11 +448,8 @@ export default function CurrentChat() {
                 </button>
               </div>
             )}
-            <form
-              onSubmit={handleSubmit}
-              className="bg-[rgb(var(--bg-primary))] rounded-3xl"
-            >
-              <div className="bg-[rgb(var(--bg-input)/var(--bg-input-opacity))] rounded-3xl flex items-end gap-2 py-1">
+            <form onSubmit={handleSubmit}>
+              <div className="bg-[rgb(var(--bg-input)/var(--bg-input-opacity))] rounded-3xl flex items-end gap-2 py-2">
                 <AttachmentPicker
                   onAttachmentSelect={handleAttachmentSelect}
                   disabled={isSending}
@@ -345,8 +458,39 @@ export default function CurrentChat() {
                 />
                 <button
                   type="button"
+                  onClick={handleTranslate}
+                  disabled={
+                    isTranslating ||
+                    isAiImproving ||
+                    isSending ||
+                    messageText.trim().length === 0
+                  }
+                  className={`text-[rgb(var(--text-secondary))] hover:text-[rgb(var(--accent-primary))] disabled:opacity-40 disabled:cursor-not-allowed transition-all p-2 mb-1 active:scale-95 ${
+                    isTranslating
+                      ? "animate-pulse text-[rgb(var(--accent-primary))]"
+                      : ""
+                  }`}
+                  title={t("chatInput.translate")}
+                >
+                  <TranslateIcon
+                    className={`size-5 md:size-5 transition-transform ${
+                      isTranslating ? "animate-spin" : ""
+                    }`}
+                    weight={isTranslating ? "fill" : "bold"}
+                    style={
+                      isTranslating ? { animationDuration: "2s" } : undefined
+                    }
+                  />
+                </button>
+                <button
+                  type="button"
                   onClick={handleAiImprove}
-                  disabled={isAiImproving || isSending || messages.length === 0}
+                  disabled={
+                    isAiImproving ||
+                    isTranslating ||
+                    isSending ||
+                    messages.length === 0
+                  }
                   className={`text-[rgb(var(--text-secondary))] hover:text-[rgb(var(--accent-primary))] disabled:opacity-40 disabled:cursor-not-allowed transition-all p-2 mb-1 active:scale-95 ${
                     isAiImproving
                       ? "animate-pulse text-[rgb(var(--accent-primary))]"
@@ -366,7 +510,7 @@ export default function CurrentChat() {
                 </button>
                 <textarea
                   ref={textareaRef}
-                  className={`flex-1 outline-none p-3 px-4 md:p-3 text-[rgb(var(--text-primary))] placeholder-[rgb(var(--text-secondary))] caret-[rgb(var(--accent-primary))] text-sm md:text-sm bg-transparent resize-none overflow-hidden ${
+                  className={`flex-1 outline-none p-3 px-4 md:p-3 text-[rgb(var(--text-primary))] placeholder-[rgb(var(--text-secondary))] caret-[rgb(var(--accent-primary))] text-sm md:text-sm bg-transparent resize-none overflow-y-auto custom-scrollbar min-h-[44px] max-h-[120px] transition-[height] duration-150 ease-out ${
                     isTypingAnimation ? "animate-pulse" : ""
                   }`}
                   placeholder={
@@ -384,22 +528,20 @@ export default function CurrentChat() {
                   onKeyDown={(event) => {
                     if (event.key === "Enter" && !event.shiftKey) {
                       event.preventDefault();
-                      if (!isSending && messageText.trim().length > 0) {
-                        handleSubmit(
-                          event as unknown as FormEvent<HTMLFormElement>
-                        );
+                      const form = event.currentTarget.form;
+                      if (form && !isSending && messageText.trim().length > 0) {
+                        form.requestSubmit();
                       }
                     }
                   }}
                   disabled={isSending || isTypingAnimation}
                   readOnly={isTypingAnimation}
                   rows={1}
-                  style={{ minHeight: "42px", maxHeight: "200px" }}
                 />
                 <button
                   type="submit"
                   disabled={isSending || messageText.trim().length === 0}
-                  className="text-sm font-semibold text-white bg-[rgb(var(--accent-primary))] hover:bg-[rgb(var(--status-success))] active:bg-[rgb(var(--accent-primary)/0.8)] disabled:opacity-60 disabled:cursor-not-allowed transition rounded-full px-5 py-2.5 md:px-4 md:py-2 mr-2"
+                  className="text-sm font-semibold text-white bg-[rgb(var(--accent-primary))] hover:bg-[rgb(var(--status-success))] active:bg-[rgb(var(--accent-primary)/0.8)] disabled:opacity-60 disabled:cursor-not-allowed transition rounded-full px-5 py-2.5 md:px-4 mr-2 mb-1"
                 >
                   {isSending ? t("chatInput.sending") : t("chatInput.send")}
                 </button>

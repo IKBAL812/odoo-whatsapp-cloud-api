@@ -43,7 +43,9 @@
     "replyingTo": "Replying to {{name}}",
     "aiImprove": "Improve with AI",
     "aiImproving": "Improving...",
-    "aiImproveError": "Failed to improve text with AI"
+    "aiImproveError": "Failed to improve text with AI",
+    "translate": "Translate to customer's language",
+    "translateError": "Failed to translate text"
   },
   "chatList": {
     "title": "Chats",
