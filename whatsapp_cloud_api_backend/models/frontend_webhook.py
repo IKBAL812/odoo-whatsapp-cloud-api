@@ -32,7 +32,6 @@ class WebhookSender:
 
         payload_json = json.dumps(payload, separators=(",", ":"))
 
-
         headers = {
             "Content-Type": "application/json",
             "x-odoo-signature": generate_signature(webhook_secret, payload_json),

@@ -55,7 +55,6 @@ class WhatsAppThread(models.Model):
 
     has_avatar = fields.Boolean(
         compute="_compute_has_avatar",
-        string="Has Avatar",
     )
 
     _sql_constraints = [
@@ -76,8 +75,9 @@ class WhatsAppThread(models.Model):
         """Compute whether the partner has an actual avatar image"""
         for record in self:
             if record.partner_id:
+                commercial_partner = record.partner_id.commercial_partner_id
                 # Check if partner has an actual avatar (not auto-generated)
-                partner = record.partner_id.with_context(whatsapp_connector=True)
+                partner = commercial_partner.with_context(whatsapp_connector=True)
                 record.has_avatar = bool(partner.avatar_256)
             else:
                 record.has_avatar = False

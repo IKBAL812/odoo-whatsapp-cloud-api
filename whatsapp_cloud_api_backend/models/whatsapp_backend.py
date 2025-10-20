@@ -64,7 +64,6 @@ class WhatsAppBackend(models.Model):
         help="URL to send WhatsApp thread and message updates to the frontend.",
     )
     frontend_webhook_secret = fields.Char(
-        string="Frontend Webhook Secret",
         help="Secret token to authenticate frontend webhook requests.",
     )
 
