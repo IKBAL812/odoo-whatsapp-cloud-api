@@ -1,9 +1,5 @@
-import {
-  ArrowBendUpLeftIcon,
-  PlusCircleIcon,
-  SmileyIcon,
-} from "@phosphor-icons/react";
-import { MouseEvent, useState } from "react";
+import { ArrowBendUpLeftIcon, SmileyIcon } from "@phosphor-icons/react";
+import { MouseEvent, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 
 const item = {
@@ -26,6 +22,28 @@ export default function Reaction({
 }: ReactionProps) {
   const [showReactionEmoji, setShowReactionEmoji] = useState(false);
   const [reactionMenuOpen, setReactionMenuOpen] = useState(false);
+  const popupRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent | globalThis.MouseEvent) => {
+      if (
+        reactionMenuOpen &&
+        popupRef.current &&
+        !popupRef.current.contains(event.target as Node)
+      ) {
+        setReactionMenuOpen(false);
+        setShowReactionEmoji(false);
+      }
+    };
+
+    if (reactionMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [reactionMenuOpen]);
 
   const handleMouseLeave = () => {
     setShowReactionEmoji(false || reactionMenuOpen);
@@ -64,10 +82,12 @@ export default function Reaction({
             hidden: { scale: 0.8 },
             show: {
               scale: 1,
-              transition: { type: "spring", bounce: 0.5, duration: 0.5 },
+              transition: { type: "spring", bounce: 0.3, duration: 0.2 },
             },
           }}
-          className="bg-[rgb(var(--bg-primary))] overflow-hidden rounded-full absolute z-50 -top-16"
+          className={`overflow-visible rounded-full absolute z-50 -top-16 ${
+            isSentFromUser ? "right-0" : "left-0"
+          }`}
         >
           <motion.div
             variants={{
@@ -76,31 +96,27 @@ export default function Reaction({
                 opacity: 1,
                 transition: {
                   type: "spring",
-                  staggerChildren: 0.05,
+                  staggerChildren: 0.02,
                   staggerDirection: isSentFromUser ? -1 : 1,
-                  bounce: 0.5,
-                  duration: 0.05,
+                  bounce: 0.3,
+                  duration: 0.02,
                 },
               },
             }}
             initial="hidden"
             animate="show"
-            className="bg-[rgb(var(--bg-secondary)/var(--bg-secondary-opacity))] text-[rgb(var(--text-primary))] flex w-auto justify-between items-center gap-2 p-2 px-4"
+            className="bg-black/20 backdrop-blur-sm text-[rgb(var(--text-primary))] flex w-auto justify-between items-center gap-1 sm:gap-2 p-1.5 sm:p-2 px-2 sm:px-4 max-w-[90vw] overflow-x-auto rounded-full border border-white/10"
           >
             {reactions.map((reaction: string, index) => (
               <motion.p
                 variants={item}
-                className="text-3xl cursor-pointer"
+                className="text-xl sm:text-2xl md:text-3xl cursor-pointer hover:scale-125 transition-transform flex-shrink-0"
                 key={index}
                 onClick={(e) => handleReactionClick(e, reaction)}
               >
                 {reaction}
               </motion.p>
             ))}
-            <PlusCircleIcon
-              weight="duotone"
-              className="size-8 cursor-pointer text-[rgb(var(--text-secondary))]"
-            />
           </motion.div>
         </motion.div>
       </AnimatePresence>
@@ -109,6 +125,7 @@ export default function Reaction({
 
   return (
     <div
+      ref={popupRef}
       className={`relative flex flex-col justify-center items-center gap-2 ${
         showReactionEmoji ? "opacity-100" : "opacity-0"
       }`}

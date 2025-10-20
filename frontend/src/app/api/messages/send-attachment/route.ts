@@ -55,15 +55,23 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { threadId, phoneNumber, backendId, attachmentId, caption, method } =
-    payload as {
-      threadId?: number | string;
-      phoneNumber?: string;
-      backendId?: number;
-      attachmentId?: number;
-      caption?: string;
-      method?: string;
-    };
+  const {
+    threadId,
+    phoneNumber,
+    backendId,
+    attachmentId,
+    caption,
+    method,
+    filename,
+  } = payload as {
+    threadId?: number | string;
+    phoneNumber?: string;
+    backendId?: number;
+    attachmentId?: number;
+    caption?: string;
+    method?: string;
+    filename?: string;
+  };
 
   const parsedThreadId =
     typeof threadId === "string" ? Number(threadId) : threadId;
@@ -119,12 +127,17 @@ export async function POST(request: NextRequest) {
     const sendMethod = method || "send_image_message";
 
     // Build kwargs
-    const kwargs: { attachment: number; caption?: string } = {
-      attachment: attachmentId,
-    };
+    const kwargs: { attachment: number; caption?: string; filename?: string } =
+      {
+        attachment: attachmentId,
+      };
 
     if (caption) {
       kwargs.caption = caption;
+    }
+
+    if (filename) {
+      kwargs.filename = filename;
     }
 
     const result = await sessionClient.call(

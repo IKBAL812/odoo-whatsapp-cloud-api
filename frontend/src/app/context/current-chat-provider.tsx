@@ -1104,6 +1104,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
         const isImage = file.type.startsWith("image/");
         const isVideo = file.type.startsWith("video/");
         const isAudio = file.type.startsWith("audio/");
+        const isDocument = !isImage && !isVideo && !isAudio;
         const method = isImage
           ? "send_image_message"
           : isVideo
@@ -1125,6 +1126,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
             attachmentId,
             caption: caption || undefined,
             method,
+            filename: isDocument ? file.name : undefined,
           }),
         });
 
