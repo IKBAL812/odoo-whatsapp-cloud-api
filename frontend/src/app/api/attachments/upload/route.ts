@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
+// Force Node.js runtime for File/Blob support
+export const runtime = "nodejs";
+
 const REQUIRED_ENV_VARS = ["ODOO_JSONRPC_HOST"] as const;
 
 const ensureEnv = () => {
@@ -37,14 +40,26 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get("file");
 
-    if (!file || !(file instanceof File)) {
+    // Check if file exists and is a Blob/File (Node.js compatible check)
+    if (!file || typeof file === "string") {
       return NextResponse.json({ error: "File is required" }, { status: 400 });
     }
 
+    // Type guard for File/Blob - works in both Node.js and Edge runtime
+    if (!("name" in file) || !("size" in file) || !("type" in file)) {
+      return NextResponse.json(
+        { error: "Invalid file format" },
+        { status: 400 }
+      );
+    }
+
+    // TypeScript type assertion after validation
+    const uploadFile = file as File;
+
     // Create form data to forward to Odoo
     const odooFormData = new FormData();
-    odooFormData.append("file", file);
-    odooFormData.append("filename", file.name);
+    odooFormData.append("file", uploadFile);
+    odooFormData.append("filename", uploadFile.name);
 
     const protocolEnv: "http" | "https" =
       process.env.ODOO_JSONRPC_PROTOCOL === "https" ? "https" : "http";
@@ -87,9 +102,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       attachmentId: data.id || data.attachment_id || data,
-      fileName: file.name,
-      fileSize: file.size,
-      mimeType: file.type,
+      fileName: uploadFile.name,
+      fileSize: uploadFile.size,
+      mimeType: uploadFile.type,
     });
   } catch (error) {
     return NextResponse.json(
