@@ -84,13 +84,13 @@ class WhatsAppCloudAPIBackendController(http.Controller):
     def serve_profile_picture(self, partner_id, **kwargs):
         Partner = http.request.env["res.partner"].sudo()
         partner = Partner.browse(partner_id)
-
-        if not partner.exists():
+        commercial_partner = partner.commercial_partner_id
+        if not commercial_partner.exists():
             return http.request.not_found()
-        if not partner.with_context(whatsapp_connector=True).avatar_256:
+        if not commercial_partner.with_context(whatsapp_connector=True).avatar_256:
             return http.request.not_found()
 
-        filecontent = base64.b64decode(partner.avatar_256)
+        filecontent = base64.b64decode(commercial_partner.avatar_256)
         headers = [
             ("Content-Type", "image/png"),
             ("Content-Length", len(filecontent)),

@@ -20,7 +20,7 @@ class ResPartner(models.Model):
         This enables the frontend to show appropriate fallback UI when partners
         have no actual profile picture.
         """
-        # When called from WhatsApp connector, 
+        # When called from WhatsApp connector,
         # return raw image data without auto-generation
         if self._context.get("whatsapp_connector"):
             for record in self:
