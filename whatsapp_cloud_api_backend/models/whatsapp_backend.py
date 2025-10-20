@@ -239,13 +239,13 @@ class WhatsAppBackend(models.Model):
 
     def initialize_web(self):
         user = self.env.user
-        backend = self.sudo().search([("user_ids", "in", user.id)], limit=1)
+        backend_ids = self.sudo().search([("user_ids", "in", user.id)])
 
-        if not backend:
+        if not backend_ids:
             return {
                 "error": "this user has no backend assigned",
             }
-        backend = backend[0]
+        company_id = fields.first(backend_ids.mapped("company_id"))
 
         base_url = self.env["ir.config_parameter"].sudo().get_param("web.base.url")
         image_url_tpl = f"{base_url}/web/image?model=res.users&field=avatar_128&id="
@@ -255,13 +255,13 @@ class WhatsAppBackend(models.Model):
                 "name": backend_user.name,
                 "image_url": f"{image_url_tpl}{backend_user.id}",
             }
-            for backend_user in backend.user_ids
+            for backend_user in backend_ids.mapped("user_ids")
         ]
 
         return {
-            "backend_id": backend.id,
-            "language": backend.language.code if backend.language else self.env.lang,
-            "company_id": backend.company_id.id,
+            "backend_ids": backend_ids.ids,
+            "language": self.env.user.lang,
+            "company_id": company_id.id,
             "user_id": user.id,
             "users": users_list,
         }
