@@ -41,6 +41,15 @@
                         </group>
                     </group>
                     <notebook>
+                        <page name="chatbot" string="Chatbot">
+                            <group>
+                                <field name="chatbot_enabled" />
+                                <field
+                                    name="chatbot_id"
+                                    attrs="{'required': [('chatbot_enabled', '=', True)], 'invisible': [('chatbot_enabled', '=', False)]}"
+                                />
+                            </group>
+                        </page>
                         <page name="users" string="Users">
                             <field
                                 name="user_ids"

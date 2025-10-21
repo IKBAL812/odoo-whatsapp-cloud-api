@@ -57,6 +57,31 @@ class WhatsAppThread(models.Model):
         compute="_compute_has_avatar",
     )
 
+    # Chatbot fields
+    chatbot_id = fields.Many2one(
+        comodel_name="whatsapp.chatbot",
+        string="Active Chatbot",
+        help="Currently active chatbot for this conversation",
+        ondelete="set null",
+        index=True,
+    )
+    chatbot_step_sequence = fields.Integer(
+        default=0,
+        help="Current step in the chatbot conversation flow (0 = not started)",
+    )
+    chatbot_ended = fields.Boolean(
+        default=False,
+        help="If True, chatbot will not respond (human handoff mode)",
+    )
+    chatbot_step_ended = fields.Boolean(
+        default=False,
+        help="If True, current step won't re-execute until navigation occurs",
+    )
+    chatbot_last_message_date = fields.Datetime(
+        string="Chatbot Last Interaction",
+        help="Last time chatbot interacted with this thread (for timeout tracking)",
+    )
+
     _sql_constraints = [
         (
             "whatsapp_thread_unique",
@@ -376,6 +401,66 @@ class WhatsAppThread(models.Model):
             message_type="media",
             body=body_value,
             attachment=attachment,
+        )
+
+    def send_button_message(
+        self,
+        body_text,
+        buttons,
+        *,
+        header_text=None,
+        footer_text=None,
+    ):
+        """Send an interactive message with reply buttons (max 3 buttons).
+
+        Args:
+            body_text: Main message text
+            buttons: List of dicts with 'title' and optional 'value' keys
+                     Example: [{'title': 'Option 1', 'value': '1'}, ...]
+            header_text: Optional header text
+            footer_text: Optional footer text
+
+        Returns:
+            dict with message info
+        """
+        self.ensure_one()
+        if not body_text:
+            raise UserError(_("Body text is required for button messages."))
+        if not buttons or not isinstance(buttons, list):
+            raise UserError(_("Buttons must be a non-empty list."))
+        if len(buttons) > 3:
+            raise UserError(_("WhatsApp supports maximum 3 reply buttons."))
+
+        button_list = []
+        for idx, btn in enumerate(buttons):
+            if not isinstance(btn, dict) or "title" not in btn:
+                raise UserError(_("Each button must have a 'title' key."))
+            button_list.append(
+                {
+                    "type": "reply",
+                    "reply": {
+                        "id": btn.get("value", str(idx)),
+                        "title": btn["title"][:20],  # WhatsApp limit: 20 chars
+                    },
+                }
+            )
+
+        interactive = {
+            "type": "button",
+            "body": {"text": body_text},
+            "action": {"buttons": button_list},
+        }
+        if header_text:
+            interactive["header"] = {"type": "text", "text": header_text}
+        if footer_text:
+            interactive["footer"] = {"text": footer_text}
+
+        payload = {
+            "type": "interactive",
+            "interactive": interactive,
+        }
+        return self._send_message(
+            payload=payload, message_type="interactive", body=body_text
         )
 
     def send_cta_url_message(

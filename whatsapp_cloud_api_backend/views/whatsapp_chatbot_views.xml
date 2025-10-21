@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- WhatsApp Chatbot Form View -->
+    <record id="view_whatsapp_chatbot_form" model="ir.ui.view">
+        <field name="name">whatsapp.chatbot.form</field>
+        <field name="model">whatsapp.chatbot</field>
+        <field name="arch" type="xml">
+            <form string="WhatsApp Chatbot">
+                <sheet>
+                    <widget name="web_ribbon" title="Archived" bg_color="bg-danger" attrs="{'invisible': [('active', '=', True)]}"/>
+                    <div class="oe_title">
+                        <label for="title" class="oe_edit_only"/>
+                        <h1>
+                            <field name="title" placeholder="e.g., Customer Support Bot"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="active" invisible="1"/>
+                            <field name="sequence"/>
+                            <field name="main_menu_button_text"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Conversation Scripts" name="scripts">
+                            <field name="script_ids" mode="tree">
+                                <tree default_order="sequence">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="name"/>
+                                    <field name="step_type"/>
+                                    <field name="message"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- WhatsApp Chatbot Tree View -->
+    <record id="view_whatsapp_chatbot_tree" model="ir.ui.view">
+        <field name="name">whatsapp.chatbot.tree</field>
+        <field name="model">whatsapp.chatbot</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="sequence" widget="handle"/>
+                <field name="title"/>
+                <field name="active" invisible="1"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- WhatsApp Chatbot Search View -->
+    <record id="view_whatsapp_chatbot_search" model="ir.ui.view">
+        <field name="name">whatsapp.chatbot.search</field>
+        <field name="model">whatsapp.chatbot</field>
+        <field name="arch" type="xml">
+            <search string="Search Chatbots">
+                <field name="title"/>
+                <filter string="Active" name="active" domain="[('active', '=', True)]"/>
+                <filter string="Archived" name="inactive" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- WhatsApp Chatbot Action -->
+    <record id="action_whatsapp_chatbot" model="ir.actions.act_window">
+        <field name="name">Chatbots</field>
+        <field name="res_model">whatsapp.chatbot</field>
+        <field name="view_mode">tree,form</field>
+        <field name="context">{'search_default_active': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first WhatsApp Chatbot
+            </p>
+            <p>
+                Chatbots allow you to automate responses to incoming WhatsApp messages.
+            </p>
+        </field>
+    </record>
+
+    <!-- WhatsApp Chatbot Script Form View -->
+    <record id="view_whatsapp_chatbot_script_form" model="ir.ui.view">
+        <field name="name">whatsapp.chatbot.script.form</field>
+        <field name="model">whatsapp.chatbot.script</field>
+        <field name="arch" type="xml">
+            <form string="Chatbot Script Step">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="chatbot_id"/>
+                            <field name="sequence"/>
+                        </group>
+                        <group>
+                            <field name="step_type"/>
+                            <field name="parent_script_id"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Message Configuration" name="message">
+                            <group>
+                                <field name="answer" attrs="{'invisible': [('step_type', '=', 'interactive')]}"/>
+                                <field name="message" readonly="1" attrs="{'invisible': [('step_type', '=', 'message')]}"/>
+                            </group>
+                        </page>
+                        <page string="Interactive Code" name="interactive" attrs="{'invisible': [('step_type', '!=', 'interactive')]}">
+                            <field name="interactive_code" widget="ace" options="{'mode': 'python'}" placeholder="# Example:&#10;values['message'] = 'Hello ' + extra.get('partner').name&#10;values['buttons'] = [&#10;    {'title': 'Yes', 'value': 'yes'},&#10;    {'title': 'No', 'value': 'no'},&#10;]"/>
+                        </page>
+                        <page string="User Options" name="options">
+                            <field name="option_ids">
+                                <tree editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="message_text"/>
+                                    <field name="next_script_id" domain="[('chatbot_id', '=', parent.chatbot_id)]"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- WhatsApp Chatbot Script Tree View -->
+    <record id="view_whatsapp_chatbot_script_tree" model="ir.ui.view">
+        <field name="name">whatsapp.chatbot.script.tree</field>
+        <field name="model">whatsapp.chatbot.script</field>
+        <field name="arch" type="xml">
+            <tree default_order="sequence">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="chatbot_id"/>
+                <field name="step_type"/>
+                <field name="message"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- WhatsApp Chatbot Script Action -->
+    <record id="action_whatsapp_chatbot_script" model="ir.actions.act_window">
+        <field name="name">Chatbot Scripts</field>
+        <field name="res_model">whatsapp.chatbot.script</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first chatbot script step
+            </p>
+            <p>
+                Scripts define the conversation flow of your chatbot.
+            </p>
+        </field>
+    </record>
+
+    <!-- Menu Items -->
+    <menuitem id="menu_whatsapp_chatbot_root"
+              name="Chatbots"
+              parent="menu_whatsapp_backend_root"
+              sequence="20"/>
+
+    <menuitem id="menu_whatsapp_chatbot"
+              name="Chatbots"
+              parent="menu_whatsapp_chatbot_root"
+              action="action_whatsapp_chatbot"
+              sequence="10"/>
+
+    <menuitem id="menu_whatsapp_chatbot_script"
+              name="Scripts"
+              parent="menu_whatsapp_chatbot_root"
+              action="action_whatsapp_chatbot_script"
+              sequence="20"/>
+
+</odoo>

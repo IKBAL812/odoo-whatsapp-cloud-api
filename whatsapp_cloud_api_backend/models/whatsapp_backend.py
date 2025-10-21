@@ -67,6 +67,19 @@ class WhatsAppBackend(models.Model):
         help="Secret token to authenticate frontend webhook requests.",
     )
 
+    # Chatbot configuration
+    chatbot_id = fields.Many2one(
+        comodel_name="whatsapp.chatbot",
+        string="Default Chatbot",
+        help="Chatbot to use for incoming messages on this backend",
+        ondelete="set null",
+    )
+    chatbot_enabled = fields.Boolean(
+        string="Enable Chatbot",
+        default=False,
+        help="If enabled, incoming messages will be handled by the chatbot",
+    )
+
     # -------------------------------------------------------------------------
     # WhatsApp Cloud API helpers
     # -------------------------------------------------------------------------

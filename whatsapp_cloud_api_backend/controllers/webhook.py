@@ -15,12 +15,13 @@
 import base64
 import json
 import logging
+from datetime import timedelta
 from http import HTTPStatus
 
 import requests
 from werkzeug.exceptions import Forbidden
 
-from odoo import http
+from odoo import _, fields, http
 from odoo.http import request
 
 _logger = logging.getLogger(__name__)
@@ -79,8 +80,17 @@ class WhatsAppCloudAPIWebhookController(http.Controller):
                 payload,
             )
             return {"error": "invalid_webhook"}
+        self._use_backend_language(backend)
         self._handle_webhook_payload(backend, payload)
         return {"status": "processed"}
+
+    def _use_backend_language(self, backend):
+        """Prepare language context for operations."""
+        context = request.env.context.copy()
+        if backend and backend.language:
+            context["lang"] = backend.language.code
+        request.env.context = context
+        return context
 
     def _find_backend_from_payload(self, payload):
         entries = payload.get("entry") or []
@@ -195,6 +205,16 @@ class WhatsAppCloudAPIWebhookController(http.Controller):
             if attachment:
                 message_record.write({"attachment_id": attachment.id})
         thread._register_message(message_record)
+
+        # Handle chatbot logic for text and interactive messages
+        if (
+            msg_type in ("text", "interactive")
+            and backend.chatbot_enabled
+            and backend.chatbot_id
+        ):
+            self._handle_chatbot_interaction(
+                backend, thread, partner, message_record.body or ""
+            )
 
     def _map_message_type(self, msg_type_raw):
         if msg_type_raw in {"image", "video", "audio", "document", "sticker"}:
@@ -414,3 +434,261 @@ class WhatsAppCloudAPIWebhookController(http.Controller):
             )
             return replied_message
         return message_model
+
+    # -------------------------------------------------------------------------
+    # Chatbot Logic
+    # -------------------------------------------------------------------------
+
+    def _handle_chatbot_interaction(self, backend, thread, partner, message_text):
+        """Process incoming message through chatbot logic.
+
+        Args:
+            backend: whatsapp.backend record
+            thread: whatsapp.thread record
+            partner: res.partner record
+            message_text: User's message text
+        """
+        chatbot = backend.chatbot_id
+        if not chatbot:
+            return
+
+        # Check if chatbot is ended (human handoff)
+        if thread.chatbot_ended:
+            return
+
+        # Check session timeout (24 hours)
+        if self._is_chatbot_session_expired(thread):
+            self._reset_chatbot_session(thread, chatbot)
+
+        # Resolve next step
+        next_step = self._resolve_chatbot_step(chatbot, thread, message_text)
+        if not next_step:
+            return
+
+        # Execute the step
+        self._execute_chatbot_step(backend, thread, partner, next_step, message_text)
+
+    def _is_chatbot_session_expired(self, thread):
+        """Check if chatbot session has expired (24 hours of inactivity)."""
+        if not thread.chatbot_last_message_date:
+            return False
+
+        now = fields.Datetime.now()
+        elapsed = now - thread.chatbot_last_message_date
+        return elapsed > timedelta(hours=24)
+
+    def _reset_chatbot_session(self, thread, chatbot):
+        """Reset chatbot session to initial state."""
+        thread.sudo().write(
+            {
+                "chatbot_id": chatbot.id,
+                "chatbot_step_sequence": 0,
+                "chatbot_ended": False,
+                "chatbot_last_message_date": fields.Datetime.now(),
+            }
+        )
+
+    def _resolve_chatbot_step(self, chatbot, thread, message_text):
+        """Determine which chatbot step to execute based on current
+        state and user input.
+
+        Returns:
+            whatsapp.chatbot.script record or False
+        """
+        script_model = request.env["whatsapp.chatbot.script"].sudo()
+        normalized_text = (message_text or "").strip()
+        chatbot_domain = [("chatbot_id", "=", chatbot.id)]
+
+        if not thread.chatbot_id or thread.chatbot_step_sequence == 0:
+            first_step = script_model.search(
+                chatbot_domain, order="sequence asc", limit=1
+            )
+            thread.sudo().write(
+                {
+                    "chatbot_id": chatbot.id,
+                    "chatbot_step_sequence": first_step.sequence,
+                    "chatbot_step_ended": False,
+                }
+            )
+            return first_step
+
+        if normalized_text == chatbot.main_menu_button_text:
+            first_step = script_model.search(
+                chatbot_domain, order="sequence asc", limit=1
+            )
+            thread.sudo().write(
+                {
+                    "chatbot_step_sequence": first_step.sequence,
+                    "chatbot_step_ended": False,
+                }
+            )
+            return first_step
+
+        matched_step = script_model.search(
+            chatbot_domain + [("name", "=", normalized_text)], limit=1
+        )
+        if matched_step and matched_step.sequence != thread.chatbot_step_sequence:
+            thread.sudo().write(
+                {
+                    "chatbot_step_sequence": matched_step.sequence,
+                    "chatbot_step_ended": False,
+                }
+            )
+            return matched_step
+
+        current_step = script_model.search(
+            chatbot_domain + [("sequence", "=", thread.chatbot_step_sequence)],
+            limit=1,
+        )
+
+        if current_step and current_step.option_ids:
+            for option in current_step.option_ids:
+                if (
+                    option.message_text.strip() == normalized_text
+                    and option.next_script_id
+                ):
+                    thread.sudo().write(
+                        {
+                            "chatbot_step_sequence": option.next_script_id.sequence,
+                            "chatbot_step_ended": False,
+                        }
+                    )
+                    return option.next_script_id
+
+        if current_step:
+            if current_step.step_type == "message" or thread.chatbot_step_ended:
+                return False
+            return current_step
+
+        return script_model.search(chatbot_domain, order="sequence asc", limit=1)
+
+    def _execute_chatbot_step(self, backend, thread, partner, step, message_text):
+        """Execute a single chatbot step.
+
+        Args:
+            backend: whatsapp.backend record
+            thread: whatsapp.thread record
+            partner: res.partner record
+            step: whatsapp.chatbot.script record
+            message_text: User's incoming message
+        """
+        thread.sudo().write(
+            {
+                "chatbot_last_message_date": fields.Datetime.now(),
+            }
+        )
+
+        if step.step_type == "message":
+            # Simple message response
+            if step.option_ids:
+                # Has options - send as interactive message with buttons
+                buttons = [
+                    {
+                        "title": option.message_text[:20],  # WhatsApp limit: 20 chars
+                        "value": option.message_text,
+                    }
+                    for option in step.option_ids
+                ]
+
+                if len(buttons) <= 3:
+                    # Use button message for <=3 buttons
+                    thread.send_button_message(
+                        body_text=step.answer or _("Please select an option:"),
+                        buttons=buttons,
+                    )
+                else:
+                    # Use list message for >3 options
+                    sections = [
+                        {
+                            "title": _("Options"),
+                            "rows": [
+                                {
+                                    "id": btn.get("value", str(idx)),
+                                    "title": btn.get("title", "")[:24],
+                                    "description": "",
+                                }
+                                for idx, btn in enumerate(buttons)
+                            ],
+                        }
+                    ]
+                    thread.send_list_message(
+                        body_text=step.answer or _("Please select an option:"),
+                        button_text=_("Select"),
+                        sections=sections,
+                    )
+            else:
+                if step.answer:
+                    menu_text = backend.chatbot_id.main_menu_button_text
+                    main_menu_button = [
+                        {
+                            "title": menu_text[:20],
+                            "value": menu_text,
+                        }
+                    ]
+                    thread.send_button_message(
+                        body_text=step.answer,
+                        buttons=main_menu_button,
+                    )
+
+        elif step.step_type == "interactive":
+            # Execute Python code to get dynamic response
+            extra_context = {
+                "thread": thread,
+                "backend": backend,
+                "partner": partner,
+            }
+            result = step.eval_interactive(message_text, extra_context, backend)
+
+            if result.get("END") or result.get("end"):
+                thread.sudo().write({"chatbot_step_ended": True})
+
+            response_text = result.get("message") or result.get("answer") or ""
+            buttons = result.get("buttons")
+
+            # Send response
+            if buttons and isinstance(buttons, list):
+                # Check if buttons have descriptions (use list) or not (use buttons)
+                has_description = any(
+                    isinstance(btn, dict) and btn.get("description") for btn in buttons
+                )
+
+                if has_description or len(buttons) > 3:
+                    # Use list message for >3 options or when descriptions present
+                    sections = [
+                        {
+                            "title": _("Options"),
+                            "rows": [
+                                {
+                                    "id": btn.get("value", str(idx)),
+                                    "title": btn.get("title", "")[:24],
+                                    "description": btn.get("description", "")[:72],
+                                }
+                                for idx, btn in enumerate(buttons)
+                                if isinstance(btn, dict)
+                            ],
+                        }
+                    ]
+                    thread.send_list_message(
+                        body_text=response_text,
+                        button_text=_("Select"),
+                        sections=sections,
+                    )
+                else:
+                    # Use button message for <=3 buttons
+                    thread.send_button_message(
+                        body_text=response_text,
+                        buttons=buttons,
+                    )
+            elif response_text:
+                # No buttons returned - add Main Menu button automatically
+                menu_text = backend.chatbot_id.main_menu_button_text
+                main_menu_button = [
+                    {
+                        "title": menu_text[:20],  # WhatsApp limit: 20 chars
+                        "value": menu_text,
+                    }
+                ]
+                thread.send_button_message(
+                    body_text=response_text,
+                    buttons=main_menu_button,
+                )

@@ -16,6 +16,7 @@
         "views/whatsapp_backend_views.xml",
         "views/whatsapp_message_views.xml",
         "views/whatsapp_thread_views.xml",
+        "views/whatsapp_chatbot_views.xml",
     ],
     "installable": True,
 }
