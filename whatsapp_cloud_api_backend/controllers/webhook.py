@@ -645,7 +645,7 @@ class WhatsAppCloudAPIWebhookController(http.Controller):
             attachment_id = result.get("attachment_id")
             if attachment_id:
                 attachment = request.env["ir.attachment"].sudo().browse(attachment_id)
-                if attachment and attachment.exists():
+                if attachment:
                     caption = result.get("message") or result.get("answer") or ""
                     mimetype = attachment.mimetype or ""
 
