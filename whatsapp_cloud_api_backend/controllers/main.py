@@ -13,6 +13,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import base64
+import unicodedata
+from urllib.parse import quote
 
 from odoo import http
 
@@ -37,12 +39,21 @@ class WhatsAppCloudAPIBackendController(http.Controller):
         if not attachment.mimetype or not attachment.datas:
             return http.request.not_found()
         filecontent = base64.b64decode(attachment.datas)
+        # Normalize filename to ASCII for fallback
+        ascii_filename = unicodedata.normalize("NFKD", attachment.name)
+        # Encode to ASCII, ignoring chars that can't be converted
+        ascii_filename = (
+            ascii_filename.encode("ascii", "ignore").decode("ascii") or "download"
+        )
+        # URL encode the original filename for UTF-8 support
+        encoded_filename = quote(attachment.name, safe="")
         headers = [
             ("Content-Type", attachment.mimetype),
             ("Content-Length", len(filecontent)),
             (
                 "Content-Disposition",
-                f'attachment; filename="{attachment.name}"',
+                f'attachment; filename="{ascii_filename}"; '
+                f"filename*=UTF-8''{encoded_filename}",
             ),
         ]
         return http.request.make_response(filecontent, headers)
@@ -64,9 +75,15 @@ class WhatsAppCloudAPIBackendController(http.Controller):
         filecontent = file.read()
         if not filecontent:
             return http.request.make_response("Empty file", status=400)
+        # Normalize filename to handle international characters
+        normalized_filename = unicodedata.normalize("NFKD", file.filename)
+        safe_filename = (
+            normalized_filename.encode("ascii", "ignore").decode("ascii")
+            or "upload"
+        )
         attachment = Attachment.create(
             {
-                "name": file.filename,
+                "name": safe_filename,
                 "datas": base64.b64encode(filecontent),
                 "mimetype": file.content_type,
             }
