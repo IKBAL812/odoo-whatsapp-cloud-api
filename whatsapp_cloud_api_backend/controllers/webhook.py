@@ -642,6 +642,29 @@ class WhatsAppCloudAPIWebhookController(http.Controller):
             if result.get("END") or result.get("end"):
                 thread.sudo().write({"chatbot_step_ended": True})
 
+            attachment_id = result.get("attachment_id")
+            if attachment_id:
+                attachment = request.env["ir.attachment"].sudo().browse(attachment_id)
+                if attachment and attachment.exists():
+                    caption = result.get("message") or result.get("answer") or ""
+                    mimetype = attachment.mimetype or ""
+
+                    if mimetype.startswith("image/"):
+                        thread.send_image_message(
+                            attachment=attachment.id, caption=caption
+                        )
+                    elif mimetype.startswith("video/"):
+                        thread.send_video_message(
+                            attachment=attachment.id, caption=caption
+                        )
+                    else:
+                        thread.send_document_message(
+                            attachment=attachment.id,
+                            caption=caption,
+                            filename=attachment.name,
+                        )
+                    return
+
             response_text = result.get("message") or result.get("answer") or ""
             buttons = result.get("buttons")
 
