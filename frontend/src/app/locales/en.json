@@ -27,6 +27,7 @@
     },
     "searchPlaceholder": "Search or start a new chat",
     "loading": "Loading...",
+    "loadingOlderMessages": "Loading older messages...",
     "typing": "typing...",
     "statusTyping": "typing",
     "statusOnline": "online",
