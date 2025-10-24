@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState, useRef } from "react";
 import TabActivePanel from "./components/tab-active-panel";
 import TabIcons from "./components/tab-icons";
 import TabPanel from "./components/tab-panel";
@@ -111,8 +111,71 @@ function TabSyncGuard() {
 }
 
 function AuthenticatedApp() {
-  const { isAuthenticated, isCheckingAuth } = useAuth();
+  const { isAuthenticated, isCheckingAuth, loginWithSessionId } = useAuth();
   const { t } = useTranslations();
+  const [isSsoLoading, setIsSsoLoading] = useState(false);
+  const [ssoError, setSsoError] = useState<string | null>(null);
+  const [isClient, setIsClient] = useState(false);
+  const ssoAttemptedRef = useRef(false);
+
+  // Mark as client-side after hydration to prevent hydration mismatch
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Auto-login from SSO parameter
+  useEffect(() => {
+    if (!isClient || ssoAttemptedRef.current) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const ssoSession = params.get("sso_session");
+    const error = params.get("error");
+
+    // Handle error from SSO endpoint
+    if (error) {
+      setSsoError(error);
+      ssoAttemptedRef.current = true;
+      // Clean URL
+      window.history.replaceState({}, "", "/");
+      return;
+    }
+
+    // Perform SSO login if parameter exists and not already authenticated
+    if (ssoSession && !isAuthenticated && !isCheckingAuth) {
+      ssoAttemptedRef.current = true;
+      setIsSsoLoading(true);
+      // Clean URL immediately (before async operation to prevent bookmark with session)
+      window.history.replaceState({}, "", "/");
+
+      // Perform login using existing auth flow
+      loginWithSessionId(ssoSession)
+        .then(() => {
+          // Success - auth state will update and component will re-render
+          setIsSsoLoading(false);
+        })
+        .catch((err) => {
+          console.error("[SSO] Auto-login failed:", err);
+          setSsoError(
+            err.message || "SSO login failed. Please try logging in manually."
+          );
+          setIsSsoLoading(false);
+        });
+    }
+  }, [isClient, isAuthenticated, isCheckingAuth, loginWithSessionId]);
+
+  // Show SSO loading state (only check after client hydration)
+  if (isSsoLoading) {
+    return (
+      <section className="min-h-screen w-full flex items-center justify-center bg-[rgb(var(--bg-primary))] text-[rgb(var(--text-primary))]">
+        <div className="text-center">
+          <div className="inline-block w-12 h-12 border-4 border-[rgb(var(--accent-primary)/0.3)] border-t-[rgb(var(--accent-primary))] rounded-full animate-spin mb-4"></div>
+          <p className="text-lg text-[rgb(var(--text-secondary)/var(--text-tertiary-opacity))]">
+            {t("auth.ssoLoggingIn") || "Logging in from Odoo..."}
+          </p>
+        </div>
+      </section>
+    );
+  }
 
   if (isCheckingAuth) {
     return (
@@ -125,7 +188,7 @@ function AuthenticatedApp() {
   }
 
   if (!isAuthenticated) {
-    return <LoginScreen />;
+    return <LoginScreen ssoError={ssoError} />;
   }
 
   return (

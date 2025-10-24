@@ -15,7 +15,8 @@
     "loginModeSessionId": "Oturum ID",
     "sessionIdLabel": "Oturum ID",
     "sessionIdPlaceholder": "Odoo çerezlerinden session_id değerini buraya yapıştırın...",
-    "sessionIdHelp": "Odoo tarayıcı çerezlerinden <code>session_id</code> değerini kopyalayın"
+    "sessionIdHelp": "Odoo tarayıcı çerezlerinden <code>session_id</code> değerini kopyalayın",
+    "ssoLoggingIn": "Odoo'dan giriş yapılıyor..."
   },
   "chat": {
     "filters": {
