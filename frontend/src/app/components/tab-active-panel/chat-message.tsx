@@ -103,16 +103,18 @@ export default function ChatMessage({ message }: ChatMessageProps) {
                 </div>
               )}
               {shouldShowMessageText && (
-                <div className="flex justify-between items-end gap-2">
-                  <p className="text-[rgb(var(--text-primary))] text-sm">
+                <div className="flex items-center gap-2">
+                  <p className="text-[rgb(var(--text-primary))] text-sm max-w-xs break-words">
                     {message.message}
                   </p>
-                  <p className="text-[rgb(var(--text-message-time)/var(--text-message-time-opacity))] text-xs">
-                    {formatTime(message.timestamp, locale)}
-                  </p>
-                  {message.isSentFromUser && (
-                    <MessageStatusIcon message={message} isInMessage />
-                  )}
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <p className="text-[rgb(var(--text-message-time)/var(--text-message-time-opacity))] text-xs whitespace-nowrap">
+                      {formatTime(message.timestamp, locale)}
+                    </p>
+                    {message.isSentFromUser && (
+                      <MessageStatusIcon message={message} isInMessage />
+                    )}
+                  </div>
                 </div>
               )}
               {!shouldShowMessageText && (
@@ -149,11 +151,11 @@ export default function ChatMessage({ message }: ChatMessageProps) {
       <div
         className={`flex ${
           message.isSentFromUser ? "justify-end" : "justify-start"
-        } items-end gap-2`}
+        } items-start gap-2`}
       >
         <div className="group rounded-lg bg-[rgb(var(--bg-primary))] z-10 overflow-hidden w-max relative">
           <div
-            className={`flex flex-col justify-between items-end px-2 p-1.5 gap-2 ${
+            className={`flex flex-col justify-between items-start px-2 p-1.5 gap-2 ${
               message.isSentFromUser
                 ? "bg-[rgb(var(--bg-chat-outgoing))]"
                 : "bg-[rgb(var(--bg-chat-incoming)/var(--bg-chat-incoming-opacity))]"
@@ -169,16 +171,18 @@ export default function ChatMessage({ message }: ChatMessageProps) {
               </div>
             )}
             {shouldShowMessageText && (
-              <div className="flex items-end gap-2">
+              <div className="flex items-center gap-2">
                 <p className="text-[rgb(var(--text-primary))] text-sm max-w-xs break-words">
                   {message.message}
                 </p>
-                <p className="text-[rgb(var(--text-message-time)/var(--text-message-time-opacity))] text-xs">
-                  {formatTime(message.timestamp, locale)}
-                </p>
-                {message.isSentFromUser && (
-                  <MessageStatusIcon message={message} isInMessage />
-                )}
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <p className="text-[rgb(var(--text-message-time)/var(--text-message-time-opacity))] text-xs whitespace-nowrap">
+                    {formatTime(message.timestamp, locale)}
+                  </p>
+                  {message.isSentFromUser && (
+                    <MessageStatusIcon message={message} isInMessage />
+                  )}
+                </div>
               </div>
             )}
             {!shouldShowMessageText && (
