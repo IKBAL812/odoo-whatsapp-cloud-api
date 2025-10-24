@@ -39,6 +39,7 @@ See [frontend/README.md](./frontend/README.md) for detailed setup instructions.
 
 LGPL-3
 
-## Author
+## Authors
 
-Ahmet Yiğit Budak - [Altinkaya Enclosures](https://github.com/altinkaya-opensource)
+- Ahmet Yiğit Budak - [Altinkaya Enclosures](https://github.com/altinkaya-opensource)
+- Erol Develi - [GitHub](https://github.com/erlinberg)
