@@ -27,9 +27,10 @@ class SessionCache {
    * Store backend IDs for a session
    */
   set(sessionId: string, backendIds: number[]): void {
+    const timestamp = Date.now();
     this.cache.set(sessionId, {
       backendIds,
-      timestamp: Date.now(),
+      timestamp,
     });
 
     console.log(
@@ -68,6 +69,21 @@ class SessionCache {
     if (this.cache.delete(sessionId)) {
       console.log(`[SessionCache] Deleted session ${sessionId}`);
     }
+  }
+
+  /**
+   * Update the timestamp of a session without changing its data
+   * This is useful for keeping sessions alive during SSE heartbeats
+   */
+  touch(sessionId: string): boolean {
+    const data = this.cache.get(sessionId);
+
+    if (!data) {
+      return false;
+    }
+
+    data.timestamp = Date.now();
+    return true;
   }
 
   /**
