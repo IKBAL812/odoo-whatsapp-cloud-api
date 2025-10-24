@@ -15,7 +15,8 @@
     "loginModeSessionId": "Session ID",
     "sessionIdLabel": "Session ID",
     "sessionIdPlaceholder": "Paste your session_id from Odoo cookies here...",
-    "sessionIdHelp": "Copy the <code>session_id</code> value from your Odoo browser cookies"
+    "sessionIdHelp": "Copy the <code>session_id</code> value from your Odoo browser cookies",
+    "ssoLoggingIn": "Logging in from Odoo..."
   },
   "chat": {
     "filters": {

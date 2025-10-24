@@ -5,7 +5,11 @@ import { useTranslations } from "@/app/context/translation-provider";
 import { useTheme } from "@/app/hooks/use-theme";
 import { SunIcon, MoonIcon } from "@phosphor-icons/react";
 
-export default function LoginScreen() {
+export default function LoginScreen({
+  ssoError,
+}: {
+  ssoError?: string | null;
+}) {
   const { t } = useTranslations();
   const { theme, toggleTheme } = useTheme();
 
@@ -41,6 +45,11 @@ export default function LoginScreen() {
             {t("auth.subtitle")}
           </p>
         </header>
+        {ssoError && (
+          <div className="mb-4 p-3 text-sm text-[rgb(var(--status-error))] bg-[rgb(var(--status-error)/0.1)] border border-[rgb(var(--status-error)/0.3)] rounded-lg">
+            <strong>SSO Error:</strong> {ssoError}
+          </div>
+        )}
         <LoginForm />
       </div>
     </section>
