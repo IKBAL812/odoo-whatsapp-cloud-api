@@ -16,6 +16,8 @@ export default function CurrentChat() {
     chatId,
     messages,
     isLoading,
+    isPaginationLoading,
+    hasMoreMessages,
     sendMessage,
     sendAttachment,
     sendReaction,
@@ -23,6 +25,7 @@ export default function CurrentChat() {
     replyTo,
     cancelReply,
     startReply,
+    loadPreviousMessages,
   } = useCurrentChat();
   const [messageText, setMessageText] = useState("");
   const [sendError, setSendError] = useState<string | null>(null);
@@ -40,14 +43,73 @@ export default function CurrentChat() {
 
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const isLoadingPaginationRef = useRef(false);
+  const lastScrollHeightRef = useRef(0);
+  const hasScrolledRef = useRef(false);
 
   // Auto-scroll to bottom on initial load and new messages
   useEffect(() => {
     const container = scrollContainerRef.current;
-    if (container) {
+    if (container && !isLoadingPaginationRef.current) {
       container.scrollTop = container.scrollHeight;
+      hasScrolledRef.current = true;
     }
   }, [messages.length, isLoading]);
+
+  // Handle scroll event for pagination
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    let isThrottled = false;
+
+    const handleScroll = () => {
+      if (isThrottled || !hasScrolledRef.current) return;
+
+      const scrollTop = container.scrollTop;
+      const scrollThreshold = 100; // Trigger when within 100px of top
+
+      if (
+        scrollTop <= scrollThreshold &&
+        hasMoreMessages &&
+        !isPaginationLoading &&
+        !isLoading
+      ) {
+        isThrottled = true;
+
+        // Save current scroll height before loading
+        lastScrollHeightRef.current = container.scrollHeight;
+        isLoadingPaginationRef.current = true;
+
+        loadPreviousMessages().finally(() => {
+          // Reset throttle after a short delay
+          setTimeout(() => {
+            isThrottled = false;
+          }, 500);
+        });
+      }
+    };
+
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      container.removeEventListener("scroll", handleScroll);
+    };
+  }, [hasMoreMessages, isPaginationLoading, isLoading, loadPreviousMessages]);
+
+  // Preserve scroll position after pagination loads
+  useEffect(() => {
+    if (!isPaginationLoading && isLoadingPaginationRef.current) {
+      const container = scrollContainerRef.current;
+      if (container && lastScrollHeightRef.current > 0) {
+        const newScrollHeight = container.scrollHeight;
+        const scrollDiff = newScrollHeight - lastScrollHeightRef.current;
+        container.scrollTop = scrollDiff;
+
+        isLoadingPaginationRef.current = false;
+        lastScrollHeightRef.current = 0;
+      }
+    }
+  }, [isPaginationLoading, messages.length]);
 
   // Auto-resize textarea based on content
   const adjustTextareaHeight = () => {
@@ -335,6 +397,16 @@ export default function CurrentChat() {
           >
             <div className="min-h-full flex flex-col justify-end">
               <div className="p-4 md:p-4 px-3 md:px-4 flex flex-col gap-2">
+                {isPaginationLoading && (
+                  <div className="w-full flex justify-center items-center py-3">
+                    <div className="flex items-center gap-2 text-[rgb(var(--text-secondary)/var(--text-secondary-opacity))]">
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-[rgb(var(--accent-primary))] border-t-transparent"></div>
+                      <span className="text-xs">
+                        {t("chat.loadingOlderMessages")}
+                      </span>
+                    </div>
+                  </div>
+                )}
                 {isLoading && (
                   <div className="text-[rgb(var(--text-primary))]">
                     {t("chat.loading")}

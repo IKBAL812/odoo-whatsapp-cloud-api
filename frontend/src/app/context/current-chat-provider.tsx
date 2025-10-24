@@ -14,6 +14,9 @@ import { useAuth } from "../hooks/use-auth";
 import { useSSE } from "../hooks/use-sse";
 import { useConnection } from "./connection-provider";
 
+// Message pagination configuration
+const MESSAGE_BATCH_SIZE = 100;
+
 export type CurrentChatContacts = {
   [contactId: string]: Contact | undefined;
 };
@@ -31,6 +34,8 @@ export type CurrentChatData = {
   group: CurrentChatContactsGroup | null;
   page: number;
   isLoading: boolean;
+  isPaginationLoading: boolean;
+  hasMoreMessages: boolean;
   threadName: string | null;
   phoneNumber: string | null;
   backendId: number | null;
@@ -49,6 +54,7 @@ export type CurrentChat = CurrentChatData & {
   sendReaction: (message: Message, emoji: string) => Promise<void>;
   startReply: (message: Message) => void;
   cancelReply: () => void;
+  loadPreviousMessages: () => Promise<void>;
 };
 
 export const CurrentChatContext = createContext<undefined | CurrentChat>(
@@ -142,6 +148,8 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
     group: null,
     page: 0,
     isLoading: false,
+    isPaginationLoading: false,
+    hasMoreMessages: true,
     threadName: null,
     phoneNumber: null,
     backendId: null,
@@ -154,6 +162,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
   });
   const latestMessageTimestampRef = useRef<number | null>(null);
   const latestMessageIdRef = useRef<number | null>(null);
+  const oldestMessageIdRef = useRef<number | null>(null);
   const notificationAudioRef = useRef<HTMLAudioElement | null>(null);
   const initialNotificationRef = useRef(true);
 
@@ -446,10 +455,14 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
       replace = false,
       lastId,
       signal,
+      direction = "forward",
+      isPagination = false,
     }: {
       replace?: boolean;
       lastId?: number | null;
       signal?: AbortSignal;
+      direction?: "forward" | "backward";
+      isPagination?: boolean;
     } = {}) => {
       if (!chatId || !sessionId) {
         return;
@@ -457,7 +470,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
 
       const searchParams = new URLSearchParams({
         threadId: chatId,
-        limit: "100", // Load last 100 messages
+        limit: String(MESSAGE_BATCH_SIZE),
       });
 
       // Determine which ID to use
@@ -466,7 +479,9 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
           ? lastId
           : replace
             ? null
-            : latestMessageIdRef.current;
+            : direction === "backward"
+              ? oldestMessageIdRef.current
+              : latestMessageIdRef.current;
 
       if (
         !replace &&
@@ -479,9 +494,17 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
         searchParams.set("lastId", String(effectiveLastId));
       }
 
+      if (direction === "backward") {
+        searchParams.set("direction", "backward");
+      }
+
       if (replace) {
         setCurrentChat((prev) =>
           prev.chatId === chatId ? { ...prev, isLoading: true } : prev
+        );
+      } else if (isPagination) {
+        setCurrentChat((prev) =>
+          prev.chatId === chatId ? { ...prev, isPaginationLoading: true } : prev
         );
       }
 
@@ -624,13 +647,18 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
             return {
               ...prev,
               isLoading: false,
+              isPaginationLoading: false,
+              hasMoreMessages:
+                direction === "backward" ? false : prev.hasMoreMessages,
             };
           }
 
-          // Merge messages
+          // Merge messages - prepend for backward pagination, append for forward
           const mergedMessages = isInitialLoad
             ? incomingMessages
-            : [...prev.messages, ...incomingMessages]; // Append new messages
+            : direction === "backward"
+              ? [...incomingMessages, ...prev.messages] // Prepend older messages
+              : [...prev.messages, ...incomingMessages]; // Append new messages
 
           nextLatestTimestamp =
             mergedMessages.length > 0
@@ -643,10 +671,27 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
           nextLatestMessageId =
             mergedNumericIds.length > 0 ? Math.max(...mergedNumericIds) : null;
 
+          // Check if we have fewer messages than requested (means no more messages to load)
+          const hasMoreMessages = (() => {
+            if (isInitialLoad) {
+              // On initial load, if we got a full batch, assume there might be more
+              // If we got less than the batch size, we know there are no older messages
+              return incomingMessages.length >= MESSAGE_BATCH_SIZE;
+            } else if (direction === "backward") {
+              // For backward pagination, check if we got a full batch
+              return incomingMessages.length >= MESSAGE_BATCH_SIZE;
+            } else {
+              // For forward pagination, keep previous state
+              return prev.hasMoreMessages;
+            }
+          })();
+
           return {
             ...prev,
             messages: mergedMessages,
             isLoading: false,
+            isPaginationLoading: false,
+            hasMoreMessages,
           };
         });
 
@@ -657,6 +702,17 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
           latestMessageIdRef.current =
             nextLatestMessageId === null ? null : nextLatestMessageId;
         }
+
+        // Update oldestMessageId for backward pagination
+        setCurrentChat((prev) => {
+          const allNumericIds = prev.messages
+            .map((message) => Number.parseInt(message.id ?? "", 10))
+            .filter((id) => !Number.isNaN(id));
+          const newOldestMessageId =
+            allNumericIds.length > 0 ? Math.min(...allNumericIds) : null;
+          oldestMessageIdRef.current = newOldestMessageId;
+          return prev;
+        });
       } catch (error) {
         if (
           (signal && signal.aborted) ||
@@ -668,14 +724,23 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
         if (replace) {
           setCurrentChat((prev) =>
             prev.chatId === chatId
-              ? { ...prev, messages: [], isLoading: false, replyTo: null }
+              ? {
+                  ...prev,
+                  messages: [],
+                  isLoading: false,
+                  isPaginationLoading: false,
+                  replyTo: null,
+                }
               : prev
           );
           latestMessageTimestampRef.current = null;
           latestMessageIdRef.current = null;
+          oldestMessageIdRef.current = null;
         } else {
           setCurrentChat((prev) =>
-            prev.chatId === chatId ? { ...prev, isLoading: false } : prev
+            prev.chatId === chatId
+              ? { ...prev, isLoading: false, isPaginationLoading: false }
+              : prev
           );
         }
       }
@@ -689,6 +754,8 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
         ...prev,
         messages: [],
         isLoading: false,
+        isPaginationLoading: false,
+        hasMoreMessages: true,
         isSending: false,
         phoneNumber: null,
         backendId: null,
@@ -698,6 +765,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
       }));
       latestMessageTimestampRef.current = null;
       latestMessageIdRef.current = null;
+      oldestMessageIdRef.current = null;
       // Don't clear global notification tracker - it persists across thread switches
       initialNotificationRef.current = true;
       return;
@@ -788,10 +856,13 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
       ...prev,
       ...chat,
       isSending: false,
+      isPaginationLoading: false,
+      hasMoreMessages: true,
       replyTo: null,
     }));
     latestMessageTimestampRef.current = null;
     latestMessageIdRef.current = null;
+    oldestMessageIdRef.current = null;
     // Don't clear global notification tracker - it persists across thread switches
     // This prevents Bug 1: playing notification sound when switching threads
     initialNotificationRef.current = true;
@@ -810,6 +881,27 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
       });
     }
   };
+
+  const loadPreviousMessages = useCallback(async () => {
+    if (!chatId || !sessionId) {
+      return;
+    }
+
+    if (currentChat.isPaginationLoading || !currentChat.hasMoreMessages) {
+      return;
+    }
+
+    await fetchMessages({
+      direction: "backward",
+      isPagination: true,
+    });
+  }, [
+    chatId,
+    sessionId,
+    currentChat.isPaginationLoading,
+    currentChat.hasMoreMessages,
+    fetchMessages,
+  ]);
 
   const sendMessage = useCallback(
     async (content: string) => {
@@ -1376,6 +1468,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
         sendReaction,
         startReply,
         cancelReply,
+        loadPreviousMessages,
       }}
     >
       {children}
