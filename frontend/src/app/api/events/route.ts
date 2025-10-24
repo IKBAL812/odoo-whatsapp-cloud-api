@@ -118,7 +118,8 @@ export async function GET(request: NextRequest) {
       );
 
       // Send initial heartbeat
-      sendSSEMessage({ type: "heartbeat", timestamp: Date.now() });
+      const initialTimestamp = Date.now();
+      sendSSEMessage({ type: "heartbeat", timestamp: initialTimestamp });
 
       // Subscribe to webhook events via EventBroadcaster with backend access control
       const threadsChannel = "threads";
@@ -155,14 +156,20 @@ export async function GET(request: NextRequest) {
 
       // Heartbeat
       let lastHeartbeat = Date.now();
+      let heartbeatCount = 0;
 
       const sendHeartbeat = () => {
         const now = Date.now();
 
         // Send heartbeat
         if (now - lastHeartbeat >= HEARTBEAT_INTERVAL_MS) {
+          heartbeatCount++;
           sendSSEMessage({ type: "heartbeat", timestamp: now });
           lastHeartbeat = now;
+
+          // Touch session cache to prevent expiration while user is connected
+          // This keeps the session alive as long as SSE connection is active
+          sessionCache.touch(sessionId);
 
           // Note: Drift detection removed to eliminate Odoo RPC dependency
           // Webhooks are the primary sync mechanism; clients should handle
@@ -178,7 +185,9 @@ export async function GET(request: NextRequest) {
 
       // Cleanup on connection close
       const cleanup = () => {
-        console.log(`[SSE] Client disconnected: ${connectionKey}`);
+        console.log(
+          `[SSE] Client disconnected: ${connectionKey} (heartbeats sent: ${heartbeatCount})`
+        );
 
         // Clear heartbeat interval
         clearInterval(heartbeatIntervalId);

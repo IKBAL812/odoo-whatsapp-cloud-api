@@ -12,6 +12,7 @@ import { useContacts } from "../hooks/use-contacts";
 import { Contact } from "./contacts-provider";
 import { useAuth } from "../hooks/use-auth";
 import { useSSE } from "../hooks/use-sse";
+import { useMessagePoller } from "../hooks/use-message-poller";
 import { useConnection } from "./connection-provider";
 
 // Message pagination configuration
@@ -405,6 +406,35 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
     {
       threadId: chatId,
       enabled: !!sessionId && !!chatId,
+    }
+  );
+
+  // Initialize periodic message polling as a fallback/validation mechanism
+  // This ensures messages are not lost if webhooks fail silently
+  useMessagePoller(
+    {
+      onMessagesFound: (messages, threadId) => {
+        // Reuse the same handler as SSE - it already handles message merging
+        handleMessagesUpdate(messages, threadId);
+      },
+      onError: (error) => {
+        // Don't report polling errors as aggressively as SSE errors
+        // Polling is a fallback mechanism, not the primary delivery method
+        console.warn(
+          `[CurrentChatProvider] Polling error for thread ${chatId}:`,
+          error.message
+        );
+      },
+      onPollComplete: () => {
+        // Report successful poll as connection restored
+        reportConnectionRestored();
+      },
+    },
+    {
+      threadId: chatId,
+      enabled: !!sessionId && !!chatId,
+      interval: 600000, // 10 minutes
+      lastMessageId: latestMessageIdRef.current,
     }
   );
 

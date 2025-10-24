@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useAuth } from "../hooks/use-auth";
 import { useSSE } from "../hooks/use-sse";
+import { useThreadsPoller } from "../hooks/use-threads-poller";
 import { useConnection } from "./connection-provider";
 import { buildPartnerAvatarUrl } from "../lib/odoo/avatar-url";
 
@@ -174,7 +175,17 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
               ? new Date(thread.last_message_date + "Z").getTime()
               : existingChat.lastMessageAt;
 
-            const newUnreadCount = thread.unread_count ?? 0;
+            // Prefer backend data, but respect frontend optimistic updates
+            // Use Math.max() to handle race conditions where:
+            // - Frontend SSE gets message webhook first → increments unread immediately
+            // - Backend thread.updated webhook arrives with stale count (queue delay)
+            // - Polling syncs to backend ground truth periodically
+            const backendUnreadCount = thread.unread_count ?? 0;
+            const frontendUnreadCount = existingChat.unreadCount ?? 0;
+            const newUnreadCount = Math.max(
+              backendUnreadCount,
+              frontendUnreadCount
+            );
             const lastNotifiedCount =
               lastNotifiedUnreadCountRef.current.get(threadId);
 
@@ -334,10 +345,80 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
     [filter, odooBaseUrl, sessionId]
   );
 
+  // Handle message arrivals to update thread list (unread count, preview, timestamp)
+  // This provides immediate optimistic updates, with polling as ground truth sync
+  const handleMessageArrival = useCallback(
+    (messages: unknown[], threadId: string) => {
+      const odooMessages = messages as Array<{
+        id: number;
+        body: string | null;
+        direction: string;
+        timestamp: number;
+      }>;
+
+      if (odooMessages.length === 0) return;
+
+      setChats((prev) => {
+        const existingChatsMap = new Map(
+          prev.complete.map((chat) => [chat.id, chat])
+        );
+        const chat = existingChatsMap.get(threadId);
+
+        if (!chat) {
+          return prev;
+        }
+
+        // Count incoming messages in this batch
+        let incomingMessageCount = 0;
+        const latestMessage = odooMessages[odooMessages.length - 1];
+
+        odooMessages.forEach((message) => {
+          const isIncoming = message.direction === "incoming";
+          if (isIncoming) {
+            incomingMessageCount++;
+          }
+        });
+
+        // Calculate new unread count
+        // IMPORTANT: Start with existing count (don't override initial value!)
+        // Then add the new incoming messages we just received
+        const currentUnreadCount = chat.unreadCount || 0;
+        const newUnreadCount = currentUnreadCount + incomingMessageCount;
+
+        // Update thread with new message info
+        const updatedChat = {
+          ...chat,
+          lastMessagePreview: latestMessage.body || chat.lastMessagePreview,
+          lastMessageAt: latestMessage.timestamp * 1000,
+          unreadCount: newUnreadCount,
+          read: newUnreadCount === 0, // Thread is "read" only when unread count is 0
+        };
+
+        existingChatsMap.set(threadId, updatedChat);
+
+        // Rebuild array and sort by lastMessageAt (most recent first)
+        const updatedChats = Array.from(existingChatsMap.values()).sort(
+          (a, b) => (b.lastMessageAt || 0) - (a.lastMessageAt || 0)
+        );
+
+        return {
+          ...prev,
+          complete: updatedChats,
+        };
+      });
+    },
+    []
+  );
+
   // Initialize SSE connection for threads
   const { isConnected: sseConnected } = useSSE(
     {
       onThreadsUpdate: handleThreadsUpdate,
+      onMessagesUpdate: handleMessageArrival, // Optimistic unread count updates
+      // STRATEGY: Optimistic updates + polling sync
+      // - message.created webhooks → immediate optimistic unread count increment
+      // - thread.updated webhooks + polling → backend ground truth (via Math.max)
+      // - Polling every 10 min corrects any drift between frontend and backend
       onError: (error) => {
         reportApiError(error);
       },
@@ -347,6 +428,31 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
     },
     {
       enabled: !!sessionId,
+      threadId: null, // Subscribe to GLOBAL messages and thread updates
+    }
+  );
+
+  // Initialize periodic thread list polling as a fallback mechanism
+  // This ensures unopened threads receive updates even if SSE fails
+  useThreadsPoller(
+    {
+      onThreadsFound: (threads) => {
+        // Reuse the same handler as SSE - it already handles thread merging
+        handleThreadsUpdate(threads);
+      },
+      onError: (error) => {
+        // Don't report polling errors as aggressively as SSE errors
+        // Polling is a fallback mechanism, not the primary delivery method
+        console.warn(`[ChatsProvider] Thread polling error:`, error.message);
+      },
+      onPollComplete: () => {
+        // Report successful poll as connection restored
+        reportConnectionRestored();
+      },
+    },
+    {
+      enabled: !!sessionId,
+      interval: 600000, // 10 minutes
     }
   );
 
