@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 16.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-10-21 12:16+0000\n"
-"PO-Revision-Date: 2025-10-21 12:16+0000\n"
+"POT-Creation-Date: 2025-10-24 11:58+0000\n"
+"PO-Revision-Date: 2025-10-24 11:58+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -248,7 +248,6 @@ msgstr ""
 
 #. module: whatsapp_cloud_api_backend
 #: model:ir.actions.act_window,name:whatsapp_cloud_api_backend.action_whatsapp_chatbot_script
-#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_chatbot_script_tree
 msgid "Chatbot Scripts"
 msgstr ""
 
@@ -477,6 +476,13 @@ msgstr ""
 #: model:ir.model.fields.selection,name:whatsapp_cloud_api_backend.selection__whatsapp_message__status__failed
 #: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_message_search
 msgid "Failed"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#. odoo-javascript
+#: code:addons/whatsapp_cloud_api_backend/static/src/js/user_menu.js:0
+#, python-format
+msgid "Failed to open WhatsApp. Please contact your administrator."
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
@@ -750,6 +756,13 @@ msgid "Online"
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
+#. odoo-javascript
+#: code:addons/whatsapp_cloud_api_backend/static/src/js/user_menu.js:0
+#, python-format
+msgid "Open WhatsApp"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script_option__message_text
 msgid "Option Text"
 msgstr ""
@@ -768,7 +781,6 @@ msgstr ""
 #. odoo-python
 #: code:addons/whatsapp_cloud_api_backend/controllers/webhook.py:0
 #: code:addons/whatsapp_cloud_api_backend/controllers/webhook.py:0
-#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_chatbot_script_form
 #, python-format
 msgid "Options"
 msgstr ""
@@ -847,14 +859,22 @@ msgid ""
 "\n"
 "Available variables:\n"
 "  • message_text: str - incoming user message\n"
-"  • values: dict - modify to set response (keys: 'answer', 'message', 'buttons')\n"
+"  • values: dict - modify to set response\n"
 "  • record: whatsapp.chatbot.script - current script record\n"
 "  • env: odoo environment\n"
 "  • extra: dict - additional context (thread, backend, partner)\n"
 "\n"
-"Example to set response:\n"
+"Response keys in values dict:\n"
+"  • message/answer: text to send\n"
+"  • buttons: list of {'title': 'Text', 'value': 'val'}\n"
+"  • attachment_id: ID of ir.attachment to send as media\n"
+"  • END: True to stop re-execution until button click\n"
+"\n"
+"Examples:\n"
 "  values['message'] = 'Hello World'\n"
-"  values['buttons'] = [{'title': 'Option 1', 'value': '1'}]\n"
+"  values['buttons'] = [{'title': 'Yes', 'value': '1'}]\n"
+"  values['attachment_id'] = 123  # Send image/video/document\n"
+"  values['END'] = True  # Stop until next button click\n"
 "\n"
 "Available modules: datetime, re, requests"
 msgstr ""
@@ -942,7 +962,6 @@ msgstr ""
 
 #. module: whatsapp_cloud_api_backend
 #: model:ir.ui.menu,name:whatsapp_cloud_api_backend.menu_whatsapp_chatbot_script
-#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_chatbot_form
 msgid "Scripts"
 msgstr ""
 
@@ -1258,13 +1277,22 @@ msgid "WhatsApp Chatbot Script Step"
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
-#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_chatbot_tree
-msgid "WhatsApp Chatbots"
+#: model:ir.model,name:whatsapp_cloud_api_backend.model_whatsapp_backend
+msgid "WhatsApp Cloud API Backend"
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
-#: model:ir.model,name:whatsapp_cloud_api_backend.model_whatsapp_backend
-msgid "WhatsApp Cloud API Backend"
+#. odoo-javascript
+#: code:addons/whatsapp_cloud_api_backend/static/src/js/user_menu.js:0
+#, python-format
+msgid "WhatsApp Integration"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#. odoo-javascript
+#: code:addons/whatsapp_cloud_api_backend/static/src/js/user_menu.js:0
+#, python-format
+msgid "WhatsApp Integration Error"
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend

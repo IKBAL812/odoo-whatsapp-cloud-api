@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from odoo import api, fields, models
+from odoo import fields, models
 
 
 class WhatsAppChatbot(models.Model):
@@ -23,7 +23,6 @@ class WhatsAppChatbot(models.Model):
     _order = "sequence, title"
 
     title = fields.Char(
-        string="Title",
         required=True,
         translate=True,
         help="Name of the chatbot",
@@ -33,7 +32,6 @@ class WhatsAppChatbot(models.Model):
         help="If unchecked, this chatbot will be disabled",
     )
     sequence = fields.Integer(
-        string="Sequence",
         default=10,
         help="Used to order chatbots in the list",
     )
@@ -44,7 +42,6 @@ class WhatsAppChatbot(models.Model):
         help="Define the conversation flow steps",
     )
     main_menu_button_text = fields.Char(
-        string="Main Menu Button Text",
         translate=True,
         default="Main Menu",
         required=True,

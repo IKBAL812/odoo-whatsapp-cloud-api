@@ -13,8 +13,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import requests
 from datetime import datetime
+
+import requests
 
 from odoo import _, api, fields, models
 from odoo.tools.safe_eval import safe_eval, wrap_module
@@ -38,7 +39,6 @@ class WhatsAppChatbotScript(models.Model):
         index=True,
     )
     sequence = fields.Integer(
-        string="Sequence",
         default=10,
         help="Order of execution in the chatbot flow",
     )
@@ -47,7 +47,6 @@ class WhatsAppChatbotScript(models.Model):
             ("message", "Simple Message"),
             ("interactive", "Interactive (with Python code)"),
         ],
-        string="Step Type",
         required=True,
         default="message",
         help="Type of chatbot step",
@@ -66,7 +65,7 @@ class WhatsAppChatbotScript(models.Model):
     )
     interactive_code = fields.Text(
         string="Interactive Python Code",
-        help=_(
+        help=(
             "Python code to compute dynamic responses for interactive steps.\n\n"
             "Available variables:\n"
             "  • message_text: str - incoming user message\n"
@@ -235,6 +234,7 @@ class WhatsAppChatbotScript(models.Model):
         except Exception as e:
             # Log error but don't break the flow
             import logging
+
             _logger = logging.getLogger(__name__)
             _logger.error(
                 "Error executing interactive code for script %s: %s",
@@ -265,7 +265,6 @@ class WhatsAppChatbotScriptOption(models.Model):
         index=True,
     )
     sequence = fields.Integer(
-        string="Sequence",
         default=10,
     )
     message_text = fields.Text(

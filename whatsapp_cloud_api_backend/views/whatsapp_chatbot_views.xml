@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8" ?>
 <odoo>
     <!-- WhatsApp Chatbot Form View -->
     <record id="view_whatsapp_chatbot_form" model="ir.ui.view">
@@ -7,28 +7,36 @@
         <field name="arch" type="xml">
             <form string="WhatsApp Chatbot">
                 <sheet>
-                    <widget name="web_ribbon" title="Archived" bg_color="bg-danger" attrs="{'invisible': [('active', '=', True)]}"/>
+                    <widget
+                        name="web_ribbon"
+                        title="Archived"
+                        bg_color="bg-danger"
+                        attrs="{'invisible': [('active', '=', True)]}"
+                    />
                     <div class="oe_title">
-                        <label for="title" class="oe_edit_only"/>
+                        <label for="title" class="oe_edit_only" />
                         <h1>
-                            <field name="title" placeholder="e.g., Customer Support Bot"/>
+                            <field
+                                name="title"
+                                placeholder="e.g., Customer Support Bot"
+                            />
                         </h1>
                     </div>
                     <group>
                         <group>
-                            <field name="active" invisible="1"/>
-                            <field name="sequence"/>
-                            <field name="main_menu_button_text"/>
+                            <field name="active" invisible="1" />
+                            <field name="sequence" />
+                            <field name="main_menu_button_text" />
                         </group>
                     </group>
                     <notebook>
                         <page string="Conversation Scripts" name="scripts">
                             <field name="script_ids" mode="tree">
                                 <tree default_order="sequence">
-                                    <field name="sequence" widget="handle"/>
-                                    <field name="name"/>
-                                    <field name="step_type"/>
-                                    <field name="message"/>
+                                    <field name="sequence" widget="handle" />
+                                    <field name="name" />
+                                    <field name="step_type" />
+                                    <field name="message" />
                                 </tree>
                             </field>
                         </page>
@@ -44,9 +52,9 @@
         <field name="model">whatsapp.chatbot</field>
         <field name="arch" type="xml">
             <tree>
-                <field name="sequence" widget="handle"/>
-                <field name="title"/>
-                <field name="active" invisible="1"/>
+                <field name="sequence" widget="handle" />
+                <field name="title" />
+                <field name="active" invisible="1" />
             </tree>
         </field>
     </record>
@@ -57,9 +65,17 @@
         <field name="model">whatsapp.chatbot</field>
         <field name="arch" type="xml">
             <search string="Search Chatbots">
-                <field name="title"/>
-                <filter string="Active" name="active" domain="[('active', '=', True)]"/>
-                <filter string="Archived" name="inactive" domain="[('active', '=', False)]"/>
+                <field name="title" />
+                <filter
+                    string="Active"
+                    name="active"
+                    domain="[('active', '=', True)]"
+                />
+                <filter
+                    string="Archived"
+                    name="inactive"
+                    domain="[('active', '=', False)]"
+                />
             </search>
         </field>
     </record>
@@ -89,31 +105,50 @@
                 <sheet>
                     <group>
                         <group>
-                            <field name="name"/>
-                            <field name="chatbot_id"/>
-                            <field name="sequence"/>
+                            <field name="name" />
+                            <field name="chatbot_id" />
+                            <field name="sequence" />
                         </group>
                         <group>
-                            <field name="step_type"/>
-                            <field name="parent_script_id"/>
+                            <field name="step_type" />
+                            <field name="parent_script_id" />
                         </group>
                     </group>
                     <notebook>
                         <page string="Message Configuration" name="message">
                             <group>
-                                <field name="answer" attrs="{'invisible': [('step_type', '=', 'interactive')]}"/>
-                                <field name="message" readonly="1" attrs="{'invisible': [('step_type', '=', 'message')]}"/>
+                                <field
+                                    name="answer"
+                                    attrs="{'invisible': [('step_type', '=', 'interactive')]}"
+                                />
+                                <field
+                                    name="message"
+                                    readonly="1"
+                                    attrs="{'invisible': [('step_type', '=', 'message')]}"
+                                />
                             </group>
                         </page>
-                        <page string="Interactive Code" name="interactive" attrs="{'invisible': [('step_type', '!=', 'interactive')]}">
-                            <field name="interactive_code" widget="ace" options="{'mode': 'python'}" placeholder="# Example:&#10;values['message'] = 'Hello ' + extra.get('partner').name&#10;values['buttons'] = [&#10;    {'title': 'Yes', 'value': 'yes'},&#10;    {'title': 'No', 'value': 'no'},&#10;]"/>
+                        <page
+                            string="Interactive Code"
+                            name="interactive"
+                            attrs="{'invisible': [('step_type', '!=', 'interactive')]}"
+                        >
+                            <field
+                                name="interactive_code"
+                                widget="ace"
+                                options="{'mode': 'python'}"
+                                placeholder="# Example:&#10;values['message'] = 'Hello ' + extra.get('partner').name&#10;values['buttons'] = [&#10;    {'title': 'Yes', 'value': 'yes'},&#10;    {'title': 'No', 'value': 'no'},&#10;]"
+                            />
                         </page>
                         <page string="User Options" name="options">
                             <field name="option_ids">
                                 <tree editable="bottom">
-                                    <field name="sequence" widget="handle"/>
-                                    <field name="message_text"/>
-                                    <field name="next_script_id" domain="[('chatbot_id', '=', parent.chatbot_id)]"/>
+                                    <field name="sequence" widget="handle" />
+                                    <field name="message_text" />
+                                    <field
+                                        name="next_script_id"
+                                        domain="[('chatbot_id', '=', parent.chatbot_id)]"
+                                    />
                                 </tree>
                             </field>
                         </page>
@@ -129,11 +164,11 @@
         <field name="model">whatsapp.chatbot.script</field>
         <field name="arch" type="xml">
             <tree default_order="sequence">
-                <field name="sequence" widget="handle"/>
-                <field name="name"/>
-                <field name="chatbot_id"/>
-                <field name="step_type"/>
-                <field name="message"/>
+                <field name="sequence" widget="handle" />
+                <field name="name" />
+                <field name="chatbot_id" />
+                <field name="step_type" />
+                <field name="message" />
             </tree>
         </field>
     </record>
@@ -154,21 +189,26 @@
     </record>
 
     <!-- Menu Items -->
-    <menuitem id="menu_whatsapp_chatbot_root"
-              name="Chatbots"
-              parent="menu_whatsapp_backend_root"
-              sequence="20"/>
+    <menuitem
+        id="menu_whatsapp_chatbot_root"
+        name="Chatbots"
+        parent="menu_whatsapp_backend_root"
+        sequence="20"
+    />
 
-    <menuitem id="menu_whatsapp_chatbot"
-              name="Chatbots"
-              parent="menu_whatsapp_chatbot_root"
-              action="action_whatsapp_chatbot"
-              sequence="10"/>
+    <menuitem
+        id="menu_whatsapp_chatbot"
+        name="Chatbots"
+        parent="menu_whatsapp_chatbot_root"
+        action="action_whatsapp_chatbot"
+        sequence="10"
+    />
 
-    <menuitem id="menu_whatsapp_chatbot_script"
-              name="Scripts"
-              parent="menu_whatsapp_chatbot_root"
-              action="action_whatsapp_chatbot_script"
-              sequence="20"/>
-
+    <menuitem
+        id="menu_whatsapp_chatbot_script"
+        name="Scripts"
+        parent="menu_whatsapp_chatbot_root"
+        action="action_whatsapp_chatbot_script"
+        sequence="20"
+    />
 </odoo>

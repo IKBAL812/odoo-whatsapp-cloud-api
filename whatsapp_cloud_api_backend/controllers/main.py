@@ -78,8 +78,7 @@ class WhatsAppCloudAPIBackendController(http.Controller):
         # Normalize filename to handle international characters
         normalized_filename = unicodedata.normalize("NFKD", file.filename)
         safe_filename = (
-            normalized_filename.encode("ascii", "ignore").decode("ascii")
-            or "upload"
+            normalized_filename.encode("ascii", "ignore").decode("ascii") or "upload"
         )
         attachment = Attachment.create(
             {
