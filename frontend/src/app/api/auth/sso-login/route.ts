@@ -21,22 +21,33 @@ import { NextResponse } from "next/server";
  * - Uses existing authentication flow
  */
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const sessionId = searchParams.get("session");
+  const url = new URL(request.url);
+  const sessionId = url.searchParams.get("session");
+
+  // Get the actual host from headers (for reverse proxy support)
+  // Priority: x-forwarded-host > host header > url.origin
+  const host =
+    request.headers.get("x-forwarded-host") ||
+    request.headers.get("host") ||
+    url.host;
+
+  // Get protocol from headers (for reverse proxy support)
+  const protocol =
+    request.headers.get("x-forwarded-proto") || url.protocol.replace(":", "");
+
+  // Construct the base URL using the actual host that the user sees
+  const baseUrl = `${protocol}://${host}`;
 
   // Validate session parameter exists
   if (!sessionId || sessionId.trim().length === 0) {
-    return NextResponse.redirect(
-      new URL("/?error=missing_session", request.url)
-    );
+    // Redirect to root with error parameter
+    return NextResponse.redirect(new URL("/?error=missing_session", baseUrl));
   }
 
   // Redirect to main page with SSO session parameter
   // The React app will detect this and automatically log in
+  // Use baseUrl to ensure we redirect to the public-facing domain (not localhost)
   return NextResponse.redirect(
-    new URL(
-      `/?sso_session=${encodeURIComponent(sessionId.trim())}`,
-      request.url
-    )
+    new URL(`/?sso_session=${encodeURIComponent(sessionId.trim())}`, baseUrl)
   );
 }

@@ -1,6 +1,8 @@
 # Copyright 2025 Erol Develi (https://github.com/erlinberg)
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
+from urllib.parse import quote
+
 from odoo import http
 from odoo.http import request
 
@@ -50,7 +52,7 @@ class WhatsAppFrontendAuthController(http.Controller):
         # Get current session ID
         session_id = request.session.sid
 
-        # Construct SSO URL
-        sso_url = f"{base_url}/api/auth/sso-login?session={session_id}"
+        # Construct SSO URL with properly encoded session ID
+        sso_url = f"{base_url}/api/auth/sso-login?session={quote(session_id, safe='')}"
 
         return {"url": sso_url}
