@@ -37,7 +37,7 @@ function whatsappMenuItem(env) {
                         title: env._t("WhatsApp Integration Error"),
                     }
                 );
-                console.error("WhatsApp SSO error:", error);
+                console.error("WhatsApp SSO error:", error.message || "An error occurred");
             }
         },
         sequence: 65, // Position between "My Odoo.com account" (60) and "Log out" (70)
