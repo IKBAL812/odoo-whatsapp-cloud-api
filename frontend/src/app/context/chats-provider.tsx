@@ -98,11 +98,16 @@ export const ChatsContext = createContext<
       ) => void;
       markChatAsRead: (chatId: string) => void;
       totalUnreadCount: number;
+      selectedBackendId: number | null;
+      setSelectedBackendId: (backendId: number | null) => void;
     }
 >(undefined);
 
 export default function ChatsProvider({ children }: PropsWithChildren) {
   const [filter, setFilter] = useState<Filters>(Filters.ALL);
+  const [selectedBackendId, setSelectedBackendId] = useState<number | null>(
+    null
+  ); // null = all backends
   const [chats, setChats] = useState<Chats>({
     complete: [],
     filtered: [],
@@ -459,6 +464,14 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
   const applyFilter = useCallback(
     (completeChats: Chat[]) => {
       return completeChats.filter((chat) => {
+        // First check backend filter
+        if (selectedBackendId !== null) {
+          if (chat.backendId !== selectedBackendId) {
+            return false;
+          }
+        }
+
+        // Then apply status filters
         if (filter === Filters.UNREAD && chat.read === false) {
           return true;
         }
@@ -474,7 +487,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
         return false;
       });
     },
-    [filter]
+    [filter, selectedBackendId]
   );
 
   const updateFilter = (filter: string) => {
@@ -723,6 +736,8 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
         updateThreadPreview,
         markChatAsRead,
         totalUnreadCount,
+        selectedBackendId,
+        setSelectedBackendId,
       }}
     >
       {children}

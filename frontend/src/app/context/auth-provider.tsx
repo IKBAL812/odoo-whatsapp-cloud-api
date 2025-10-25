@@ -24,6 +24,7 @@ type AuthContextValue = {
   backendUserId: number | null;
   backendUsers: BackendUser[];
   backendUsersById: Record<number, BackendUser>;
+  backendNames: Record<number, string>;
   isAuthenticated: boolean;
   isCheckingAuth: boolean;
   isAuthenticating: boolean;
@@ -49,6 +50,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
   const [backendIds, setBackendIds] = useState<number[]>([]);
   const [backendUserId, setBackendUserId] = useState<number | null>(null);
   const [backendUsers, setBackendUsers] = useState<BackendUser[]>([]);
+  const [backendNames, setBackendNames] = useState<Record<number, string>>({});
   const [status, setStatus] = useState<AuthStatus>("checking");
   const [isAuthenticating, setIsAuthenticating] = useState(false);
 
@@ -78,6 +80,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
             backendIds?: number[];
             backendUserId?: number | null;
             backendUsers?: BackendUser[];
+            backendNames?: Record<number, string>;
           };
           setBackendId(
             typeof parsed.backendId === "number" ? parsed.backendId : null
@@ -92,6 +95,11 @@ export default function AuthProvider({ children }: PropsWithChildren) {
           );
           setBackendUsers(
             Array.isArray(parsed.backendUsers) ? parsed.backendUsers : []
+          );
+          setBackendNames(
+            parsed.backendNames && typeof parsed.backendNames === "object"
+              ? parsed.backendNames
+              : {}
           );
         } catch {
           window.localStorage.removeItem(SESSION_BACKEND_KEY);
@@ -120,6 +128,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
         backendIds?: number[];
         backendUserId?: number | null;
         backendUsers?: BackendUser[];
+        backendNames?: Record<number, string>;
       }
     ) => {
       if (typeof window === "undefined") {
@@ -142,6 +151,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
             backendIds: backendMeta.backendIds ?? [],
             backendUserId: backendMeta.backendUserId ?? null,
             backendUsers: backendMeta.backendUsers ?? [],
+            backendNames: backendMeta.backendNames ?? {},
           })
         );
       } else {
@@ -190,6 +200,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
               backend_ids?: number[];
               user_id?: number;
               users?: { id: number; name: string; image_url?: string | null }[];
+              backend_names?: Record<number, string>;
             }
           | undefined;
 
@@ -219,16 +230,23 @@ export default function AuthProvider({ children }: PropsWithChildren) {
           typeof backendMeta?.user_id === "number"
             ? backendMeta?.user_id
             : null;
+        const resolvedBackendNames =
+          backendMeta?.backend_names &&
+          typeof backendMeta.backend_names === "object"
+            ? backendMeta.backend_names
+            : {};
 
         setBackendId(resolvedBackendId);
         setBackendIds(resolvedBackendIds);
         setBackendUserId(resolvedBackendUserId);
         setBackendUsers(backendUsersList);
+        setBackendNames(resolvedBackendNames);
         persistSession(newSessionId, sessionUser, {
           backendId: resolvedBackendId,
           backendIds: resolvedBackendIds,
           backendUserId: resolvedBackendUserId,
           backendUsers: backendUsersList,
+          backendNames: resolvedBackendNames,
         });
         setStatus("authenticated");
       } catch (error) {
@@ -238,6 +256,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
         setBackendIds([]);
         setBackendUserId(null);
         setBackendUsers([]);
+        setBackendNames({});
         clearPersistedSession();
         setStatus("unauthenticated");
         throw error;
@@ -277,6 +296,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
               backend_ids?: number[];
               user_id?: number;
               users?: { id: number; name: string; image_url?: string | null }[];
+              backend_names?: Record<number, string>;
             }
           | undefined;
 
@@ -302,16 +322,23 @@ export default function AuthProvider({ children }: PropsWithChildren) {
           typeof backendMeta?.user_id === "number"
             ? backendMeta?.user_id
             : null;
+        const resolvedBackendNames =
+          backendMeta?.backend_names &&
+          typeof backendMeta.backend_names === "object"
+            ? backendMeta.backend_names
+            : {};
 
         setBackendId(resolvedBackendId);
         setBackendIds(resolvedBackendIds);
         setBackendUserId(resolvedBackendUserId);
         setBackendUsers(backendUsersList);
+        setBackendNames(resolvedBackendNames);
         persistSession(providedSessionId, sessionUser, {
           backendId: resolvedBackendId,
           backendIds: resolvedBackendIds,
           backendUserId: resolvedBackendUserId,
           backendUsers: backendUsersList,
+          backendNames: resolvedBackendNames,
         });
         setStatus("authenticated");
       } catch (error) {
@@ -321,6 +348,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
         setBackendIds([]);
         setBackendUserId(null);
         setBackendUsers([]);
+        setBackendNames({});
         clearPersistedSession();
         setStatus("unauthenticated");
         throw error;
@@ -338,6 +366,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
     setBackendIds([]);
     setBackendUserId(null);
     setBackendUsers([]);
+    setBackendNames({});
     clearPersistedSession();
     setStatus("unauthenticated");
   }, [clearPersistedSession]);
@@ -357,6 +386,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
         },
         {}
       ),
+      backendNames,
       isAuthenticated: status === "authenticated",
       isCheckingAuth: status === "checking",
       isAuthenticating,
@@ -371,6 +401,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
       backendIds,
       backendUserId,
       backendUsers,
+      backendNames,
       status,
       isAuthenticating,
       login,

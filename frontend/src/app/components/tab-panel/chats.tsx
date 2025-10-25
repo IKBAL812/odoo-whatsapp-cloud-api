@@ -10,6 +10,7 @@ import { useTranslations } from "@/app/context/translation-provider";
 import MessageStatusIcon from "../message-status-icon";
 import { useMobileNavigation } from "@/app/context/mobile-navigation-provider";
 import { useResponsive } from "@/app/hooks/use-responsive";
+import BackendSelector from "../backend-selector";
 
 export default function Chats({ selectedTab }: { selectedTab: string }) {
   const {
@@ -196,6 +197,7 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
           {t(`navigation.${selectedTab}`)}
         </p>
       </section>
+      <BackendSelector />
       <section className="w-full flex flex-col gap-1 px-4">
         <div className="flex justify-start items-center text-[rgb(var(--text-primary))] gap-2">
           {[Filters.ALL, Filters.UNREAD].map((f: string) => (
