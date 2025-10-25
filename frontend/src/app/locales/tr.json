@@ -25,6 +25,10 @@
       "favorites": "Favoriler",
       "groups": "Gruplar"
     },
+    "backendSelector": {
+      "selectBackend": "Arka Uç",
+      "allBackends": "Tüm Arka Uçlar"
+    },
     "searchPlaceholder": "Ara veya yeni sohbet başlat",
     "loading": "Yükleniyor...",
     "loadingOlderMessages": "Eski mesajlar yükleniyor...",

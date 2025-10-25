@@ -271,8 +271,12 @@ class WhatsAppBackend(models.Model):
             for backend_user in backend_ids.mapped("user_ids")
         ]
 
+        # Backend names mapping for frontend selector
+        backend_names = {backend.id: backend.name for backend in backend_ids}
+
         return {
             "backend_ids": backend_ids.ids,
+            "backend_names": backend_names,
             "language": self.env.user.lang,
             "company_id": company_id.id,
             "user_id": user.id,
