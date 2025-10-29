@@ -11,7 +11,7 @@
                         name="web_ribbon"
                         title="Archived"
                         bg_color="bg-danger"
-                        attrs="{'invisible': [('active', '=', True)]}"
+                        invisible="active"
                     />
                     <div class="oe_title">
                         <label for="title" class="oe_edit_only" />
@@ -119,19 +119,19 @@
                             <group>
                                 <field
                                     name="answer"
-                                    attrs="{'invisible': [('step_type', '=', 'interactive')]}"
+                                    invisible="step_type == 'interactive'"
                                 />
                                 <field
                                     name="message"
                                     readonly="1"
-                                    attrs="{'invisible': [('step_type', '=', 'message')]}"
+                                    invisible="step_type == 'message'"
                                 />
                             </group>
                         </page>
                         <page
                             string="Interactive Code"
                             name="interactive"
-                            attrs="{'invisible': [('step_type', '!=', 'interactive')]}"
+                            invisible="step_type != 'interactive'"
                         >
                             <field
                                 name="interactive_code"

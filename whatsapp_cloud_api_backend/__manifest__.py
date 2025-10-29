@@ -4,7 +4,7 @@
     "name": "WhatsApp Cloud API Backend",
     "summary": "WhatsApp Cloud API & Odoo Integration Backend",
     "version": "17.0.1.0.0",
-    "author": "Ahmet Yiğit Budak, Erol Develi, Altinkaya Enclosures",
+    "author": "Ahmet Yiğit Budak, Altinkaya Enclosures",
     "website": "https://github.com/altinkaya-opensource/odoo-whatsapp-cloud-api",
     "license": "LGPL-3",
     "category": "Tools",

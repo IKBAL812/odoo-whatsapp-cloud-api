@@ -46,7 +46,8 @@
                                 <field name="chatbot_enabled" />
                                 <field
                                     name="chatbot_id"
-                                    attrs="{'required': [('chatbot_enabled', '=', True)], 'invisible': [('chatbot_enabled', '=', False)]}"
+                                    required="chatbot_enabled"
+                                    invisible="not chatbot_enabled"
                                 />
                             </group>
                         </page>
