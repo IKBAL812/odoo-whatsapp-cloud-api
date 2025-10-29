@@ -103,6 +103,161 @@ export const ChatsContext = createContext<
     }
 >(undefined);
 
+// Constants for localStorage persistence
+const NOTIFICATION_STATE_KEY = "whatsapp.notificationState.threads";
+const NOTIFIED_MESSAGES_KEY = "whatsapp.notificationState.messages";
+const MESSAGE_NOTIFICATION_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
+const NOTIFICATION_PERMISSION_KEY = "whatsapp.notificationPermission.dismissed";
+
+// Helper to load notification state from localStorage
+function loadNotificationState(): Map<string, number> {
+  if (typeof window === "undefined") return new Map();
+
+  try {
+    const stored = localStorage.getItem(NOTIFICATION_STATE_KEY);
+    if (!stored) return new Map();
+
+    const parsed: { [key: string]: number } = JSON.parse(stored);
+    return new Map(Object.entries(parsed));
+  } catch (error) {
+    console.error(
+      "[Notifications] Failed to restore state from localStorage:",
+      error
+    );
+    return new Map();
+  }
+}
+
+// Helper to save notification state to localStorage (debounced)
+let saveTimeout: NodeJS.Timeout | null = null;
+function saveNotificationState(state: Map<string, number>) {
+  if (typeof window === "undefined") return;
+
+  // Debounce saves to avoid excessive localStorage writes
+  if (saveTimeout) clearTimeout(saveTimeout);
+
+  saveTimeout = setTimeout(() => {
+    try {
+      const stateObj = Object.fromEntries(state);
+      localStorage.setItem(NOTIFICATION_STATE_KEY, JSON.stringify(stateObj));
+    } catch (error) {
+      console.error(
+        "[Notifications] Failed to save state to localStorage:",
+        error
+      );
+    }
+  }, 1000); // Debounce for 1 second
+}
+
+// Helper to load notified messages from localStorage
+function loadNotifiedMessages(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+
+  try {
+    const stored = localStorage.getItem(NOTIFIED_MESSAGES_KEY);
+    if (!stored) return new Set();
+
+    const parsed: { [key: string]: number } = JSON.parse(stored);
+    const now = Date.now();
+
+    // Filter out expired entries (older than TTL)
+    const validKeys = Object.entries(parsed)
+      .filter(([, timestamp]) => now - timestamp < MESSAGE_NOTIFICATION_TTL)
+      .map(([key]) => key);
+
+    return new Set(validKeys);
+  } catch (error) {
+    console.error(
+      "[Notifications] Failed to restore notified messages from localStorage:",
+      error
+    );
+    return new Set();
+  }
+}
+
+// Helper to save notified messages to localStorage (debounced)
+let saveMessagesTimeout: NodeJS.Timeout | null = null;
+function saveNotifiedMessages(messages: Set<string>) {
+  if (typeof window === "undefined") return;
+
+  // Debounce saves to avoid excessive localStorage writes
+  if (saveMessagesTimeout) clearTimeout(saveMessagesTimeout);
+
+  saveMessagesTimeout = setTimeout(() => {
+    try {
+      const now = Date.now();
+      // Store message keys with current timestamp
+      const messageObj: { [key: string]: number } = {};
+      messages.forEach((key) => {
+        messageObj[key] = now;
+      });
+
+      localStorage.setItem(NOTIFIED_MESSAGES_KEY, JSON.stringify(messageObj));
+    } catch (error) {
+      console.error(
+        "[Notifications] Failed to save notified messages to localStorage:",
+        error
+      );
+    }
+  }, 1000); // Debounce for 1 second
+}
+
+// Helper to build message notification key
+function buildMessageNotificationKey(
+  messageId: number,
+  threadId: string,
+  timestamp: number
+): string {
+  return `${threadId}-${messageId}-${timestamp}`;
+}
+
+// Helper to check if permission was previously dismissed
+function wasPermissionDismissed(): boolean {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem(NOTIFICATION_PERMISSION_KEY) === "true";
+}
+
+// Helper to mark permission as dismissed
+function markPermissionDismissed() {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(NOTIFICATION_PERMISSION_KEY, "true");
+}
+
+// Helper to show browser notification for a thread
+function showBrowserNotification(
+  threadName: string,
+  messagePreview: string,
+  threadId: string
+) {
+  if (typeof window === "undefined" || !("Notification" in window)) {
+    return;
+  }
+
+  if (Notification.permission === "granted") {
+    new Notification(threadName || "New message", {
+      body: messagePreview || "You have a new message",
+      tag: `thread-${threadId}`, // Prevent duplicate notifications for same thread
+    });
+  } else if (
+    Notification.permission === "default" &&
+    !wasPermissionDismissed()
+  ) {
+    Notification.requestPermission()
+      .then((permission) => {
+        if (permission === "denied") {
+          markPermissionDismissed();
+        } else if (permission === "granted") {
+          // Permission granted, show the notification now
+          new Notification(threadName || "New message", {
+            body: messagePreview || "You have a new message",
+            tag: `thread-${threadId}`,
+          });
+        }
+      })
+      .catch(() => undefined);
+  }
+}
+
 export default function ChatsProvider({ children }: PropsWithChildren) {
   const [filter, setFilter] = useState<Filters>(Filters.ALL);
   const [selectedBackendId, setSelectedBackendId] = useState<number | null>(
@@ -118,6 +273,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
   const isFetchingRef = useRef(false);
   const notificationAudioRef = useRef<HTMLAudioElement | null>(null);
   const lastNotifiedUnreadCountRef = useRef<Map<string, number>>(new Map()); // threadId -> last notified unread count
+  const notifiedMessagesRef = useRef<Set<string>>(new Set()); // messageId-threadId-timestamp -> notified
   const [odooBaseUrl, setOdooBaseUrl] = useState<string | null>(null);
 
   // Initialize notification audio
@@ -126,6 +282,15 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
       return;
     }
     notificationAudioRef.current = new Audio("/notification.mp3");
+  }, []);
+
+  // Restore notification state from localStorage on mount
+  useEffect(() => {
+    const restoredState = loadNotificationState();
+    lastNotifiedUnreadCountRef.current = restoredState;
+
+    const restoredMessages = loadNotifiedMessages();
+    notifiedMessagesRef.current = restoredMessages;
   }, []);
 
   // Fetch Odoo base URL for avatar generation
@@ -162,6 +327,11 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
       // Track if any thread has a genuinely new message for notifications
       // Use ref to check outside of setChats to avoid stale closure
       let shouldPlayNotification = false;
+      const threadsToNotify: Array<{
+        id: string;
+        name: string;
+        preview: string;
+      }> = [];
 
       setChats((prev) => {
         // Create a map of existing chats for efficient lookup
@@ -203,13 +373,21 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
             ) {
               // Unread count increased - play notification!
               shouldPlayNotification = true;
+              threadsToNotify.push({
+                id: threadId,
+                name: thread.name || `Thread ${threadId}`,
+                preview: thread.last_message_preview || "New message",
+              });
               lastNotifiedUnreadCountRef.current.set(threadId, newUnreadCount);
+              saveNotificationState(lastNotifiedUnreadCountRef.current);
             } else if (lastNotifiedCount === undefined) {
               // First time seeing this thread - set baseline without notifying
               lastNotifiedUnreadCountRef.current.set(threadId, newUnreadCount);
+              saveNotificationState(lastNotifiedUnreadCountRef.current);
             } else if (newUnreadCount < lastNotifiedCount) {
               // Unread count decreased (user read messages) - update baseline
               lastNotifiedUnreadCountRef.current.set(threadId, newUnreadCount);
+              saveNotificationState(lastNotifiedUnreadCountRef.current);
             }
 
             const hasUnread = newUnreadCount > 0;
@@ -260,6 +438,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
 
             // For new chats, set baseline without notifying (they're new to the list)
             lastNotifiedUnreadCountRef.current.set(threadId, newUnreadCount);
+            saveNotificationState(lastNotifiedUnreadCountRef.current);
 
             // Extract partner ID and display name from Odoo tuple
             const partnerId =
@@ -345,6 +524,12 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
             // Failed to create audio element
           }
         }
+
+        // Show browser notifications for all threads that triggered notifications
+        // This works for ALL threads, not just the active one
+        threadsToNotify.forEach((thread) => {
+          showBrowserNotification(thread.name, thread.preview, thread.id);
+        });
       }
     },
     [filter, odooBaseUrl, sessionId]
@@ -362,6 +547,14 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
       }>;
 
       if (odooMessages.length === 0) return;
+
+      // Check for new incoming messages to notify about
+      const incomingMessagesToNotify: Array<{
+        id: number;
+        body: string;
+        threadId: string;
+        threadName: string;
+      }> = [];
 
       setChats((prev) => {
         const existingChatsMap = new Map(
@@ -381,6 +574,27 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
           const isIncoming = message.direction === "incoming";
           if (isIncoming) {
             incomingMessageCount++;
+
+            // Check if this message should trigger a notification
+            const messageKey = buildMessageNotificationKey(
+              message.id,
+              threadId,
+              message.timestamp
+            );
+
+            if (!notifiedMessagesRef.current.has(messageKey)) {
+              // New incoming message - add to notification list
+              incomingMessagesToNotify.push({
+                id: message.id,
+                body: message.body || "New message",
+                threadId: threadId,
+                threadName:
+                  chat.threadName || chat.phoneNumber || `Thread ${threadId}`,
+              });
+
+              // Mark as notified
+              notifiedMessagesRef.current.add(messageKey);
+            }
           }
         });
 
@@ -411,6 +625,26 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
           complete: updatedChats,
         };
       });
+
+      // Show browser notifications for new incoming messages
+      // This works for ALL threads, including closed ones!
+      if (incomingMessagesToNotify.length > 0) {
+        // Save updated notification state
+        saveNotifiedMessages(notifiedMessagesRef.current);
+
+        // Show browser notification for each message
+        incomingMessagesToNotify.forEach((msg) => {
+          showBrowserNotification(msg.threadName, msg.body, msg.threadId);
+        });
+
+        // Play audio notification sound
+        if (notificationAudioRef.current) {
+          notificationAudioRef.current.currentTime = 0;
+          notificationAudioRef.current.play().catch(() => {
+            // Failed to play notification sound
+          });
+        }
+      }
     },
     []
   );
@@ -530,6 +764,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
     (chatId: string) => {
       // Reset the notified unread count so we don't re-notify
       lastNotifiedUnreadCountRef.current.set(chatId, 0);
+      saveNotificationState(lastNotifiedUnreadCountRef.current);
 
       setChats((prev) => {
         const updatedComplete = prev.complete.map((chat) => {
