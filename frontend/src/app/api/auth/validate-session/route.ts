@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { OdooClient } from "@/app/lib/odoo/jsonrpc";
+import { sessionCache } from "@/app/lib/session-cache";
 
-const REQUIRED_ENV_VARS = ["ODOO_JSONRPC_HOST", "ODOO_JSONRPC_DATABASE"] as const;
+const REQUIRED_ENV_VARS = [
+  "ODOO_JSONRPC_HOST",
+  "ODOO_JSONRPC_DATABASE",
+] as const;
 
 const ensureEnv = () => {
   const missing = REQUIRED_ENV_VARS.filter((name) => !process.env[name]);
@@ -53,23 +57,22 @@ export async function POST(request: Request) {
   });
 
   try {
-    // Create a session client with the provided session ID
-    const session = odooClient.createSession(sessionId.trim());
+    // Create a session client with the provided session ID (initially without context)
+    const tempSession = odooClient.createSession(sessionId.trim());
 
-    // Validate the session by making a simple call to get session info
-    const sessionInfo = await session.call<{
+    // Validate the session by calling ir.http's session_info method
+    const sessionInfo = await tempSession.call<{
       uid?: number;
       username?: string;
       name?: string;
+      partner_display_name?: string;
       user_context?: Record<string, unknown>;
+      db?: string;
+      server_version?: string;
+      company_id?: number;
+      partner_id?: number;
       [key: string]: unknown;
-    }>(
-      "res.users",
-      "get_session_info",
-      [],
-      {},
-      false
-    );
+    }>("ir.http", "session_info", [[]], {}, false);
 
     if (!sessionInfo || !sessionInfo.uid) {
       return NextResponse.json(
@@ -78,17 +81,37 @@ export async function POST(request: Request) {
       );
     }
 
-    // Try to initialize WhatsApp backend
+    // Create a new session with the proper user_context from session_info
+    const session = odooClient.createSession(
+      sessionId.trim(),
+      sessionInfo.user_context || {}
+    );
+
+    // Try to initialize WhatsApp backend with the proper context
     let backend = null;
     try {
-      backend = await session.call(
-        "whatsapp.backend",
-        "initialize_web",
-        [[]],
-        {},
-        false
+      backend = await session.call<{
+        backend_id?: number;
+        backend_ids?: number[];
+        user_id?: number;
+        language?: string;
+        company_id?: number;
+        users?: Array<{ id: number; name: string; image_url?: string }>;
+      }>("whatsapp.backend", "initialize_web", [[]], {}, false);
+
+      // Store backend_ids in server-side cache for secure SSE access control
+      if (backend && Array.isArray(backend.backend_ids)) {
+        sessionCache.set(sessionId.trim(), backend.backend_ids);
+      } else {
+        console.warn(
+          `[ValidateSession] No backend_ids returned from initialize_web for session ${sessionId.trim()}`
+        );
+      }
+    } catch (error) {
+      console.error(
+        "[ValidateSession] Failed to initialize WhatsApp backend:",
+        error
       );
-    } catch (initError) {
       // Failed to initialize WhatsApp backend - not critical
     }
 

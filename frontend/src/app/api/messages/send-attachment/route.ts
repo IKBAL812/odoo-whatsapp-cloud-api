@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { OdooClient } from "@/app/lib/odoo/jsonrpc";
 
-const REQUIRED_ENV_VARS = ["ODOO_JSONRPC_HOST", "ODOO_JSONRPC_DATABASE"] as const;
+const REQUIRED_ENV_VARS = [
+  "ODOO_JSONRPC_HOST",
+  "ODOO_JSONRPC_DATABASE",
+] as const;
 
 const ensureEnv = () => {
   const missing = REQUIRED_ENV_VARS.filter((name) => !process.env[name]);
@@ -49,19 +52,25 @@ export async function POST(request: NextRequest) {
   try {
     payload = await request.json();
   } catch {
-    return NextResponse.json(
-      { error: "Invalid JSON body" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { threadId, phoneNumber, backendId, attachmentId, caption, method } = payload as {
+  const {
+    threadId,
+    phoneNumber,
+    backendId,
+    attachmentId,
+    caption,
+    method,
+    filename,
+  } = payload as {
     threadId?: number | string;
     phoneNumber?: string;
     backendId?: number;
     attachmentId?: number;
     caption?: string;
     method?: string;
+    filename?: string;
   };
 
   const parsedThreadId =
@@ -118,12 +127,17 @@ export async function POST(request: NextRequest) {
     const sendMethod = method || "send_image_message";
 
     // Build kwargs
-    const kwargs: { attachment: number; caption?: string } = {
-      attachment: attachmentId,
-    };
+    const kwargs: { attachment: number; caption?: string; filename?: string } =
+      {
+        attachment: attachmentId,
+      };
 
     if (caption) {
       kwargs.caption = caption;
+    }
+
+    if (filename) {
+      kwargs.filename = filename;
     }
 
     const result = await sessionClient.call(

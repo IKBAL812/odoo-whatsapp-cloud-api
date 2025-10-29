@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { OdooClient } from "@/app/lib/odoo/jsonrpc";
 
-const REQUIRED_ENV_VARS = ["ODOO_JSONRPC_HOST", "ODOO_JSONRPC_DATABASE"] as const;
+const REQUIRED_ENV_VARS = [
+  "ODOO_JSONRPC_HOST",
+  "ODOO_JSONRPC_DATABASE",
+] as const;
 
 const ensureEnv = () => {
   const missing = REQUIRED_ENV_VARS.filter((name) => !process.env[name]);
@@ -22,6 +25,7 @@ type OdooMessageRecord = {
   message_id?: string | null;
   replied_message_id?: false | [number, string] | null;
   timestamp: number;
+  reaction_emoji?: string | false | null;
 };
 
 export async function GET(request: NextRequest) {
@@ -54,6 +58,7 @@ export async function GET(request: NextRequest) {
   }
 
   const limitParam = request.nextUrl.searchParams.get("limit");
+  // Default to 30 if not specified (but frontend always sends 100)
   const limit = limitParam ? Number(limitParam) : 30;
   if (Number.isNaN(limit) || limit <= 0) {
     return NextResponse.json(
@@ -69,6 +74,23 @@ export async function GET(request: NextRequest) {
   if (typeof lastId !== "undefined" && Number.isNaN(lastId)) {
     return NextResponse.json(
       { error: "lastId must be a valid number" },
+      { status: 400 }
+    );
+  }
+
+  const directionParam = request.nextUrl.searchParams.get("direction");
+  const direction =
+    directionParam === "backward" || directionParam === "forward"
+      ? directionParam
+      : undefined;
+
+  if (
+    typeof directionParam === "string" &&
+    directionParam.length > 0 &&
+    typeof direction === "undefined"
+  ) {
+    return NextResponse.json(
+      { error: "direction must be 'forward' or 'backward'" },
       { status: 400 }
     );
   }
@@ -107,7 +129,11 @@ export async function GET(request: NextRequest) {
     ];
 
     if (typeof lastId === "number") {
-      domain.push(["id", ">", lastId]);
+      if (direction === "backward") {
+        domain.push(["id", "<", lastId]);
+      } else {
+        domain.push(["id", ">", lastId]);
+      }
     }
 
     const messages = await sessionClient.searchRead<OdooMessageRecord[]>(
@@ -115,6 +141,7 @@ export async function GET(request: NextRequest) {
       domain,
       {
         limit,
+        order: direction === "backward" ? "id DESC" : undefined,
         select: [
           "create_date",
           "body",
@@ -126,6 +153,7 @@ export async function GET(request: NextRequest) {
           "replied_message_id",
           "write_date",
           "timestamp",
+          "reaction_emoji",
         ],
       }
     );
@@ -177,19 +205,17 @@ export async function POST(request: NextRequest) {
   try {
     payload = await request.json();
   } catch {
-    return NextResponse.json(
-      { error: "Invalid JSON body" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { threadId, phoneNumber, message, backendId, replyToMessageId } = payload as {
-    threadId?: number | string;
-    phoneNumber?: string;
-    message?: string;
-    backendId?: number;
-    replyToMessageId?: string;
-  };
+  const { threadId, phoneNumber, message, backendId, replyToMessageId } =
+    payload as {
+      threadId?: number | string;
+      phoneNumber?: string;
+      message?: string;
+      backendId?: number;
+      replyToMessageId?: string;
+    };
 
   const parsedThreadId =
     typeof threadId === "string" ? Number(threadId) : threadId;
@@ -208,10 +234,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (!message || typeof message !== "string" || message.trim().length === 0) {
-    return NextResponse.json(
-      { error: "message is required" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "message is required" }, { status: 400 });
   }
 
   const trimmedMessage = message.trim();

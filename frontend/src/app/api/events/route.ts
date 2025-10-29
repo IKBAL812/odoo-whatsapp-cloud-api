@@ -1,19 +1,13 @@
 import { NextRequest } from "next/server";
-import { OdooClient } from "@/app/lib/odoo/jsonrpc";
-
-const REQUIRED_ENV_VARS = ["ODOO_JSONRPC_HOST", "ODOO_JSONRPC_DATABASE"] as const;
+import { eventBroadcaster } from "@/app/lib/events/broadcaster";
+import { sessionCache } from "@/app/lib/session-cache";
 
 const ensureEnv = () => {
-  const missing = REQUIRED_ENV_VARS.filter((name) => !process.env[name]);
-  if (missing.length > 0) {
-    throw new Error(
-      `Missing required environment variables: ${missing.join(", ")}`
-    );
-  }
+  // No Odoo connection required - we use cached backend_ids
 };
 
 type SSEUpdate = {
-  type: "threads" | "messages" | "heartbeat";
+  type: "threads" | "messages" | "heartbeat" | "sync_required";
   data?: {
     threads?: unknown[];
     messages?: unknown[];
@@ -22,9 +16,7 @@ type SSEUpdate = {
   timestamp: number;
 };
 
-const CHECK_INTERVAL_MS = 5000; // 5 seconds (reduced frequency)
 const HEARTBEAT_INTERVAL_MS = 30000; // 30 seconds
-const MAX_CONSECUTIVE_ERRORS = 5;
 
 // Simple rate limiting - in production use Redis or proper rate limiting
 const activeConnections = new Map<string, number>();
@@ -35,82 +27,82 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     return new Response(
       JSON.stringify({
-        error: error instanceof Error ? error.message : "Server configuration error",
+        error:
+          error instanceof Error ? error.message : "Server configuration error",
       }),
-      { 
+      {
         status: 500,
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json" },
       }
     );
   }
 
   // Get URL parameters
   const url = new URL(request.url);
-  const sessionId = request.headers.get("x-session-id") || url.searchParams.get("sessionId");
-  
+  const sessionId =
+    request.headers.get("x-session-id") || url.searchParams.get("sessionId");
+
   if (!sessionId) {
-    return new Response(
-      JSON.stringify({ error: "Missing Odoo session id" }),
-      { 
-        status: 401,
-        headers: { "Content-Type": "application/json" }
-      }
-    );
+    return new Response(JSON.stringify({ error: "Missing Odoo session id" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
-  const protocolEnv: "http" | "https" =
-    process.env.ODOO_JSONRPC_PROTOCOL === "https" ? "https" : "http";
-  const portEnv = process.env.ODOO_JSONRPC_PORT;
-  const port = portEnv ? Number(portEnv) : undefined;
-
-  if (typeof port !== "undefined" && Number.isNaN(port)) {
-    return new Response(
-      JSON.stringify({ error: "ODOO_JSONRPC_PORT must be a valid number" }),
-      { 
-        status: 500,
-        headers: { "Content-Type": "application/json" }
-      }
-    );
-  }
-
-  const odooClient = new OdooClient({
-    host: process.env.ODOO_JSONRPC_HOST as string,
-    port,
-    protocol: protocolEnv,
-  });
-
-  const sessionClient = odooClient.createSession(sessionId);
   const threadId = url.searchParams.get("threadId");
-  
+
+  // Get user's allowed backends from server-side cache (populated during auth)
+  const allowedBackendIds = sessionCache.get(sessionId);
+
+  if (!allowedBackendIds) {
+    console.warn(
+      `[SSE] No backend_ids found in cache for session ${sessionId} - session may be expired or invalid`
+    );
+    return new Response(
+      JSON.stringify({
+        error: "Invalid or expired session ID. Please log in again.",
+      }),
+      {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  }
+
+  if (allowedBackendIds.length === 0) {
+    console.warn(`[SSE] Session ${sessionId} has no backend access`);
+    return new Response(
+      JSON.stringify({
+        error: "No WhatsApp backends available for this user",
+      }),
+      {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  }
+
+  console.log(
+    `[SSE] User has access to backends: [${allowedBackendIds.join(", ")}] (from cache)`
+  );
+
   // Simple connection limiting
-  const connectionKey = `${sessionId}-${threadId || 'global'}`;
+  const connectionKey = `${sessionId}-${threadId || "global"}`;
   const currentConnections = activeConnections.get(connectionKey) || 0;
-  
-  if (currentConnections >= 3) { // Max 3 connections per session+thread
+
+  if (currentConnections >= 3) {
+    // Max 3 connections per session+thread
     return new Response(
       JSON.stringify({ error: "Too many active connections for this session" }),
-      { 
+      {
         status: 429,
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json" },
       }
     );
   }
-  
+
   // Track connection
   activeConnections.set(connectionKey, currentConnections + 1);
-  
-  // Odoo format: YYYY-MM-DD HH:MM:SS
-  const formatOdooDateTime = (date: Date) => {
-    return date.toISOString().replace('T', ' ').replace('Z', '').slice(0, 19);
-  };
-  
-  // Start checking from 1 minute ago to catch any recent messages
-  const startTime = new Date(Date.now() - 60000); // 1 minute buffer
-  let lastThreadsCheck = formatOdooDateTime(startTime);
-  let lastMessagesCheck = formatOdooDateTime(startTime);
-  let lastHeartbeat = Date.now();
-  let consecutiveErrors = 0;
-  let intervalId: NodeJS.Timeout;
 
   const encoder = new TextEncoder();
 
@@ -121,146 +113,89 @@ export async function GET(request: NextRequest) {
         controller.enqueue(encoder.encode(message));
       };
 
+      console.log(
+        `[SSE] Client connected: ${connectionKey} (total connections: ${activeConnections.get(connectionKey)})`
+      );
+
       // Send initial heartbeat
-      sendSSEMessage({ type: "heartbeat", timestamp: Date.now() });
+      const initialTimestamp = Date.now();
+      sendSSEMessage({ type: "heartbeat", timestamp: initialTimestamp });
 
-      const checkForUpdates = async () => {
-        try {
-          const now = Date.now();
+      // Subscribe to webhook events via EventBroadcaster with backend access control
+      const threadsChannel = "threads";
+      const messagesChannel = threadId ? `messages:${threadId}` : "messages";
 
-          // Check for new threads (every check)
-          try {
-            const threadsResponse = await sessionClient.searchRead(
-              "whatsapp.thread",
-              [["last_message_date", ">", lastThreadsCheck]],
-              {
-                limit: 50,
-                select: [
-                  "name",
-                  "last_message_date",
-                  "last_message_preview",
-                  "phone_number",
-                  "backend_id",
-                  "write_date",
-                  "unread_count",  // NEW: Request unread count from backend
-                ],
-                order: "last_message_date desc"
-              }
-            );
+      const listenerMetadata = {
+        allowedBackendIds,
+        sessionId,
+      };
 
-            if (Array.isArray(threadsResponse) && threadsResponse.length > 0) {
-              sendSSEMessage({
-                type: "threads",
-                data: { threads: threadsResponse },
-                timestamp: now
-              });
-              
-              // Update timestamp to the latest message date from the response
-              const latestThread = threadsResponse[0]; // Already sorted by last_message_date desc
-              if (latestThread.last_message_date) {
-                lastThreadsCheck = latestThread.last_message_date;
-              } else {
-                lastThreadsCheck = formatOdooDateTime(new Date());
-              }
-            } else {
-              // No updates, just advance the timestamp slightly to avoid re-checking same data
-              lastThreadsCheck = formatOdooDateTime(new Date());
-            }
-            consecutiveErrors = 0; // Reset error counter on success
-          } catch (error) {
-            consecutiveErrors++;
+      // Thread events listener
+      const unsubscribeThreads = eventBroadcaster.subscribe(
+        threadsChannel,
+        (data) => {
+          const update = data as SSEUpdate;
+          sendSSEMessage(update);
+        },
+        listenerMetadata
+      );
 
-            // If connection refused or network error, stop checking to avoid spamming logs
-            const err = error as any;
-            if (err?.cause?.code === 'ECONNREFUSED' || err?.message?.includes('fetch failed')) {
-              clearInterval(intervalId);
-              controller.close();
-              return;
-            }
-          }
+      // Message events listener
+      const unsubscribeMessages = eventBroadcaster.subscribe(
+        messagesChannel,
+        (data) => {
+          const update = data as SSEUpdate;
+          sendSSEMessage(update);
+        },
+        listenerMetadata
+      );
 
-          // Check for new messages (only if threadId specified)
-          if (threadId) {
-            try {
-              const messagesResponse = await sessionClient.searchRead(
-                "whatsapp.message",
-                [
-                  ["thread_id", "=", parseInt(threadId)],
-                  ["write_date", ">", lastMessagesCheck]
-                ],
-                {
-                  limit: 50,
-                  select: [
-                    "body",
-                    "status",
-                    "direction",
-                    "attachment_id",
-                    "message_id",
-                    "replied_message_id",
-                    "create_date",
-                    "create_uid",
-                    "write_date",
-                    "timestamp",
-                  ],
-                }
-              );
+      console.log(
+        `[SSE] Subscribed to channels: ${threadsChannel}, ${messagesChannel}`
+      );
 
-              // Always update timestamp, regardless of results
-              const currentMessageCheckTime = formatOdooDateTime(new Date());
+      // Heartbeat
+      let lastHeartbeat = Date.now();
+      let heartbeatCount = 0;
 
-              if (Array.isArray(messagesResponse) && messagesResponse.length > 0) {
-                sendSSEMessage({
-                  type: "messages",
-                  data: { 
-                    messages: messagesResponse,
-                    threadId: threadId 
-                  },
-                  timestamp: now
-                });
-              }
-              
-              // Update timestamp after successful check
-              lastMessagesCheck = currentMessageCheckTime;
-              consecutiveErrors = 0; // Reset error counter on success
-            } catch (error) {
-              consecutiveErrors++;
+      const sendHeartbeat = () => {
+        const now = Date.now();
 
-              // If connection refused or network error, stop checking to avoid spamming logs
-              const err = error as any;
-              if (err?.cause?.code === 'ECONNREFUSED' || err?.message?.includes('fetch failed')) {
-                clearInterval(intervalId);
-                controller.close();
-                return;
-              }
-            }
-          }
+        // Send heartbeat
+        if (now - lastHeartbeat >= HEARTBEAT_INTERVAL_MS) {
+          heartbeatCount++;
+          sendSSEMessage({ type: "heartbeat", timestamp: now });
+          lastHeartbeat = now;
 
-          // Send heartbeat every 30 seconds
-          if (now - lastHeartbeat >= HEARTBEAT_INTERVAL_MS) {
-            sendSSEMessage({ type: "heartbeat", timestamp: now });
-            lastHeartbeat = now;
-          }
+          // Touch session cache to prevent expiration while user is connected
+          // This keeps the session alive as long as SSE connection is active
+          sessionCache.touch(sessionId);
 
-        } catch {
-          consecutiveErrors++;
-
-          // If too many consecutive errors, slow down the checks
-          if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
-            // Too many consecutive SSE errors - could implement exponential backoff here
-          }
+          // Note: Drift detection removed to eliminate Odoo RPC dependency
+          // Webhooks are the primary sync mechanism; clients should handle
+          // sync_required events if webhooks fail
         }
       };
 
-      // Initial check
-      checkForUpdates();
-
-      // Set up interval
-      intervalId = setInterval(checkForUpdates, CHECK_INTERVAL_MS);
+      // Start heartbeat interval
+      const heartbeatIntervalId = setInterval(
+        sendHeartbeat,
+        HEARTBEAT_INTERVAL_MS
+      );
 
       // Cleanup on connection close
       const cleanup = () => {
-        clearInterval(intervalId);
-        
+        console.log(
+          `[SSE] Client disconnected: ${connectionKey} (heartbeats sent: ${heartbeatCount})`
+        );
+
+        // Clear heartbeat interval
+        clearInterval(heartbeatIntervalId);
+
+        // Unsubscribe from webhook events
+        unsubscribeThreads();
+        unsubscribeMessages();
+
         // Decrement connection counter
         const connections = activeConnections.get(connectionKey) || 1;
         if (connections <= 1) {
@@ -268,7 +203,7 @@ export async function GET(request: NextRequest) {
         } else {
           activeConnections.set(connectionKey, connections - 1);
         }
-        
+
         try {
           controller.close();
         } catch {
@@ -278,9 +213,6 @@ export async function GET(request: NextRequest) {
 
       // Handle client disconnect
       request.signal.addEventListener("abort", cleanup);
-
-      // Don't add process listeners for each connection to prevent memory leaks
-      // These should be handled globally if needed
     },
   });
 
@@ -288,7 +220,7 @@ export async function GET(request: NextRequest) {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
-      "Connection": "keep-alive",
+      Connection: "keep-alive",
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Headers": "Cache-Control, x-session-id",
     },

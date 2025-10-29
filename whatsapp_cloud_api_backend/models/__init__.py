@@ -3,3 +3,6 @@
 from . import whatsapp_backend
 from . import whatsapp_message
 from . import whatsapp_thread
+from . import res_partner
+from . import whatsapp_chatbot
+from . import whatsapp_chatbot_script

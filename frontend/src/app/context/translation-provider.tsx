@@ -81,8 +81,8 @@ export function TranslationProvider({ children }: PropsWithChildren) {
         typeof value === "string"
           ? value
           : typeof fallback === "string"
-          ? fallback
-          : key;
+            ? fallback
+            : key;
 
       if (!vars) {
         return resolved;
@@ -119,7 +119,9 @@ export function TranslationProvider({ children }: PropsWithChildren) {
 export const useTranslations = () => {
   const context = useContext(TranslationContext);
   if (!context) {
-    throw new Error("useTranslations must be used within a TranslationProvider");
+    throw new Error(
+      "useTranslations must be used within a TranslationProvider"
+    );
   }
   return context;
 };

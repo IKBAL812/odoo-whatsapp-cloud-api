@@ -8,7 +8,7 @@
     "website": "https://github.com/altinkaya-opensource/odoo-whatsapp-cloud-api",
     "license": "LGPL-3",
     "category": "Tools",
-    "depends": ["base", "mail", "queue_job"],
+    "depends": ["base", "mail", "queue_job", "web"],
     "external_dependencies": {"python": ["requests"]},
     "data": [
         "security/whatsapp_security.xml",
@@ -16,6 +16,12 @@
         "views/whatsapp_backend_views.xml",
         "views/whatsapp_message_views.xml",
         "views/whatsapp_thread_views.xml",
+        "views/whatsapp_chatbot_views.xml",
     ],
+    "assets": {
+        "web.assets_backend": [
+            "whatsapp_cloud_api_backend/static/src/js/user_menu.js",
+        ],
+    },
     "installable": True,
 }

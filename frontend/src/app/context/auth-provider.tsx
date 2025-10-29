@@ -20,9 +20,11 @@ type AuthContextValue = {
   sessionId: string | null;
   user: OdooLoginResult | null;
   backendId: number | null;
+  backendIds: number[];
   backendUserId: number | null;
   backendUsers: BackendUser[];
   backendUsersById: Record<number, BackendUser>;
+  backendNames: Record<number, string>;
   isAuthenticated: boolean;
   isCheckingAuth: boolean;
   isAuthenticating: boolean;
@@ -45,8 +47,10 @@ export default function AuthProvider({ children }: PropsWithChildren) {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [user, setUser] = useState<OdooLoginResult | null>(null);
   const [backendId, setBackendId] = useState<number | null>(null);
+  const [backendIds, setBackendIds] = useState<number[]>([]);
   const [backendUserId, setBackendUserId] = useState<number | null>(null);
   const [backendUsers, setBackendUsers] = useState<BackendUser[]>([]);
+  const [backendNames, setBackendNames] = useState<Record<number, string>>({});
   const [status, setStatus] = useState<AuthStatus>("checking");
   const [isAuthenticating, setIsAuthenticating] = useState(false);
 
@@ -60,12 +64,12 @@ export default function AuthProvider({ children }: PropsWithChildren) {
     const storedBackend = window.localStorage.getItem(SESSION_BACKEND_KEY);
 
     if (storedSession) {
+      // Load cached data immediately for faster UI
       setSessionId(storedSession);
       if (storedUser) {
         try {
           setUser(JSON.parse(storedUser));
-        } catch (error) {
-          console.warn("Failed to parse stored user session", error);
+        } catch {
           window.localStorage.removeItem(SESSION_USER_KEY);
         }
       }
@@ -73,28 +77,47 @@ export default function AuthProvider({ children }: PropsWithChildren) {
         try {
           const parsed = JSON.parse(storedBackend) as {
             backendId?: number | null;
+            backendIds?: number[];
             backendUserId?: number | null;
             backendUsers?: BackendUser[];
+            backendNames?: Record<number, string>;
           };
           setBackendId(
             typeof parsed.backendId === "number" ? parsed.backendId : null
+          );
+          setBackendIds(
+            Array.isArray(parsed.backendIds) ? parsed.backendIds : []
           );
           setBackendUserId(
             typeof parsed.backendUserId === "number"
               ? parsed.backendUserId
               : null
           );
-          setBackendUsers(Array.isArray(parsed.backendUsers) ? parsed.backendUsers : []);
-        } catch (error) {
-          console.warn("Failed to parse stored backend meta", error);
+          setBackendUsers(
+            Array.isArray(parsed.backendUsers) ? parsed.backendUsers : []
+          );
+          setBackendNames(
+            parsed.backendNames && typeof parsed.backendNames === "object"
+              ? parsed.backendNames
+              : {}
+          );
+        } catch {
           window.localStorage.removeItem(SESSION_BACKEND_KEY);
         }
       }
       setStatus("authenticated");
+
+      // Revalidate session in background to refresh server-side cache
+      // This ensures session cache is populated after server restart or frontend deployment
+      loginWithSessionId(storedSession).catch(() => {
+        // Session validation failed - user will be logged out
+        console.log("[Auth] Session revalidation failed on mount");
+      });
     } else {
       setStatus("unauthenticated");
     }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps - only run on mount
 
   const persistSession = useCallback(
     (
@@ -102,8 +125,10 @@ export default function AuthProvider({ children }: PropsWithChildren) {
       sessionUser: OdooLoginResult | null,
       backendMeta?: {
         backendId?: number | null;
+        backendIds?: number[];
         backendUserId?: number | null;
         backendUsers?: BackendUser[];
+        backendNames?: Record<number, string>;
       }
     ) => {
       if (typeof window === "undefined") {
@@ -123,8 +148,10 @@ export default function AuthProvider({ children }: PropsWithChildren) {
           SESSION_BACKEND_KEY,
           JSON.stringify({
             backendId: backendMeta.backendId ?? null,
+            backendIds: backendMeta.backendIds ?? [],
             backendUserId: backendMeta.backendUserId ?? null,
             backendUsers: backendMeta.backendUsers ?? [],
+            backendNames: backendMeta.backendNames ?? {},
           })
         );
       } else {
@@ -170,8 +197,10 @@ export default function AuthProvider({ children }: PropsWithChildren) {
         const backendMeta = data?.backend as
           | {
               backend_id?: number;
+              backend_ids?: number[];
               user_id?: number;
               users?: { id: number; name: string; image_url?: string | null }[];
+              backend_names?: Record<number, string>;
             }
           | undefined;
 
@@ -194,26 +223,40 @@ export default function AuthProvider({ children }: PropsWithChildren) {
           typeof backendMeta?.backend_id === "number"
             ? backendMeta?.backend_id
             : null;
+        const resolvedBackendIds = Array.isArray(backendMeta?.backend_ids)
+          ? backendMeta.backend_ids
+          : [];
         const resolvedBackendUserId =
           typeof backendMeta?.user_id === "number"
             ? backendMeta?.user_id
             : null;
+        const resolvedBackendNames =
+          backendMeta?.backend_names &&
+          typeof backendMeta.backend_names === "object"
+            ? backendMeta.backend_names
+            : {};
 
         setBackendId(resolvedBackendId);
+        setBackendIds(resolvedBackendIds);
         setBackendUserId(resolvedBackendUserId);
         setBackendUsers(backendUsersList);
+        setBackendNames(resolvedBackendNames);
         persistSession(newSessionId, sessionUser, {
           backendId: resolvedBackendId,
+          backendIds: resolvedBackendIds,
           backendUserId: resolvedBackendUserId,
           backendUsers: backendUsersList,
+          backendNames: resolvedBackendNames,
         });
         setStatus("authenticated");
       } catch (error) {
         setSessionId(null);
         setUser(null);
         setBackendId(null);
+        setBackendIds([]);
         setBackendUserId(null);
         setBackendUsers([]);
+        setBackendNames({});
         clearPersistedSession();
         setStatus("unauthenticated");
         throw error;
@@ -250,8 +293,10 @@ export default function AuthProvider({ children }: PropsWithChildren) {
         const backendMeta = data?.backend as
           | {
               backend_id?: number;
+              backend_ids?: number[];
               user_id?: number;
               users?: { id: number; name: string; image_url?: string | null }[];
+              backend_names?: Record<number, string>;
             }
           | undefined;
 
@@ -270,26 +315,40 @@ export default function AuthProvider({ children }: PropsWithChildren) {
           typeof backendMeta?.backend_id === "number"
             ? backendMeta?.backend_id
             : null;
+        const resolvedBackendIds = Array.isArray(backendMeta?.backend_ids)
+          ? backendMeta.backend_ids
+          : [];
         const resolvedBackendUserId =
           typeof backendMeta?.user_id === "number"
             ? backendMeta?.user_id
             : null;
+        const resolvedBackendNames =
+          backendMeta?.backend_names &&
+          typeof backendMeta.backend_names === "object"
+            ? backendMeta.backend_names
+            : {};
 
         setBackendId(resolvedBackendId);
+        setBackendIds(resolvedBackendIds);
         setBackendUserId(resolvedBackendUserId);
         setBackendUsers(backendUsersList);
+        setBackendNames(resolvedBackendNames);
         persistSession(providedSessionId, sessionUser, {
           backendId: resolvedBackendId,
+          backendIds: resolvedBackendIds,
           backendUserId: resolvedBackendUserId,
           backendUsers: backendUsersList,
+          backendNames: resolvedBackendNames,
         });
         setStatus("authenticated");
       } catch (error) {
         setSessionId(null);
         setUser(null);
         setBackendId(null);
+        setBackendIds([]);
         setBackendUserId(null);
         setBackendUsers([]);
+        setBackendNames({});
         clearPersistedSession();
         setStatus("unauthenticated");
         throw error;
@@ -304,8 +363,10 @@ export default function AuthProvider({ children }: PropsWithChildren) {
     setSessionId(null);
     setUser(null);
     setBackendId(null);
+    setBackendIds([]);
     setBackendUserId(null);
     setBackendUsers([]);
+    setBackendNames({});
     clearPersistedSession();
     setStatus("unauthenticated");
   }, [clearPersistedSession]);
@@ -314,16 +375,18 @@ export default function AuthProvider({ children }: PropsWithChildren) {
     () => ({
       sessionId,
       user,
-       backendId,
-       backendUserId,
-       backendUsers,
-       backendUsersById: backendUsers.reduce<Record<number, BackendUser>>(
-         (acc, backendUser) => {
-           acc[backendUser.id] = backendUser;
-           return acc;
-         },
-         {}
-       ),
+      backendId,
+      backendIds,
+      backendUserId,
+      backendUsers,
+      backendUsersById: backendUsers.reduce<Record<number, BackendUser>>(
+        (acc, backendUser) => {
+          acc[backendUser.id] = backendUser;
+          return acc;
+        },
+        {}
+      ),
+      backendNames,
       isAuthenticated: status === "authenticated",
       isCheckingAuth: status === "checking",
       isAuthenticating,
@@ -335,8 +398,10 @@ export default function AuthProvider({ children }: PropsWithChildren) {
       sessionId,
       user,
       backendId,
+      backendIds,
       backendUserId,
       backendUsers,
+      backendNames,
       status,
       isAuthenticating,
       login,

@@ -15,7 +15,8 @@
     "loginModeSessionId": "Session ID",
     "sessionIdLabel": "Session ID",
     "sessionIdPlaceholder": "Paste your session_id from Odoo cookies here...",
-    "sessionIdHelp": "Copy the <code>session_id</code> value from your Odoo browser cookies"
+    "sessionIdHelp": "Copy the <code>session_id</code> value from your Odoo browser cookies",
+    "ssoLoggingIn": "Logging in from Odoo..."
   },
   "chat": {
     "filters": {
@@ -24,21 +25,33 @@
       "favorites": "Favorites",
       "groups": "Groups"
     },
+    "backendSelector": {
+      "selectBackend": "Backend",
+      "allBackends": "All Backends"
+    },
     "searchPlaceholder": "Search or start a new chat",
     "loading": "Loading...",
+    "loadingOlderMessages": "Loading older messages...",
     "typing": "typing...",
     "statusTyping": "typing",
     "statusOnline": "online",
     "dayToday": "Today",
     "dayYesterday": "Yesterday",
-    "reply": "Reply"
+    "reply": "Reply",
+    "openInOdoo": "Odoo Page",
+    "openInOdooTitle": "Open partner in Odoo"
   },
   "chatInput": {
     "placeholder": "Type a message",
     "send": "Send",
     "sending": "Sending...",
     "sendError": "Failed to send the message",
-    "replyingTo": "Replying to {{name}}"
+    "replyingTo": "Replying to {{name}}",
+    "aiImprove": "Improve with AI",
+    "aiImproving": "Improving...",
+    "aiImproveError": "Failed to improve text with AI",
+    "translate": "Translate to customer's language",
+    "translateError": "Failed to translate text"
   },
   "chatList": {
     "title": "Chats",
@@ -55,7 +68,9 @@
     "profile": "Profile",
     "github": "Github",
     "logout": "Logout",
-    "language": "Language"
+    "language": "Language",
+    "darkTheme": "Dark Theme",
+    "lightTheme": "Light Theme"
   },
   "newChat": {
     "title": "New Chat",
@@ -82,5 +97,12 @@
     "retry": "Retry",
     "login": "Log In",
     "checking": "Checking connection..."
+  },
+  "sessionSync": {
+    "blocked": {
+      "title": "WhatsApp is active in another tab",
+      "message": "To use WhatsApp in this tab, close the other tab or refresh this page.",
+      "footer": "This tab will automatically become active if the other tab is closed."
+    }
   }
 }

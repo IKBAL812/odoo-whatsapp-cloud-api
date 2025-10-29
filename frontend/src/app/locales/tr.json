@@ -15,7 +15,8 @@
     "loginModeSessionId": "Oturum ID",
     "sessionIdLabel": "Oturum ID",
     "sessionIdPlaceholder": "Odoo çerezlerinden session_id değerini buraya yapıştırın...",
-    "sessionIdHelp": "Odoo tarayıcı çerezlerinden <code>session_id</code> değerini kopyalayın"
+    "sessionIdHelp": "Odoo tarayıcı çerezlerinden <code>session_id</code> değerini kopyalayın",
+    "ssoLoggingIn": "Odoo'dan giriş yapılıyor..."
   },
   "chat": {
     "filters": {
@@ -24,21 +25,33 @@
       "favorites": "Favoriler",
       "groups": "Gruplar"
     },
+    "backendSelector": {
+      "selectBackend": "Arka Uç",
+      "allBackends": "Tüm Arka Uçlar"
+    },
     "searchPlaceholder": "Ara veya yeni sohbet başlat",
     "loading": "Yükleniyor...",
+    "loadingOlderMessages": "Eski mesajlar yükleniyor...",
     "typing": "yazıyor...",
     "statusTyping": "yazıyor",
     "statusOnline": "çevrimiçi",
     "dayToday": "Bugün",
     "dayYesterday": "Dün",
-    "reply": "Yanıtla"
+    "reply": "Yanıtla",
+    "openInOdoo": "Odoo Sayfası",
+    "openInOdooTitle": "Odoo'da partneri aç"
   },
   "chatInput": {
     "placeholder": "Mesaj yazın",
     "send": "Gönder",
     "sending": "Gönderiliyor...",
     "sendError": "Mesaj gönderilemedi",
-    "replyingTo": "{{name}} kişisine yanıt veriliyor"
+    "replyingTo": "{{name}} kişisine yanıt veriliyor",
+    "aiImprove": "Yapay zeka ile iyileştir",
+    "aiImproving": "İyileştiriliyor...",
+    "aiImproveError": "Metin yapay zeka ile iyileştirilemedi",
+    "translate": "Müşteri diline çevir",
+    "translateError": "Metin çevrilemedi"
   },
   "chatList": {
     "title": "Sohbetler",
@@ -55,7 +68,9 @@
     "profile": "Profil",
     "github": "Github",
     "logout": "Çıkış",
-    "language": "Dil"
+    "language": "Dil",
+    "darkTheme": "Koyu Tema",
+    "lightTheme": "Açık Tema"
   },
   "newChat": {
     "title": "Yeni sohbet",
@@ -82,5 +97,12 @@
     "retry": "Tekrar Dene",
     "login": "Giriş Yap",
     "checking": "Bağlantı kontrol ediliyor..."
+  },
+  "sessionSync": {
+    "blocked": {
+      "title": "WhatsApp başka bir sekmede aktif",
+      "message": "WhatsApp'ı bu sekmede kullanmak için diğer sekmeyi kapatın veya bu sayfayı yenileyin.",
+      "footer": "Diğer sekme kapatılırsa bu sekme otomatik olarak aktif hale gelecektir."
+    }
   }
 }

@@ -1,6 +1,137 @@
 @import "tailwindcss";
 
-html, body {
+/* Theme CSS Variables */
+:root[data-theme="dark"] {
+  /* Background colors */
+  --bg-primary: 0 0 0; /* black */
+  --bg-secondary: 255 255 255; /* white with opacity */
+  --bg-secondary-opacity: 0.1;
+  --bg-tertiary-opacity: 0.15;
+  --bg-quaternary-opacity: 0.2;
+  --bg-sidebar: 0 0 0; /* black */
+  --bg-sidebar-opacity: 0.85;
+  --bg-mobile-nav: 0 0 0; /* black */
+  --bg-mobile-nav-opacity: 0.95;
+
+  /* Chat bubble colors */
+  --bg-chat-outgoing: 6 78 59; /* emerald-900 */
+  --bg-chat-incoming: 255 255 255; /* white */
+  --bg-chat-incoming-opacity: 0.2;
+  --bg-reply-preview: 0 0 0; /* black */
+  --bg-reply-preview-opacity: 0.4;
+
+  /* Text colors */
+  --text-primary: 255 255 255; /* white */
+  --text-secondary: 255 255 255; /* white */
+  --text-secondary-opacity: 0.5;
+  --text-tertiary-opacity: 0.7;
+  --text-quaternary-opacity: 0.8;
+  --text-message-time: 255 255 255; /* white */
+  --text-message-time-opacity: 0.8;
+
+  /* Border colors */
+  --border-primary: 209 213 219; /* gray-300 */
+  --border-primary-opacity: 0.2;
+  --border-secondary: 107 114 128; /* gray-500 */
+  --border-secondary-opacity: 0.65;
+
+  /* Accent colors */
+  --accent-primary: 16 185 129; /* emerald-500 */
+  --accent-active: 52 211 153; /* emerald-400 */
+  --accent-hover: 255 255 255; /* white */
+  --accent-hover-opacity: 0.2;
+
+  /* Status colors */
+  --status-error: 248 113 113; /* red-400 */
+  --status-success: 16 185 129; /* emerald-500 */
+  --status-info: 96 165 250; /* blue-400 */
+
+  /* Scrollbar colors */
+  --scrollbar-thumb: 255 255 255; /* white */
+  --scrollbar-thumb-opacity: 0.25;
+  --scrollbar-thumb-hover-opacity: 0.35;
+  --scrollbar-thumb-active: 16 185 129; /* emerald-500 */
+  --scrollbar-thumb-active-opacity: 0.6;
+
+  /* Special backgrounds */
+  --bg-input: 255 255 255; /* white */
+  --bg-input-opacity: 0.05;
+  --bg-button-secondary: 255 255 255; /* white */
+  --bg-button-secondary-opacity: 0.1;
+  --bg-overlay: 0 0 0; /* black */
+  --bg-overlay-opacity: 0.8;
+  --bg-tooltip: 55 65 81; /* gray-700 */
+  --bg-tooltip-opacity: 0.9;
+}
+
+:root[data-theme="light"] {
+  /* Background colors - Clean, modern hierarchy */
+  --bg-primary: 255 255 255; /* #FFFFFF - pure white main area (Telegram/Discord style) */
+  --bg-secondary: 247 247 248; /* #F7F7F8 - subtle grey for contrast areas */
+  --bg-secondary-opacity: 1;
+  --bg-tertiary-opacity: 1;
+  --bg-quaternary-opacity: 1;
+  --bg-sidebar: 247 247 248; /* #F7F7F8 - light grey sidebar (Discord-inspired) */
+  --bg-sidebar-opacity: 1;
+  --bg-mobile-nav: 255 255 255; /* #FFFFFF - white nav bar */
+  --bg-mobile-nav-opacity: 1;
+  --bg-card: 255 255 255; /* #FFFFFF - white cards */
+  --bg-card-opacity: 1;
+
+  /* Chat bubble colors - Clear distinction */
+  --bg-chat-outgoing: 220 248 198; /* #DCF8C6 - WhatsApp green for sent */
+  --bg-chat-incoming: 240 240 242; /* #F0F0F2 - light grey for received (iMessage-inspired) */
+  --bg-chat-incoming-opacity: 1;
+  --bg-reply-preview: 235 235 237; /* #EBEBED - slightly darker grey for quoted messages */
+  --bg-reply-preview-opacity: 1;
+
+  /* Text colors - High contrast, readable */
+  --text-primary: 0 0 0; /* #000000 - true black for maximum readability */
+  --text-secondary: 116 116 128; /* #747480 - iOS grey for secondary text */
+  --text-secondary-opacity: 1;
+  --text-tertiary-opacity: 1;
+  --text-quaternary-opacity: 1;
+  --text-message-time: 142 142 147; /* #8E8E93 - iOS muted grey for timestamps */
+  --text-message-time-opacity: 1;
+
+  /* Border colors - Subtle but visible */
+  --border-primary: 229 229 234; /* #E5E5EA - iOS-style light border */
+  --border-primary-opacity: 1;
+  --border-secondary: 209 209 214; /* #D1D1D6 - slightly darker border */
+  --border-secondary-opacity: 1;
+
+  /* Accent colors - WhatsApp green primary */
+  --accent-primary: 37 211 102; /* #25D366 - WhatsApp brand green */
+  --accent-active: 33 189 92; /* #21BD5C - slightly darker active state */
+  --accent-hover: 242 242 247; /* #F2F2F7 - iOS-style light hover */
+  --accent-hover-opacity: 1;
+
+  /* Status colors - Standard, recognizable */
+  --status-error: 255 59 48; /* #FF3B30 - iOS red for errors */
+  --status-success: 37 211 102; /* #25D366 - WhatsApp green for success */
+  --status-info: 0 122 255; /* #007AFF - iOS blue for info */
+  --status-warning: 255 149 0; /* #FF9500 - iOS orange for warnings */
+
+  /* Scrollbar colors */
+  --scrollbar-thumb: 199 199 204; /* #C7C7CC - iOS-style scrollbar */
+  --scrollbar-thumb-opacity: 1;
+  --scrollbar-thumb-hover-opacity: 1;
+  --scrollbar-thumb-active: 37 211 102; /* #25D366 - WhatsApp green */
+  --scrollbar-thumb-active-opacity: 1;
+
+  /* Special backgrounds */
+  --bg-input: 255 255 255; /* #FFFFFF - white input with border */
+  --bg-input-opacity: 1;
+  --bg-button-secondary: 242 242 247; /* #F2F2F7 - iOS secondary button */
+  --bg-button-secondary-opacity: 1;
+  --bg-overlay: 0 0 0; /* black overlay */
+  --bg-overlay-opacity: 0.5;
+  --bg-tooltip: 44 44 46; /* #2C2C2E - iOS dark grey for tooltips */
+  --bg-tooltip-opacity: 0.95;
+}
+
+html,
+body {
   height: 100vh;
   width: 100vw;
   overflow: hidden;
@@ -15,8 +146,55 @@ html, body {
   display: none; /* Chrome, Safari, and Opera */
 }
 
+/* Custom Scrollbar Styles - Cross-Browser Compatible */
+.custom-scrollbar {
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--scrollbar-thumb) / var(--scrollbar-thumb-opacity))
+    transparent;
+  scrollbar-gutter: stable;
+}
+
+/* Webkit browsers (Chrome, Safari, Edge, Opera) */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgb(var(--scrollbar-thumb) / var(--scrollbar-thumb-opacity));
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgb(
+    var(--scrollbar-thumb) / var(--scrollbar-thumb-hover-opacity)
+  );
+  background-clip: padding-box;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:active {
+  background: rgb(
+    var(--scrollbar-thumb-active) / var(--scrollbar-thumb-active-opacity)
+  );
+  background-clip: padding-box;
+}
+
+/* Corner (where horizontal and vertical scrollbars meet) */
+.custom-scrollbar::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 .background-custom {
   background-color: #ffffff;
   opacity: 0.03;
-  background-image:  repeating-radial-gradient( circle at 0 0, transparent 0, #ffffff 10px ), repeating-linear-gradient( #17171755, #171717 );
+  background-image:
+    repeating-radial-gradient(circle at 0 0, transparent 0, #ffffff 10px),
+    repeating-linear-gradient(#17171755, #171717);
 }

@@ -6,6 +6,8 @@ import time
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
+from .frontend_webhook import WebhookSender
+
 
 class WhatsAppThread(models.Model):
     _name = "whatsapp.thread"
@@ -33,7 +35,7 @@ class WhatsAppThread(models.Model):
         ondelete="set null",
         index=True,
     )
-    phone_number = fields.Char(string="Phone Number", required=True, index=True)
+    phone_number = fields.Char(required=True, index=True)
     whatsapp_message_ids = fields.One2many(
         comodel_name="whatsapp.message",
         inverse_name="thread_id",
@@ -44,10 +46,41 @@ class WhatsAppThread(models.Model):
         string="Last Message",
         readonly=True,
     )
-    last_message_date = fields.Datetime(
-        string="Last Message Date", readonly=True, index=True
+    last_message_date = fields.Datetime(readonly=True, index=True)
+    last_message_preview = fields.Text(readonly=True)
+
+    unread_count = fields.Integer(
+        compute="_compute_unread_count",
     )
-    last_message_preview = fields.Text(string="Last Message Preview", readonly=True)
+
+    has_avatar = fields.Boolean(
+        compute="_compute_has_avatar",
+    )
+
+    # Chatbot fields
+    chatbot_id = fields.Many2one(
+        comodel_name="whatsapp.chatbot",
+        string="Active Chatbot",
+        help="Currently active chatbot for this conversation",
+        ondelete="set null",
+        index=True,
+    )
+    chatbot_step_sequence = fields.Integer(
+        default=0,
+        help="Current step in the chatbot conversation flow (0 = not started)",
+    )
+    chatbot_ended = fields.Boolean(
+        default=False,
+        help="If True, chatbot will not respond (human handoff mode)",
+    )
+    chatbot_step_ended = fields.Boolean(
+        default=False,
+        help="If True, current step won't re-execute until navigation occurs",
+    )
+    chatbot_last_message_date = fields.Datetime(
+        string="Chatbot Last Interaction",
+        help="Last time chatbot interacted with this thread (for timeout tracking)",
+    )
 
     _sql_constraints = [
         (
@@ -57,10 +90,22 @@ class WhatsAppThread(models.Model):
         )
     ]
 
-    unread_count = fields.Integer(
-        string="Unread Count",
-        compute="_compute_unread_count",
-    )
+    def send_webhook_payload(self, event_type):
+        """Send the thread data to the frontend webhook."""
+        for thread in self:
+            WebhookSender.send_thread_webhook_payload(thread, event_type)
+
+    @api.depends("partner_id", "partner_id.avatar_256")
+    def _compute_has_avatar(self):
+        """Compute whether the partner has an actual avatar image"""
+        for record in self:
+            if record.partner_id:
+                commercial_partner = record.partner_id.commercial_partner_id
+                # Check if partner has an actual avatar (not auto-generated)
+                partner = commercial_partner.with_context(whatsapp_connector=True)
+                record.has_avatar = bool(partner.avatar_256)
+            else:
+                record.has_avatar = False
 
     def _compute_unread_count(self):
         """Compute unread count for each thread."""
@@ -86,6 +131,12 @@ class WhatsAppThread(models.Model):
                 vals.get("partner_id"), vals.get("phone_number")
             )
         thread = super().create(vals)
+
+        # Push the new thread to
+        # frontend webhook
+
+        thread.with_delay().send_webhook_payload("thread.created")
+
         return thread
 
     def write(self, vals):
@@ -99,6 +150,11 @@ class WhatsAppThread(models.Model):
                 )
                 if new_name != thread.name:
                     super(WhatsAppThread, thread).write({"name": new_name})
+
+        # Push the updated thread to
+        # frontend webhook
+        self.with_delay().send_webhook_payload("thread.updated")
+
         return res
 
     def _register_message(self, message_record):
@@ -192,8 +248,17 @@ class WhatsAppThread(models.Model):
         if extra_vals:
             vals.update(extra_vals)
 
-        message_record = self.env["whatsapp.message"].sudo().create(vals)
-        self._register_message(message_record)
+        if message_type == "reaction":
+            message_record = (
+                self.env["whatsapp.message"]
+                .sudo()
+                .search([("message_id", "=", base_payload["reaction"]["message_id"])])
+            )
+            if message_record:
+                message_record.write({"reaction_emoji": body})
+        else:
+            message_record = self.env["whatsapp.message"].sudo().create(vals)
+            self._register_message(message_record)
         return {
             "message_id": message_record.id,
             "whatsapp_id": message_record.message_id,
@@ -336,6 +401,66 @@ class WhatsAppThread(models.Model):
             message_type="media",
             body=body_value,
             attachment=attachment,
+        )
+
+    def send_button_message(
+        self,
+        body_text,
+        buttons,
+        *,
+        header_text=None,
+        footer_text=None,
+    ):
+        """Send an interactive message with reply buttons (max 3 buttons).
+
+        Args:
+            body_text: Main message text
+            buttons: List of dicts with 'title' and optional 'value' keys
+                     Example: [{'title': 'Option 1', 'value': '1'}, ...]
+            header_text: Optional header text
+            footer_text: Optional footer text
+
+        Returns:
+            dict with message info
+        """
+        self.ensure_one()
+        if not body_text:
+            raise UserError(_("Body text is required for button messages."))
+        if not buttons or not isinstance(buttons, list):
+            raise UserError(_("Buttons must be a non-empty list."))
+        if len(buttons) > 3:
+            raise UserError(_("WhatsApp supports maximum 3 reply buttons."))
+
+        button_list = []
+        for idx, btn in enumerate(buttons):
+            if not isinstance(btn, dict) or "title" not in btn:
+                raise UserError(_("Each button must have a 'title' key."))
+            button_list.append(
+                {
+                    "type": "reply",
+                    "reply": {
+                        "id": btn.get("value", str(idx)),
+                        "title": btn["title"][:20],  # WhatsApp limit: 20 chars
+                    },
+                }
+            )
+
+        interactive = {
+            "type": "button",
+            "body": {"text": body_text},
+            "action": {"buttons": button_list},
+        }
+        if header_text:
+            interactive["header"] = {"type": "text", "text": header_text}
+        if footer_text:
+            interactive["footer"] = {"text": footer_text}
+
+        payload = {
+            "type": "interactive",
+            "interactive": interactive,
+        }
+        return self._send_message(
+            payload=payload, message_type="interactive", body=body_text
         )
 
     def send_cta_url_message(

@@ -6,7 +6,9 @@ import { useTranslations } from "@/app/context/translation-provider";
 
 export default function LoginForm() {
   const { login, loginWithSessionId, isAuthenticating } = useAuth();
-  const [loginMode, setLoginMode] = useState<"credentials" | "sessionId">("credentials");
+  const [loginMode, setLoginMode] = useState<"credentials" | "sessionId">(
+    "credentials"
+  );
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [sessionId, setSessionId] = useState("");
@@ -30,9 +32,12 @@ export default function LoginForm() {
     }
   };
 
-  const isSubmitDisabled = loginMode === "sessionId"
-    ? sessionId.trim().length === 0 || isAuthenticating
-    : username.trim().length === 0 || password.length === 0 || isAuthenticating;
+  const isSubmitDisabled =
+    loginMode === "sessionId"
+      ? sessionId.trim().length === 0 || isAuthenticating
+      : username.trim().length === 0 ||
+        password.length === 0 ||
+        isAuthenticating;
 
   return (
     <form
@@ -41,14 +46,14 @@ export default function LoginForm() {
       noValidate
     >
       {/* Login Mode Toggle */}
-      <div className="flex gap-2 p-1 bg-white/5 rounded-lg">
+      <div className="flex gap-2 p-1 bg-[rgb(var(--bg-input)/var(--bg-input-opacity))] rounded-lg">
         <button
           type="button"
           onClick={() => setLoginMode("credentials")}
           className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition ${
             loginMode === "credentials"
-              ? "bg-emerald-600 text-white"
-              : "text-white/60 hover:text-white"
+              ? "bg-[rgb(var(--accent-primary))] text-white"
+              : "text-[rgb(var(--text-secondary))] hover:text-[rgb(var(--text-primary))]"
           }`}
         >
           {t("auth.loginModeCredentials")}
@@ -58,8 +63,8 @@ export default function LoginForm() {
           onClick={() => setLoginMode("sessionId")}
           className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition ${
             loginMode === "sessionId"
-              ? "bg-emerald-600 text-white"
-              : "text-white/60 hover:text-white"
+              ? "bg-[rgb(var(--accent-primary))] text-white"
+              : "text-[rgb(var(--text-secondary))] hover:text-[rgb(var(--text-primary))]"
           }`}
         >
           {t("auth.loginModeSessionId")}
@@ -69,7 +74,10 @@ export default function LoginForm() {
       {loginMode === "credentials" ? (
         <>
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-white/70" htmlFor="username">
+            <label
+              className="text-sm font-medium text-[rgb(var(--text-secondary)/var(--text-tertiary-opacity))]"
+              htmlFor="username"
+            >
               {t("auth.username")}
             </label>
             <input
@@ -79,12 +87,15 @@ export default function LoginForm() {
               autoComplete="username"
               value={username}
               onChange={(event) => setUsername(event.target.value)}
-              className="rounded-lg w-full p-3 outline-none bg-white/10 text-white placeholder-white/50 border border-white/10 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/40 transition"
+              className="rounded-lg w-full p-3 outline-none bg-[rgb(var(--bg-input)/var(--bg-input-opacity))] text-[rgb(var(--text-primary))] placeholder-[rgb(var(--text-secondary))] border border-[rgb(var(--border-primary)/var(--border-primary-opacity))] focus:border-[rgb(var(--accent-primary))] focus:ring-2 focus:ring-[rgb(var(--accent-primary)/0.4)] transition"
               placeholder={t("auth.username")}
             />
           </div>
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-white/70" htmlFor="password">
+            <label
+              className="text-sm font-medium text-[rgb(var(--text-secondary)/var(--text-tertiary-opacity))]"
+              htmlFor="password"
+            >
               {t("auth.password")}
             </label>
             <input
@@ -94,14 +105,17 @@ export default function LoginForm() {
               autoComplete="current-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="rounded-lg w-full p-3 outline-none bg-white/10 text-white placeholder-white/50 border border-white/10 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/40 transition"
+              className="rounded-lg w-full p-3 outline-none bg-[rgb(var(--bg-input)/var(--bg-input-opacity))] text-[rgb(var(--text-primary))] placeholder-[rgb(var(--text-secondary))] border border-[rgb(var(--border-primary)/var(--border-primary-opacity))] focus:border-[rgb(var(--accent-primary))] focus:ring-2 focus:ring-[rgb(var(--accent-primary)/0.4)] transition"
               placeholder={t("auth.password")}
             />
           </div>
         </>
       ) : (
         <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium text-white/70" htmlFor="sessionId">
+          <label
+            className="text-sm font-medium text-[rgb(var(--text-secondary)/var(--text-tertiary-opacity))]"
+            htmlFor="sessionId"
+          >
             {t("auth.sessionIdLabel")}
           </label>
           <textarea
@@ -110,32 +124,36 @@ export default function LoginForm() {
             rows={3}
             value={sessionId}
             onChange={(event) => setSessionId(event.target.value)}
-            className="rounded-lg w-full p-3 outline-none bg-white/10 text-white placeholder-white/50 border border-white/10 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/40 transition font-mono text-xs"
+            className="rounded-lg w-full p-3 outline-none bg-[rgb(var(--bg-input)/var(--bg-input-opacity))] text-[rgb(var(--text-primary))] placeholder-[rgb(var(--text-secondary))] border border-[rgb(var(--border-primary)/var(--border-primary-opacity))] focus:border-[rgb(var(--accent-primary))] focus:ring-2 focus:ring-[rgb(var(--accent-primary)/0.4)] transition font-mono text-xs"
             placeholder={t("auth.sessionIdPlaceholder")}
           />
-          <p className="text-xs text-white/50">
-            {t("auth.sessionIdHelp").split("<code>").map((part, i) => {
-              if (i === 0) return part;
-              const [codeContent, ...rest] = part.split("</code>");
-              return (
-                <span key={i}>
-                  <code className="bg-white/10 px-1 py-0.5 rounded">{codeContent}</code>
-                  {rest.join("</code>")}
-                </span>
-              );
-            })}
+          <p className="text-xs text-[rgb(var(--text-secondary)/var(--text-secondary-opacity))]">
+            {t("auth.sessionIdHelp")
+              .split("<code>")
+              .map((part, i) => {
+                if (i === 0) return part;
+                const [codeContent, ...rest] = part.split("</code>");
+                return (
+                  <span key={i}>
+                    <code className="bg-[rgb(var(--bg-secondary)/var(--bg-secondary-opacity))] px-1 py-0.5 rounded">
+                      {codeContent}
+                    </code>
+                    {rest.join("</code>")}
+                  </span>
+                );
+              })}
           </p>
         </div>
       )}
 
       {error && (
-        <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg p-2">
+        <p className="text-sm text-[rgb(var(--status-error))] bg-[rgb(var(--status-error)/0.1)] border border-[rgb(var(--status-error)/0.3)] rounded-lg p-2">
           {error}
         </p>
       )}
       <button
         type="submit"
-        className="rounded-lg p-3 bg-emerald-600 text-white font-semibold hover:bg-emerald-500 transition disabled:opacity-60 disabled:cursor-not-allowed"
+        className="rounded-lg p-3 bg-[rgb(var(--accent-primary))] text-white font-semibold hover:bg-[rgb(var(--status-success))] transition disabled:opacity-60 disabled:cursor-not-allowed"
         disabled={isSubmitDisabled}
       >
         {isAuthenticating ? t("auth.submitting") : t("auth.submit")}

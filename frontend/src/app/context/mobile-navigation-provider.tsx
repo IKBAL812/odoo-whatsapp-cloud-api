@@ -1,6 +1,12 @@
 "use client";
 
-import { createContext, PropsWithChildren, useState, useCallback, useContext } from "react";
+import {
+  createContext,
+  PropsWithChildren,
+  useState,
+  useCallback,
+  useContext,
+} from "react";
 
 type MobileView = "chatList" | "activeChat";
 
@@ -11,9 +17,9 @@ type MobileNavigationContextType = {
   showActiveChat: () => void;
 };
 
-const MobileNavigationContext = createContext<MobileNavigationContextType | undefined>(
-  undefined
-);
+const MobileNavigationContext = createContext<
+  MobileNavigationContextType | undefined
+>(undefined);
 
 export function MobileNavigationProvider({ children }: PropsWithChildren) {
   const [currentView, setCurrentView] = useState<MobileView>("chatList");
@@ -43,7 +49,9 @@ export function MobileNavigationProvider({ children }: PropsWithChildren) {
 export function useMobileNavigation() {
   const context = useContext(MobileNavigationContext);
   if (!context) {
-    throw new Error("useMobileNavigation must be used within MobileNavigationProvider");
+    throw new Error(
+      "useMobileNavigation must be used within MobileNavigationProvider"
+    );
   }
   return context;
 }

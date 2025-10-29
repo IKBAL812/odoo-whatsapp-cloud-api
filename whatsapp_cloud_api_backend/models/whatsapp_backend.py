@@ -29,19 +29,17 @@ class WhatsAppBackend(models.Model):
     _description = "WhatsApp Cloud API Backend"
     # _inherit = ["mail.thread", "mail.activity.mixin"]
 
-    name = fields.Char(string="Name", required=True)
-    active = fields.Boolean(string="Active", default=True)
+    name = fields.Char(required=True)
+    active = fields.Boolean(default=True)
     api_token = fields.Char(string="API Token", required=True)
     phone_number_id = fields.Char(string="Phone Number ID", required=True)
     api_version = fields.Char(string="API Version", required=True, default="v23.0")
     webhook_secret = fields.Char(
-        string="Webhook Secret",
         required=True,
         default=lambda self: secrets.token_urlsafe(32),
     )
     language = fields.Many2one(
         comodel_name="res.lang",
-        string="Language",
     )
     user_ids = fields.Many2many(
         comodel_name="res.users",
@@ -59,6 +57,27 @@ class WhatsAppBackend(models.Model):
         comodel_name="res.company",
         string="Company",
         default=lambda self: self.env.company,
+    )
+
+    frontend_webhook_url = fields.Char(
+        string="Frontend Webhook URL",
+        help="URL to send WhatsApp thread and message updates to the frontend.",
+    )
+    frontend_webhook_secret = fields.Char(
+        help="Secret token to authenticate frontend webhook requests.",
+    )
+
+    # Chatbot configuration
+    chatbot_id = fields.Many2one(
+        comodel_name="whatsapp.chatbot",
+        string="Default Chatbot",
+        help="Chatbot to use for incoming messages on this backend",
+        ondelete="set null",
+    )
+    chatbot_enabled = fields.Boolean(
+        string="Enable Chatbot",
+        default=False,
+        help="If enabled, incoming messages will be handled by the chatbot",
     )
 
     # -------------------------------------------------------------------------
@@ -141,20 +160,15 @@ class WhatsAppBackend(models.Model):
             raise UserError(_("Attachment has no file data."))
 
         # Prepare multipart form data
-        files = {
-            'file': (attachment.name, file_data, attachment.mimetype)
-        }
+        files = {"file": (attachment.name, file_data, attachment.mimetype)}
         data = {
-            'messaging_product': 'whatsapp',
+            "messaging_product": "whatsapp",
+            "type": attachment.mimetype,
         }
 
         try:
             response = requests.post(
-                url,
-                headers=headers,
-                files=files,
-                data=data,
-                timeout=30
+                url, headers=headers, files=files, data=data, timeout=30
             )
         except RequestException as exc:
             _logger.exception("WhatsApp media upload failed")
@@ -238,13 +252,13 @@ class WhatsAppBackend(models.Model):
 
     def initialize_web(self):
         user = self.env.user
-        backend = self.sudo().search([("user_ids", "in", user.id)], limit=1)
+        backend_ids = self.sudo().search([("user_ids", "in", user.id)])
 
-        if not backend:
+        if not backend_ids:
             return {
                 "error": "this user has no backend assigned",
             }
-        backend = backend[0]
+        company_id = fields.first(backend_ids.mapped("company_id"))
 
         base_url = self.env["ir.config_parameter"].sudo().get_param("web.base.url")
         image_url_tpl = f"{base_url}/web/image?model=res.users&field=avatar_128&id="
@@ -254,13 +268,17 @@ class WhatsAppBackend(models.Model):
                 "name": backend_user.name,
                 "image_url": f"{image_url_tpl}{backend_user.id}",
             }
-            for backend_user in backend.user_ids
+            for backend_user in backend_ids.mapped("user_ids")
         ]
 
+        # Backend names mapping for frontend selector
+        backend_names = {backend.id: backend.name for backend in backend_ids}
+
         return {
-            "backend_id": backend.id,
-            "language": backend.language.code if backend.language else self.env.lang,
-            "company_id": backend.company_id.id,
+            "backend_ids": backend_ids.ids,
+            "backend_names": backend_names,
+            "language": self.env.user.lang,
+            "company_id": company_id.id,
             "user_id": user.id,
             "users": users_list,
         }

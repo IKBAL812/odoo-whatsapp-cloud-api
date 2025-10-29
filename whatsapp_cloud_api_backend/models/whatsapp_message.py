@@ -3,6 +3,7 @@
 from odoo import api, fields, models
 
 from ..controllers.main import WP_ATTACHMENT_DOWNLOAD_PATH
+from .frontend_webhook import WebhookSender
 
 
 class WhatsAppMessage(models.Model):
@@ -19,7 +20,6 @@ class WhatsAppMessage(models.Model):
     )
     direction = fields.Selection(
         selection=[("incoming", "Incoming"), ("outgoing", "Outgoing")],
-        string="Direction",
         default="outgoing",
         required=True,
         help="Indicates whether the message was received from or sent to WhatsApp.",
@@ -35,7 +35,6 @@ class WhatsAppMessage(models.Model):
         help="External conversation identifier supplied by the WhatsApp API.",
     )
     phone_number = fields.Char(
-        string="Phone Number",
         help="Counterparty phone number in international format.",
     )
     partner_id = fields.Many2one(
@@ -63,19 +62,17 @@ class WhatsAppMessage(models.Model):
             ("status", "Status"),
             ("unknown", "Unknown"),
         ],
-        string="Message Type",
         default="text",
         required=True,
         help="Type of message exchanged with the WhatsApp Cloud API.",
     )
-    body = fields.Text(string="Body", help="Text content of the message, if any.")
+    body = fields.Text(help="Text content of the message, if any.")
     attachment_id = fields.Many2one(
         comodel_name="ir.attachment",
         string="Attachment",
         help="Optional media or document associated with the message.",
     )
     payload = fields.Json(
-        string="Payload",
         help="Raw payload returned by the WhatsApp Cloud API for traceability.",
     )
     status = fields.Selection(
@@ -87,7 +84,6 @@ class WhatsAppMessage(models.Model):
             ("read", "Read"),
             ("failed", "Failed"),
         ],
-        string="Status",
         default="pending",
         required=True,
         help="Lifecycle state of the message in the WhatsApp Cloud API.",
@@ -106,8 +102,9 @@ class WhatsAppMessage(models.Model):
         help="Reference to the message this message is replying to, if any.",
     )
 
+    reaction_emoji = fields.Char()
+
     timestamp = fields.Integer(
-        string="Timestamp",
         required=True,
     )
 
@@ -127,6 +124,11 @@ class WhatsAppMessage(models.Model):
             "A message with the same identifier already exists for this backend.",
         )
     ]
+
+    def send_webhook_payload(self, event_type):
+        """Send the message data to the frontend webhook."""
+        for message in self:
+            WebhookSender.send_message_webhook_payload(message, event_type)
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -148,6 +150,9 @@ class WhatsAppMessage(models.Model):
                 ReadStatus |= status
             record.read_status_ids = [(6, 0, ReadStatus.ids)]
 
+        # Send webhook payload for message creation
+        res.with_delay().send_webhook_payload("message.created")
+
         return res
 
     def _compute_is_read_by_me(self):
@@ -155,7 +160,10 @@ class WhatsAppMessage(models.Model):
             read_status = record.read_status_ids.filtered(
                 lambda r: r.user_id == self.env.user
             )
-            record.is_read_by_me = read_status.is_read if read_status else False
+            if read_status:
+                record.is_read_by_me = read_status.is_read
+            else:  #  if no read status found for the user, consider as read
+                record.is_read_by_me = True
 
     def mark_as_read_by_user(self, user):
         for record in self:

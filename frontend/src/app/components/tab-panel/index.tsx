@@ -15,7 +15,7 @@ export default function TabPanelSwitcher() {
     return (
       <section className="w-full h-full min-h-0 flex flex-col gap-3 p-4">
         <section className="w-full flex justify-between items-center">
-          <p className="text-white text-2xl font-semibold capitalize">
+          <p className="text-[rgb(var(--text-primary))] text-2xl font-semibold capitalize">
             {t("navigation.profile")}
           </p>
         </section>
@@ -26,5 +26,9 @@ export default function TabPanelSwitcher() {
     );
   }
 
-  return <div className="text-white">{t("common.comingSoon")}</div>;
+  return (
+    <div className="text-[rgb(var(--text-primary))]">
+      {t("common.comingSoon")}
+    </div>
+  );
 }

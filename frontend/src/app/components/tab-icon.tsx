@@ -26,7 +26,9 @@ export default function TabIcon({ tab }: { tab?: string }) {
   return (
     <Component
       className={`size-6 ${
-        selectedTab === tab ? "text-white" : "text-gray-400"
+        selectedTab === tab
+          ? "text-[rgb(var(--accent-active))]"
+          : "text-[rgb(var(--text-secondary))]"
       }`}
       weight={selectedTab === tab && tab !== "status" ? "fill" : "bold"}
     />

@@ -12,7 +12,11 @@ import { useContacts } from "../hooks/use-contacts";
 import { Contact } from "./contacts-provider";
 import { useAuth } from "../hooks/use-auth";
 import { useSSE } from "../hooks/use-sse";
+import { useMessagePoller } from "../hooks/use-message-poller";
 import { useConnection } from "./connection-provider";
+
+// Message pagination configuration
+const MESSAGE_BATCH_SIZE = 100;
 
 export type CurrentChatContacts = {
   [contactId: string]: Contact | undefined;
@@ -31,9 +35,15 @@ export type CurrentChatData = {
   group: CurrentChatContactsGroup | null;
   page: number;
   isLoading: boolean;
+  isPaginationLoading: boolean;
+  hasMoreMessages: boolean;
   threadName: string | null;
   phoneNumber: string | null;
   backendId: number | null;
+  partnerId: number | null;
+  partnerName: string | null;
+  partnerAvatar: string | null;
+  hasAvatar: boolean;
   isSending: boolean;
   replyTo: Message | null;
 };
@@ -42,8 +52,10 @@ export type CurrentChat = CurrentChatData & {
   loadCurrentChat: (chat: Partial<CurrentChatData>) => void;
   sendMessage: (content: string) => Promise<void>;
   sendAttachment: (file: File, caption?: string) => Promise<void>;
+  sendReaction: (message: Message, emoji: string) => Promise<void>;
   startReply: (message: Message) => void;
   cancelReply: () => void;
+  loadPreviousMessages: () => Promise<void>;
 };
 
 export const CurrentChatContext = createContext<undefined | CurrentChat>(
@@ -61,6 +73,7 @@ type OdooMessageRecord = {
   create_uid: [number, string];
   replied_message_id?: false | [number, string] | null;
   timestamp: number;
+  reaction_emoji?: string | false | null;
   attachment?: {
     id: number;
     name: string;
@@ -123,8 +136,80 @@ export const shouldPlayNotificationAudio = (
   visibility: DocumentVisibilityState | undefined
 ) => visibility !== "visible";
 
+// Constants for localStorage persistence
+const NOTIFIED_MESSAGES_KEY = "whatsapp.notificationState.messages";
+const MESSAGE_NOTIFICATION_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
+const NOTIFICATION_PERMISSION_KEY = "whatsapp.notificationPermission.dismissed";
+
+// Helper to load notified messages from localStorage
+function loadNotifiedMessages(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+
+  try {
+    const stored = localStorage.getItem(NOTIFIED_MESSAGES_KEY);
+    if (!stored) return new Set();
+
+    const parsed: { [key: string]: number } = JSON.parse(stored);
+    const now = Date.now();
+
+    // Filter out expired entries (older than TTL)
+    const validKeys = Object.entries(parsed)
+      .filter(([, timestamp]) => now - timestamp < MESSAGE_NOTIFICATION_TTL)
+      .map(([key]) => key);
+
+    return new Set(validKeys);
+  } catch (error) {
+    console.error(
+      "[Notifications] Failed to restore notified messages from localStorage:",
+      error
+    );
+    return new Set();
+  }
+}
+
+// Helper to save notified messages to localStorage (debounced)
+let saveMessagesTimeout: NodeJS.Timeout | null = null;
+function saveNotifiedMessages(messages: Set<string>) {
+  if (typeof window === "undefined") return;
+
+  // Debounce saves to avoid excessive localStorage writes
+  if (saveMessagesTimeout) clearTimeout(saveMessagesTimeout);
+
+  saveMessagesTimeout = setTimeout(() => {
+    try {
+      const now = Date.now();
+      // Store message keys with current timestamp
+      const messageObj: { [key: string]: number } = {};
+      messages.forEach((key) => {
+        messageObj[key] = now;
+      });
+
+      localStorage.setItem(NOTIFIED_MESSAGES_KEY, JSON.stringify(messageObj));
+    } catch (error) {
+      console.error(
+        "[Notifications] Failed to save notified messages to localStorage:",
+        error
+      );
+    }
+  }, 1000); // Debounce for 1 second
+}
+
+// Helper to check if permission was previously dismissed
+function wasPermissionDismissed(): boolean {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem(NOTIFICATION_PERMISSION_KEY) === "true";
+}
+
+// Helper to mark permission as dismissed
+function markPermissionDismissed() {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(NOTIFICATION_PERMISSION_KEY, "true");
+}
+
 // Global notification tracker - persists across thread switches
-const globalNotifiedMessagesRef: { current: Set<string> } = { current: new Set() };
+const globalNotifiedMessagesRef: { current: Set<string> } = {
+  current: new Set(),
+};
 
 export default function CurrentChatProvider({ children }: PropsWithChildren) {
   const [currentChat, setCurrentChat] = useState<CurrentChatData>({
@@ -134,14 +219,21 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
     group: null,
     page: 0,
     isLoading: false,
+    isPaginationLoading: false,
+    hasMoreMessages: true,
     threadName: null,
     phoneNumber: null,
     backendId: null,
+    partnerId: null,
+    partnerName: null,
+    partnerAvatar: null,
+    hasAvatar: false,
     isSending: false,
     replyTo: null,
   });
   const latestMessageTimestampRef = useRef<number | null>(null);
   const latestMessageIdRef = useRef<number | null>(null);
+  const oldestMessageIdRef = useRef<number | null>(null);
   const notificationAudioRef = useRef<HTMLAudioElement | null>(null);
   const initialNotificationRef = useRef(true);
 
@@ -155,222 +247,220 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
   const { reportApiError, reportConnectionRestored } = useConnection();
 
   const chatId = currentChat.chatId;
-  const pendingPreviewUpdateRef = useRef<{ threadId: string; message: string; timestamp: number } | null>(null);
+  const pendingPreviewUpdateRef = useRef<{
+    threadId: string;
+    message: string;
+    timestamp: number;
+  } | null>(null);
   const pendingMarkAsReadRef = useRef<string | null>(null);
 
   // SSE message handler for real-time message updates
-  const handleMessagesUpdate = useCallback((messages: unknown[], threadId: string) => {
-    console.log("[SSE] Received message update:", messages.length, "messages for thread", threadId);
-
-    if (threadId !== chatId) {
-      console.log("[SSE] Ignoring - not current chat. Current:", chatId, "Received:", threadId);
-      return; // Ignore messages for other chats
-    }
-
-    const odooMessages = (messages as OdooMessageRecord[]).reverse(); // Backend returns newest first, reverse for chat display
-    console.log("[SSE] Processing messages:", odooMessages);
-    console.log("[SSE Reply Debug] Raw odooMessages with reply info:", odooMessages.map(m => ({
-      id: m.id,
-      replied_message_id: m.replied_message_id,
-      message_id: m.message_id
-    })));
-    const rawMessages: MessageWithReplyReference[] = odooMessages.map((record) => {
-      const timestamp = record.timestamp * 1000; // Convert seconds to milliseconds
-      const direction = record.direction ?? "incoming";
-      const status = (record.status ?? "").toLowerCase();
-      const messageText = record.body || "";
-
-      const deliveredStatuses = ["delivered", "read"];
-      const sentStatuses = ["sent", ...deliveredStatuses];
-      const userIdValue =
-        Array.isArray(record.create_uid) && record.create_uid.length > 0
-          ? record.create_uid[0]
-          : null;
-      const whatsappId =
-        typeof record.message_id === "string" ? record.message_id : null;
-      const replyTuple = Array.isArray(record.replied_message_id)
-        ? record.replied_message_id
-        : null;
-      const replyMessageId = replyTuple?.[0] ? String(replyTuple[0]) : null;
-
-      return {
-        id: record.id.toString(),
-        contactId: threadId,
-        message: messageText,
-        timestamp,
-        isSentFromUser: direction === "outgoing",
-        sent: sentStatuses.includes(status),
-        delivered: deliveredStatuses.includes(status),
-        read: status === "read",
-        userId: userIdValue ?? null,
-        whatsappId,
-        replyMessageId,
-        attachment: record.attachment,
-      };
-    });
-
-    // Process messages similar to fetchMessages
-    setCurrentChat((prev) => {
-      if (prev.chatId !== threadId) {
-        return prev;
+  const handleMessagesUpdate = useCallback(
+    (messages: unknown[], threadId: string) => {
+      if (threadId !== chatId) {
+        return; // Ignore messages for other chats
       }
 
-      const repliesById = new Map<string, NonNullable<Message["replyTo"]>>();
+      const odooMessages = (messages as OdooMessageRecord[]).reverse(); // Backend returns newest first, reverse for chat display
 
-      console.log("[SSE Reply Debug] Building reply metadata map");
-      console.log("[SSE Reply Debug] Existing messages count:", prev.messages.length);
-      console.log("[SSE Reply Debug] Raw messages count:", rawMessages.length);
+      const rawMessages: MessageWithReplyReference[] = odooMessages.map(
+        (record) => {
+          const timestamp = record.timestamp * 1000; // Convert seconds to milliseconds
+          const direction = record.direction ?? "incoming";
+          const status = (record.status ?? "").toLowerCase();
+          const messageText = record.body || "";
 
-      // Build reply metadata map from existing messages
-      prev.messages.forEach((message) => {
-        if (message.id) {
-          const meta = toReplyMetadata(message);
-          if (meta) {
-            repliesById.set(message.id, meta);
-            console.log("[SSE Reply Debug] Added existing message to map:", message.id, "whatsappId:", message.whatsappId);
+          const deliveredStatuses = ["delivered", "read"];
+          const sentStatuses = ["sent", ...deliveredStatuses];
+          const userIdValue =
+            Array.isArray(record.create_uid) && record.create_uid.length > 0
+              ? record.create_uid[0]
+              : null;
+          const whatsappId =
+            typeof record.message_id === "string" ? record.message_id : null;
+          const replyTuple = Array.isArray(record.replied_message_id)
+            ? record.replied_message_id
+            : null;
+          const replyMessageId = replyTuple?.[0] ? String(replyTuple[0]) : null;
+          const reactionEmoji =
+            typeof record.reaction_emoji === "string"
+              ? record.reaction_emoji
+              : null;
+
+          return {
+            id: record.id.toString(),
+            contactId: threadId,
+            message: messageText,
+            timestamp,
+            isSentFromUser: direction === "outgoing",
+            sent: sentStatuses.includes(status),
+            delivered: deliveredStatuses.includes(status),
+            read: status === "read",
+            userId: userIdValue ?? null,
+            whatsappId,
+            replyMessageId,
+            attachment: record.attachment,
+            reactionEmoji,
+          };
+        }
+      );
+
+      // Process messages similar to fetchMessages
+      setCurrentChat((prev) => {
+        if (prev.chatId !== threadId) {
+          return prev;
+        }
+
+        const repliesById = new Map<string, NonNullable<Message["replyTo"]>>();
+
+        // Build reply metadata map from existing messages
+        prev.messages.forEach((message) => {
+          if (message.id) {
+            const meta = toReplyMetadata(message);
+            if (meta) {
+              repliesById.set(message.id, meta);
+            }
           }
-        }
-      });
+        });
 
-      // Also add reply metadata from raw messages (for newly arrived messages)
-      rawMessages.forEach((rawMessage) => {
-        if (rawMessage.id && rawMessage.whatsappId) {
-          repliesById.set(rawMessage.id, {
-            messageId: rawMessage.whatsappId,
-            message: rawMessage.message,
-            contactId: rawMessage.contactId,
-            senderIsUser: rawMessage.isSentFromUser,
-          });
-          console.log("[SSE Reply Debug] Added raw message to map:", rawMessage.id, "whatsappId:", rawMessage.whatsappId);
-        }
-      });
-
-      console.log("[SSE Reply Debug] Total replies in map:", repliesById.size);
-      console.log("[SSE Reply Debug] Reply map keys:", Array.from(repliesById.keys()));
-
-      const mappedMessages: Message[] = rawMessages.map((message) => {
-        const { replyMessageId, ...rest } = message;
-        const baseMessage = rest as Message;
-
-        if (!replyMessageId) {
-          return baseMessage;
-        }
-
-        console.log("[SSE Reply Debug] Trying to resolve reply for message:", message.id, "replyMessageId:", replyMessageId);
-        const replyMetadata = repliesById.get(replyMessageId);
-        if (!replyMetadata) {
-          console.log("[SSE Reply Debug] ❌ FAILED to find reply metadata for:", replyMessageId);
-          console.log("[SSE Reply Debug] Available keys:", Array.from(repliesById.keys()));
-          return baseMessage;
-        }
-
-        console.log("[SSE Reply Debug] ✅ Successfully resolved reply:", replyMessageId, "->", replyMetadata);
-        return {
-          ...baseMessage,
-          replyTo: replyMetadata,
-        };
-      });
-
-      // Handle message updates: merge new messages with existing ones
-      const existingMessagesMap = new Map(prev.messages.map(m => [m.id, m]));
-      const updatedMessagesMap = new Map(existingMessagesMap);
-
-      let hasNewMessages = false;
-      let hasNewIncomingMessages = false;
-
-      mappedMessages.forEach((newMessage, index) => {
-        if (newMessage.id && existingMessagesMap.has(newMessage.id)) {
-          // Update existing message (e.g., status changes)
-          console.log("[SSE] Updating existing message:", newMessage.id);
-          updatedMessagesMap.set(newMessage.id, {
-            ...existingMessagesMap.get(newMessage.id)!,
-            ...newMessage,
-            // Preserve optimistic properties if this is an update to an optimistic message
-            sent: newMessage.sent || existingMessagesMap.get(newMessage.id)!.sent,
-            delivered: newMessage.delivered || existingMessagesMap.get(newMessage.id)!.delivered,
-          } as Message);
-        } else if (newMessage.id && !existingMessagesMap.has(newMessage.id)) {
-          // Add new message - keep the replyMessageId from rawMessages for later resolution
-          console.log("[SSE] Adding NEW message:", newMessage.id, newMessage.message);
-          const rawMessageWithReplyId = rawMessages[index];
-          updatedMessagesMap.set(newMessage.id, {
-            ...newMessage,
-            // Store replyMessageId as a custom property for resolution later
-            replyMessageId: rawMessageWithReplyId.replyMessageId,
-          } as MessageWithReplyReference);
-          hasNewMessages = true;
-          // Check if it's an incoming message (not from user)
-          if (!newMessage.isSentFromUser) {
-            hasNewIncomingMessages = true;
+        // Also add reply metadata from raw messages (for newly arrived messages)
+        rawMessages.forEach((rawMessage) => {
+          if (rawMessage.id && rawMessage.whatsappId) {
+            repliesById.set(rawMessage.id, {
+              messageId: rawMessage.whatsappId,
+              message: rawMessage.message,
+              contactId: rawMessage.contactId,
+              senderIsUser: rawMessage.isSentFromUser,
+            });
           }
-        }
-      });
+        });
 
-      console.log("[SSE] hasNewMessages:", hasNewMessages, "hasNewIncomingMessages:", hasNewIncomingMessages);
+        const mappedMessages: Message[] = rawMessages.map((message) => {
+          const { replyMessageId, ...rest } = message;
+          const baseMessage = rest as Message;
 
-      if (!hasNewMessages) {
-        console.log("[SSE] No new messages, skipping state update");
-        return prev;
-      }
-
-      const sortedMessages = Array.from(updatedMessagesMap.values())
-        .sort((a, b) => a.timestamp - b.timestamp); // Still need sorting when merging SSE messages
-
-      // Rebuild reply metadata map with ALL messages (including newly merged ones)
-      const finalRepliesById = new Map<string, NonNullable<Message["replyTo"]>>();
-      sortedMessages.forEach((message) => {
-        if (message.id && message.whatsappId) {
-          const meta = toReplyMetadata(message);
-          if (meta) {
-            finalRepliesById.set(message.id, meta);
+          if (!replyMessageId) {
+            return baseMessage;
           }
-        }
-      });
 
-      // Re-map messages to ensure reply metadata is properly resolved
-      const updatedMessages = sortedMessages.map((message) => {
-        // If message already has replyTo, keep it
-        if (message.replyTo) {
+          const replyMetadata = repliesById.get(replyMessageId);
+          if (!replyMetadata) {
+            return baseMessage;
+          }
+
+          return {
+            ...baseMessage,
+            replyTo: replyMetadata,
+          };
+        });
+
+        // Handle message updates: merge new messages with existing ones
+        const existingMessagesMap = new Map(
+          prev.messages.map((m) => [m.id, m])
+        );
+        const updatedMessagesMap = new Map(existingMessagesMap);
+
+        let hasNewMessages = false;
+        let hasNewIncomingMessages = false;
+
+        mappedMessages.forEach((newMessage, index) => {
+          if (newMessage.id && existingMessagesMap.has(newMessage.id)) {
+            // Update existing message (e.g., status changes)
+            updatedMessagesMap.set(newMessage.id, {
+              ...existingMessagesMap.get(newMessage.id)!,
+              ...newMessage,
+              // Preserve optimistic properties if this is an update to an optimistic message
+              sent:
+                newMessage.sent || existingMessagesMap.get(newMessage.id)!.sent,
+              delivered:
+                newMessage.delivered ||
+                existingMessagesMap.get(newMessage.id)!.delivered,
+            } as Message);
+          } else if (newMessage.id && !existingMessagesMap.has(newMessage.id)) {
+            // Add new message - keep the replyMessageId from rawMessages for later resolution
+            const rawMessageWithReplyId = rawMessages[index];
+            updatedMessagesMap.set(newMessage.id, {
+              ...newMessage,
+              // Store replyMessageId as a custom property for resolution later
+              replyMessageId: rawMessageWithReplyId.replyMessageId,
+            } as MessageWithReplyReference);
+            hasNewMessages = true;
+            // Check if it's an incoming message (not from user)
+            if (!newMessage.isSentFromUser) {
+              hasNewIncomingMessages = true;
+            }
+          }
+        });
+
+        if (!hasNewMessages) {
+          return prev;
+        }
+
+        const sortedMessages = Array.from(updatedMessagesMap.values()).sort(
+          (a, b) => a.timestamp - b.timestamp
+        ); // Still need sorting when merging SSE messages
+
+        // Rebuild reply metadata map with ALL messages (including newly merged ones)
+        const finalRepliesById = new Map<
+          string,
+          NonNullable<Message["replyTo"]>
+        >();
+        sortedMessages.forEach((message) => {
+          if (message.id && message.whatsappId) {
+            const meta = toReplyMetadata(message);
+            if (meta) {
+              finalRepliesById.set(message.id, meta);
+            }
+          }
+        });
+
+        // Re-map messages to ensure reply metadata is properly resolved
+        const updatedMessages = sortedMessages.map((message) => {
+          // If message already has replyTo, keep it
+          if (message.replyTo) {
+            return message;
+          }
+
+          // Otherwise, try to resolve it from the replyMessageId if it exists
+          const rawMessage = message as MessageWithReplyReference;
+          if (rawMessage.replyMessageId) {
+            const replyMetadata = finalRepliesById.get(
+              rawMessage.replyMessageId
+            );
+            if (replyMetadata) {
+              return {
+                ...message,
+                replyTo: replyMetadata,
+              };
+            }
+          }
+
           return message;
+        });
+
+        // Store the preview update to be executed in useEffect
+        if (updatedMessages.length > 0) {
+          const latestMessage = updatedMessages[updatedMessages.length - 1];
+          pendingPreviewUpdateRef.current = {
+            threadId,
+            message: latestMessage.message,
+            timestamp: latestMessage.timestamp,
+          };
         }
 
-        // Otherwise, try to resolve it from the replyMessageId if it exists
-        const rawMessage = message as MessageWithReplyReference;
-        if (rawMessage.replyMessageId) {
-          const replyMetadata = finalRepliesById.get(rawMessage.replyMessageId);
-          if (replyMetadata) {
-            return {
-              ...message,
-              replyTo: replyMetadata,
-            };
-          }
+        // If we received new incoming messages in the active chat, mark as read
+        if (hasNewIncomingMessages) {
+          pendingMarkAsReadRef.current = threadId;
         }
 
-        return message;
-      });
-
-      // Store the preview update to be executed in useEffect
-      if (updatedMessages.length > 0) {
-        const latestMessage = updatedMessages[updatedMessages.length - 1];
-        pendingPreviewUpdateRef.current = {
-          threadId,
-          message: latestMessage.message,
-          timestamp: latestMessage.timestamp
+        return {
+          ...prev,
+          messages: updatedMessages,
         };
-      }
-
-      // If we received new incoming messages in the active chat, mark as read
-      if (hasNewIncomingMessages) {
-        console.log("[SSE] New incoming message in active chat, marking as read");
-        pendingMarkAsReadRef.current = threadId;
-      }
-
-      return {
-        ...prev,
-        messages: updatedMessages,
-      };
-    });
-  }, [chatId]);
+      });
+    },
+    [chatId]
+  );
 
   // Initialize SSE for current chat messages
   useSSE(
@@ -380,13 +470,41 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
         reportApiError(error);
       },
       onReconnect: () => {
-        console.log("SSE Reconnected for messages");
         reportConnectionRestored();
       },
     },
     {
       threadId: chatId,
       enabled: !!sessionId && !!chatId,
+    }
+  );
+
+  // Initialize periodic message polling as a fallback/validation mechanism
+  // This ensures messages are not lost if webhooks fail silently
+  useMessagePoller(
+    {
+      onMessagesFound: (messages, threadId) => {
+        // Reuse the same handler as SSE - it already handles message merging
+        handleMessagesUpdate(messages, threadId);
+      },
+      onError: (error) => {
+        // Don't report polling errors as aggressively as SSE errors
+        // Polling is a fallback mechanism, not the primary delivery method
+        console.warn(
+          `[CurrentChatProvider] Polling error for thread ${chatId}:`,
+          error.message
+        );
+      },
+      onPollComplete: () => {
+        // Report successful poll as connection restored
+        reportConnectionRestored();
+      },
+    },
+    {
+      threadId: chatId,
+      enabled: !!sessionId && !!chatId,
+      interval: 600000, // 10 minutes
+      lastMessageId: latestMessageIdRef.current,
     }
   );
 
@@ -405,8 +523,6 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
       const threadId = pendingMarkAsReadRef.current;
       pendingMarkAsReadRef.current = null;
 
-      console.log("[SSE] Marking thread as read:", threadId);
-
       // Update local state immediately
       markChatAsRead(threadId);
 
@@ -418,8 +534,8 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
           "x-session-id": sessionId,
         },
         body: JSON.stringify({ threadId }),
-      }).catch((err) => {
-        console.error("[SSE] Failed to mark thread as read:", err);
+      }).catch(() => {
+        // Failed to mark thread as read
       });
     }
   }, [currentChat.messages, sessionId, markChatAsRead]);
@@ -429,8 +545,24 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
       return;
     }
     notificationAudioRef.current = new Audio("/notification.mp3");
-    if ("Notification" in window && Notification.permission === "default") {
-      Notification.requestPermission().catch(() => undefined);
+
+    // Restore notified messages from localStorage
+    const restoredMessages = loadNotifiedMessages();
+    globalNotifiedMessagesRef.current = restoredMessages;
+
+    // Only request permission if not previously dismissed
+    if (
+      "Notification" in window &&
+      Notification.permission === "default" &&
+      !wasPermissionDismissed()
+    ) {
+      Notification.requestPermission()
+        .then((permission) => {
+          if (permission === "denied") {
+            markPermissionDismissed();
+          }
+        })
+        .catch(() => undefined);
     }
   }, []);
 
@@ -439,10 +571,14 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
       replace = false,
       lastId,
       signal,
+      direction = "forward",
+      isPagination = false,
     }: {
       replace?: boolean;
       lastId?: number | null;
       signal?: AbortSignal;
+      direction?: "forward" | "backward";
+      isPagination?: boolean;
     } = {}) => {
       if (!chatId || !sessionId) {
         return;
@@ -450,7 +586,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
 
       const searchParams = new URLSearchParams({
         threadId: chatId,
-        limit: "100",  // Load last 100 messages
+        limit: String(MESSAGE_BATCH_SIZE),
       });
 
       // Determine which ID to use
@@ -459,9 +595,14 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
           ? lastId
           : replace
             ? null
-            : latestMessageIdRef.current;
+            : direction === "backward"
+              ? oldestMessageIdRef.current
+              : latestMessageIdRef.current;
 
-      if (!replace && (effectiveLastId === null || typeof effectiveLastId === "undefined")) {
+      if (
+        !replace &&
+        (effectiveLastId === null || typeof effectiveLastId === "undefined")
+      ) {
         return;
       }
 
@@ -469,25 +610,35 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
         searchParams.set("lastId", String(effectiveLastId));
       }
 
+      if (direction === "backward") {
+        searchParams.set("direction", "backward");
+      }
+
       if (replace) {
         setCurrentChat((prev) =>
           prev.chatId === chatId ? { ...prev, isLoading: true } : prev
         );
+      } else if (isPagination) {
+        setCurrentChat((prev) =>
+          prev.chatId === chatId ? { ...prev, isPaginationLoading: true } : prev
+        );
       }
 
       try {
-        const response = await fetch(`/api/messages?${searchParams.toString()}`, {
-          headers: {
-            "x-session-id": sessionId,
-          },
-          signal,
-        });
+        const response = await fetch(
+          `/api/messages?${searchParams.toString()}`,
+          {
+            headers: {
+              "x-session-id": sessionId,
+            },
+            signal,
+          }
+        );
 
         if (!response.ok) {
           const errorBody = await response.json().catch(() => null);
           const message =
-            errorBody?.error ??
-            `Failed to fetch messages (${response.status})`;
+            errorBody?.error ?? `Failed to fetch messages (${response.status})`;
           reportApiError({ status: response.status, message });
           throw new Error(message);
         }
@@ -498,41 +649,49 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
           ? data.messages.reverse() // Backend returns newest first, reverse for chat display
           : [];
 
-        const rawMessages: MessageWithReplyReference[] = records.map((record) => {
-          const timestamp = record.timestamp * 1000; // Convert seconds to milliseconds
-          const direction = record.direction ?? "incoming";
-          const status = (record.status ?? "").toLowerCase();
-          const messageText = record.body || "";
+        const rawMessages: MessageWithReplyReference[] = records.map(
+          (record) => {
+            const timestamp = record.timestamp * 1000; // Convert seconds to milliseconds
+            const direction = record.direction ?? "incoming";
+            const status = (record.status ?? "").toLowerCase();
+            const messageText = record.body || "";
 
-          const deliveredStatuses = ["delivered", "read"];
-          const sentStatuses = ["sent", ...deliveredStatuses];
-          const userIdValue =
-            Array.isArray(record.create_uid) && record.create_uid.length > 0
-              ? record.create_uid[0]
+            const deliveredStatuses = ["delivered", "read"];
+            const sentStatuses = ["sent", ...deliveredStatuses];
+            const userIdValue =
+              Array.isArray(record.create_uid) && record.create_uid.length > 0
+                ? record.create_uid[0]
+                : null;
+            const whatsappId =
+              typeof record.message_id === "string" ? record.message_id : null;
+            const replyTuple = Array.isArray(record.replied_message_id)
+              ? record.replied_message_id
               : null;
-          const whatsappId =
-            typeof record.message_id === "string" ? record.message_id : null;
-          const replyTuple = Array.isArray(record.replied_message_id)
-            ? record.replied_message_id
-            : null;
-          const replyMessageId = replyTuple?.[0]
-            ? String(replyTuple[0])
-            : null;
-          return {
-            id: record.id.toString(),
-            contactId: chatId,
-            message: messageText,
-            timestamp,
-            isSentFromUser: direction === "outgoing",
-            sent: sentStatuses.includes(status),
-            delivered: deliveredStatuses.includes(status),
-            read: status === "read",
-            userId: userIdValue ?? null,
-            whatsappId,
-            replyMessageId,
-            attachment: record.attachment,
-          };
-        });
+            const replyMessageId = replyTuple?.[0]
+              ? String(replyTuple[0])
+              : null;
+            const reactionEmoji =
+              typeof record.reaction_emoji === "string"
+                ? record.reaction_emoji
+                : null;
+
+            return {
+              id: record.id.toString(),
+              contactId: chatId,
+              message: messageText,
+              timestamp,
+              isSentFromUser: direction === "outgoing",
+              sent: sentStatuses.includes(status),
+              delivered: deliveredStatuses.includes(status),
+              read: status === "read",
+              userId: userIdValue ?? null,
+              whatsappId,
+              replyMessageId,
+              attachment: record.attachment,
+              reactionEmoji,
+            };
+          }
+        );
 
         let nextLatestTimestamp: number | null | undefined;
         let nextLatestMessageId: number | null | undefined;
@@ -594,25 +753,28 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
           const incomingMessages = isInitialLoad
             ? mappedMessages
             : mappedMessages.filter(
-              (message) =>
-                !message.id || !existingIds.has(message.id)
-            );
+                (message) => !message.id || !existingIds.has(message.id)
+              );
 
           if (!isInitialLoad && incomingMessages.length === 0) {
-            nextLatestTimestamp =
-              latestMessageTimestampRef.current ?? null;
+            nextLatestTimestamp = latestMessageTimestampRef.current ?? null;
             nextLatestMessageId = latestMessageIdRef.current ?? null;
 
             return {
               ...prev,
               isLoading: false,
+              isPaginationLoading: false,
+              hasMoreMessages:
+                direction === "backward" ? false : prev.hasMoreMessages,
             };
           }
 
-          // Merge messages
+          // Merge messages - prepend for backward pagination, append for forward
           const mergedMessages = isInitialLoad
             ? incomingMessages
-            : [...prev.messages, ...incomingMessages]; // Append new messages
+            : direction === "backward"
+              ? [...incomingMessages, ...prev.messages] // Prepend older messages
+              : [...prev.messages, ...incomingMessages]; // Append new messages
 
           nextLatestTimestamp =
             mergedMessages.length > 0
@@ -625,10 +787,27 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
           nextLatestMessageId =
             mergedNumericIds.length > 0 ? Math.max(...mergedNumericIds) : null;
 
+          // Check if we have fewer messages than requested (means no more messages to load)
+          const hasMoreMessages = (() => {
+            if (isInitialLoad) {
+              // On initial load, if we got a full batch, assume there might be more
+              // If we got less than the batch size, we know there are no older messages
+              return incomingMessages.length >= MESSAGE_BATCH_SIZE;
+            } else if (direction === "backward") {
+              // For backward pagination, check if we got a full batch
+              return incomingMessages.length >= MESSAGE_BATCH_SIZE;
+            } else {
+              // For forward pagination, keep previous state
+              return prev.hasMoreMessages;
+            }
+          })();
+
           return {
             ...prev,
             messages: mergedMessages,
             isLoading: false,
+            isPaginationLoading: false,
+            hasMoreMessages,
           };
         });
 
@@ -639,6 +818,17 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
           latestMessageIdRef.current =
             nextLatestMessageId === null ? null : nextLatestMessageId;
         }
+
+        // Update oldestMessageId for backward pagination
+        setCurrentChat((prev) => {
+          const allNumericIds = prev.messages
+            .map((message) => Number.parseInt(message.id ?? "", 10))
+            .filter((id) => !Number.isNaN(id));
+          const newOldestMessageId =
+            allNumericIds.length > 0 ? Math.min(...allNumericIds) : null;
+          oldestMessageIdRef.current = newOldestMessageId;
+          return prev;
+        });
       } catch (error) {
         if (
           (signal && signal.aborted) ||
@@ -650,14 +840,23 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
         if (replace) {
           setCurrentChat((prev) =>
             prev.chatId === chatId
-              ? { ...prev, messages: [], isLoading: false, replyTo: null }
+              ? {
+                  ...prev,
+                  messages: [],
+                  isLoading: false,
+                  isPaginationLoading: false,
+                  replyTo: null,
+                }
               : prev
           );
           latestMessageTimestampRef.current = null;
           latestMessageIdRef.current = null;
+          oldestMessageIdRef.current = null;
         } else {
           setCurrentChat((prev) =>
-            prev.chatId === chatId ? { ...prev, isLoading: false } : prev
+            prev.chatId === chatId
+              ? { ...prev, isLoading: false, isPaginationLoading: false }
+              : prev
           );
         }
       }
@@ -671,13 +870,18 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
         ...prev,
         messages: [],
         isLoading: false,
+        isPaginationLoading: false,
+        hasMoreMessages: true,
         isSending: false,
         phoneNumber: null,
         backendId: null,
+        partnerId: null,
+        hasAvatar: false,
         replyTo: null,
       }));
       latestMessageTimestampRef.current = null;
       latestMessageIdRef.current = null;
+      oldestMessageIdRef.current = null;
       // Don't clear global notification tracker - it persists across thread switches
       initialNotificationRef.current = true;
       return;
@@ -715,6 +919,15 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
             typeof chat.backendId === "number"
               ? chat.backendId
               : prev.backendId,
+          partnerId:
+            typeof chat.partnerId === "number"
+              ? chat.partnerId
+              : prev.partnerId,
+          partnerName:
+            typeof chat.partnerName === "string"
+              ? chat.partnerName
+              : prev.partnerName,
+          hasAvatar: chat.hasAvatar === true,
         }));
       } else {
         const groupContacts: CurrentChatContacts = {};
@@ -740,6 +953,15 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
             typeof chat.backendId === "number"
               ? chat.backendId
               : prev.backendId,
+          partnerId:
+            typeof chat.partnerId === "number"
+              ? chat.partnerId
+              : prev.partnerId,
+          partnerName:
+            typeof chat.partnerName === "string"
+              ? chat.partnerName
+              : prev.partnerName,
+          hasAvatar: chat.hasAvatar === true,
         }));
       }
     }
@@ -750,10 +972,13 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
       ...prev,
       ...chat,
       isSending: false,
+      isPaginationLoading: false,
+      hasMoreMessages: true,
       replyTo: null,
     }));
     latestMessageTimestampRef.current = null;
     latestMessageIdRef.current = null;
+    oldestMessageIdRef.current = null;
     // Don't clear global notification tracker - it persists across thread switches
     // This prevents Bug 1: playing notification sound when switching threads
     initialNotificationRef.current = true;
@@ -772,6 +997,27 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
       });
     }
   };
+
+  const loadPreviousMessages = useCallback(async () => {
+    if (!chatId || !sessionId) {
+      return;
+    }
+
+    if (currentChat.isPaginationLoading || !currentChat.hasMoreMessages) {
+      return;
+    }
+
+    await fetchMessages({
+      direction: "backward",
+      isPagination: true,
+    });
+  }, [
+    chatId,
+    sessionId,
+    currentChat.isPaginationLoading,
+    currentChat.hasMoreMessages,
+    fetchMessages,
+  ]);
 
   const sendMessage = useCallback(
     async (content: string) => {
@@ -900,9 +1146,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
                 id: messageId ? messageId.toString() : message.id,
                 whatsappId: whatsappId ?? message.whatsappId,
                 sent: true,
-                delivered: status
-                  ? deliveredStatuses.includes(status)
-                  : true,
+                delivered: status ? deliveredStatuses.includes(status) : true,
                 read: status ? readStatuses.includes(status) : false,
                 error: undefined,
                 // Keep the optimistic timestamp for consistent ordering
@@ -954,7 +1198,16 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
         throw err;
       }
     },
-    [sessionId, currentChat, backendUserId, authBackendId, fetchMessages, updateThreadPreview, reportApiError, reportConnectionRestored]
+    [
+      sessionId,
+      currentChat,
+      backendUserId,
+      authBackendId,
+      fetchMessages,
+      updateThreadPreview,
+      reportApiError,
+      reportConnectionRestored,
+    ]
   );
 
   const sendAttachment = useCallback(
@@ -1059,6 +1312,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
         const isImage = file.type.startsWith("image/");
         const isVideo = file.type.startsWith("video/");
         const isAudio = file.type.startsWith("audio/");
+        const isDocument = !isImage && !isVideo && !isAudio;
         const method = isImage
           ? "send_image_message"
           : isVideo
@@ -1080,6 +1334,7 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
             attachmentId,
             caption: caption || undefined,
             method,
+            filename: isDocument ? file.name : undefined,
           }),
         });
 
@@ -1102,7 +1357,9 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
 
         // Clean up the optimistic object URL
         setCurrentChat((prev) => {
-          const optimisticMessage = prev.messages.find(m => m.id === optimisticId);
+          const optimisticMessage = prev.messages.find(
+            (m) => m.id === optimisticId
+          );
           if (optimisticMessage?.attachment?.url) {
             URL.revokeObjectURL(optimisticMessage.attachment.url);
           }
@@ -1178,6 +1435,75 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
     ]
   );
 
+  const sendReaction = useCallback(
+    async (message: Message, emoji: string) => {
+      if (!sessionId) {
+        throw new Error("You are not authenticated");
+      }
+      if (!message.whatsappId) {
+        throw new Error("Cannot react to this message (missing WhatsApp ID)");
+      }
+
+      const fallbackPhone =
+        currentChat.phoneNumber ??
+        extractDigits(currentChat.threadName) ??
+        extractDigits(currentChat.contact?.displayName);
+
+      if (!fallbackPhone) {
+        throw new Error("Unable to determine the recipient phone number");
+      }
+
+      const backendId = currentChat.backendId ?? authBackendId ?? undefined;
+
+      try {
+        const response = await fetch("/api/messages/send-reaction", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-session-id": sessionId,
+          },
+          body: JSON.stringify({
+            phoneNumber: fallbackPhone,
+            emoji,
+            whatsappMessageId: message.whatsappId,
+            backendId,
+          }),
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          const errorMessage =
+            typeof data?.error === "string"
+              ? data.error
+              : "Failed to send reaction";
+          reportApiError({ status: response.status, message: errorMessage });
+          throw new Error(errorMessage);
+        }
+
+        reportConnectionRestored();
+
+        // Optimistically update the message with the reaction
+        setCurrentChat((prev) => ({
+          ...prev,
+          messages: prev.messages.map((m) =>
+            m.id === message.id ? { ...m, reactionEmoji: emoji } : m
+          ),
+        }));
+      } catch (error) {
+        const err = error as Error;
+        reportApiError(error);
+        throw err;
+      }
+    },
+    [
+      sessionId,
+      currentChat,
+      authBackendId,
+      reportApiError,
+      reportConnectionRestored,
+    ]
+  );
+
   const startReply = useCallback((message: Message) => {
     if (!message.whatsappId) {
       return;
@@ -1203,7 +1529,26 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     const activeChatId = currentChat.chatId;
     if (!activeChatId) {
-      console.log("[Message Notification] No active chat ID");
+      return;
+    }
+
+    // Check initialNotificationRef FIRST, before updating any state
+    // This prevents notifications when opening a thread for the first time
+    if (initialNotificationRef.current) {
+      // Only reset the flag if we actually have messages to process
+      // This prevents premature reset when effect runs with empty messages array
+      if (currentChat.messages.length > 0) {
+        // Still mark messages as seen to prevent future notifications
+        const { next } = findUnnotifiedIncomingMessages(
+          currentChat.messages,
+          globalNotifiedMessagesRef.current
+        );
+        globalNotifiedMessagesRef.current = next;
+        saveNotifiedMessages(globalNotifiedMessagesRef.current);
+
+        // Reset the flag now that we've processed the initial messages
+        initialNotificationRef.current = false;
+      }
       return;
     }
 
@@ -1215,47 +1560,47 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
     );
     globalNotifiedMessagesRef.current = next;
 
-    console.log("[Message Notification] Checking messages:", {
-      totalMessages: currentChat.messages.length,
-      incomingCount: incoming.length,
-      isInitial: initialNotificationRef.current,
-    });
-
-    if (initialNotificationRef.current) {
-      console.log("[Message Notification] Skipping initial load");
-      initialNotificationRef.current = false;
-      return;
-    }
-
     if (incoming.length === 0) {
-      console.log("[Message Notification] No new incoming messages");
       return;
     }
 
-    console.log("[Message Notification] Processing", incoming.length, "new messages");
+    // Save updated notification state to localStorage
+    saveNotifiedMessages(globalNotifiedMessagesRef.current);
 
     // Note: Audio notification is now handled by chats-provider at thread level
     // This prevents double notifications and ensures notifications work for all threads
-    // We only show browser notifications here for the active chat
+    // Browser notifications for active chat are also moving to chats-provider
+    // This code may be removed in the future
 
     if (typeof window !== "undefined" && "Notification" in window) {
-      console.log("[Message Notification] Permission:", Notification.permission);
       if (Notification.permission === "granted") {
         incoming.forEach((message) => {
           const contact = contacts.find((c) => c.id === message.contactId);
           const title =
             contact?.displayName ?? currentChat.threadName ?? "New message";
-          console.log("[Message Notification] Showing notification:", title);
           new Notification(title, {
             body: message.message,
           });
         });
-      } else if (Notification.permission === "default") {
-        console.log("[Message Notification] Requesting permission");
-        Notification.requestPermission().catch(() => undefined);
+      } else if (
+        Notification.permission === "default" &&
+        !wasPermissionDismissed()
+      ) {
+        Notification.requestPermission()
+          .then((permission) => {
+            if (permission === "denied") {
+              markPermissionDismissed();
+            }
+          })
+          .catch(() => undefined);
       }
     }
-  }, [currentChat.chatId, currentChat.messages, currentChat.threadName, contacts]);
+  }, [
+    currentChat.chatId,
+    currentChat.messages,
+    currentChat.threadName,
+    contacts,
+  ]);
 
   return (
     <CurrentChatContext.Provider
@@ -1264,8 +1609,10 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
         loadCurrentChat,
         sendMessage,
         sendAttachment,
+        sendReaction,
         startReply,
         cancelReply,
+        loadPreviousMessages,
       }}
     >
       {children}
