@@ -3,14 +3,14 @@ name: Frontend Pre-commit
 on:
   pull_request:
     branches:
-      - "16.0*"
+      - "17.0*"
     paths:
       - "frontend/**"
       - ".github/workflows/frontend-pre-commit.yml"
   push:
     branches:
-      - "16.0"
-      - "16.0*"
+      - "17.0"
+      - "17.0*"
     paths:
       - "frontend/**"
       - ".github/workflows/frontend-pre-commit.yml"

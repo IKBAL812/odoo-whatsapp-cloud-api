@@ -3,7 +3,7 @@ name: Backend Pre-commit
 on:
   pull_request:
     branches:
-      - "16.0*"
+      - "17.0*"
     paths:
       - "whatsapp_cloud_api_backend/**"
       - ".pre-commit-config.yaml"
@@ -12,8 +12,8 @@ on:
       - ".github/workflows/backend-pre-commit.yml"
   push:
     branches:
-      - "16.0"
-      - "16.0*"
+      - "17.0"
+      - "17.0*"
     paths:
       - "whatsapp_cloud_api_backend/**"
       - ".pre-commit-config.yaml"

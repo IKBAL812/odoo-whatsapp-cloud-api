@@ -3,14 +3,14 @@ name: Frontend Docker Build
 on:
   pull_request:
     branches:
-      - "16.0*"
+      - "17.0*"
     paths:
       - "frontend/**"
       - ".github/workflows/frontend-docker-build.yml"
   push:
     branches:
-      - "16.0"
-      - "16.0*"
+      - "17.0"
+      - "17.0*"
     paths:
       - "frontend/**"
       - ".github/workflows/frontend-docker-build.yml"
