@@ -101,7 +101,7 @@ class WhatsAppBackend(models.Model):
             "Content-Type": "application/json",
         }
         try:
-            response = requests.post(url, headers=headers, json=payload, timeout=15)
+            response = requests.post(url, headers=headers, json=payload, timeout=60)
         except RequestException as exc:
             _logger.exception("WhatsApp API request failed")
             raise UserError(_("Unable to contact WhatsApp API: %s") % exc) from exc
@@ -168,7 +168,7 @@ class WhatsAppBackend(models.Model):
 
         try:
             response = requests.post(
-                url, headers=headers, files=files, data=data, timeout=30
+                url, headers=headers, files=files, data=data, timeout=60
             )
         except RequestException as exc:
             _logger.exception("WhatsApp media upload failed")

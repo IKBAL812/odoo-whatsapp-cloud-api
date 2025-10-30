@@ -348,7 +348,7 @@ class WhatsAppCloudAPIWebhookController(http.Controller):
                 f"https://graph.facebook.com/{backend.api_version or 'v20.0'}"
                 f"/{media_id}"
             )
-            response = requests.get(media_url, headers=headers, timeout=30)
+            response = requests.get(media_url, headers=headers, timeout=60)
 
             if response.status_code != 200:
                 _logger.error(
