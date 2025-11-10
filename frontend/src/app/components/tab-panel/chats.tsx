@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { UsersThreeIcon } from "@phosphor-icons/react";
 import { useChats } from "@/app/hooks/use-chats";
 import { Chat, Filters, Message } from "@/app/context/chats-provider";
@@ -11,19 +12,23 @@ import MessageStatusIcon from "../message-status-icon";
 import { useMobileNavigation } from "@/app/context/mobile-navigation-provider";
 import { useResponsive } from "@/app/hooks/use-responsive";
 import BackendSelector from "../backend-selector";
+import { useAuth } from "@/app/hooks/use-auth";
 
 export default function Chats({ selectedTab }: { selectedTab: string }) {
   const {
     filter,
     updateFilter,
-    chats: { filtered, isLoading },
+    chats: { filtered, isLoading, complete },
     markChatAsRead,
+    totalUnreadCount,
   } = useChats();
   const { getContact } = useContacts();
   const { loadCurrentChat, contact, chatId: currentChatId } = useCurrentChat();
   const { t, locale } = useTranslations();
   const { showActiveChat } = useMobileNavigation();
   const { isMobile } = useResponsive();
+  const { sessionId } = useAuth();
+  const [isMarkingAllRead, setIsMarkingAllRead] = useState(false);
 
   const getMetaMessage = (chat: Chat, message?: Message): string => {
     if (!message) {
@@ -40,6 +45,40 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
     }
 
     return message.message;
+  };
+
+  const handleMarkAllRead = async () => {
+    if (!sessionId) return;
+
+    // Get all unread chats
+    const unreadChats = complete.filter((chat) => !chat.read);
+
+    if (unreadChats.length === 0) return;
+
+    setIsMarkingAllRead(true);
+
+    // Optimistically update UI
+    unreadChats.forEach((chat) => {
+      markChatAsRead(chat.id);
+    });
+
+    // Call API for each unread chat (in parallel)
+    const promises = unreadChats.map((chat) =>
+      fetch("/api/threads/mark-read", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-session-id": sessionId,
+        },
+        body: JSON.stringify({ threadId: chat.id }),
+      }).catch((err) => {
+        console.error(`Failed to mark chat ${chat.id} as read:`, err);
+        return null; // Don't fail entire operation
+      })
+    );
+
+    await Promise.allSettled(promises);
+    setIsMarkingAllRead(false);
   };
 
   const renderChat = (chat: Chat) => {
@@ -213,6 +252,18 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
               {t(`chat.filters.${f}`)}
             </button>
           ))}
+          {/* Read All Button */}
+          {totalUnreadCount > 0 && (
+            <button
+              onClick={handleMarkAllRead}
+              disabled={isMarkingAllRead}
+              className={`text-sm p-2 px-4 md:p-1 md:px-3 border-[1px] rounded-full cursor-pointer transition-colors capitalize border-[rgb(var(--border-primary)/var(--border-primary-opacity))] hover:bg-[rgb(var(--bg-secondary)/var(--bg-secondary-opacity))] active:bg-[rgb(var(--bg-secondary)/var(--bg-quaternary-opacity))] text-[rgb(var(--text-primary))] ${
+                isMarkingAllRead ? "opacity-50 cursor-wait" : ""
+              }`}
+            >
+              {isMarkingAllRead ? t("chat.loading") : t("chat.filters.readAll")}
+            </button>
+          )}
         </div>
       </section>
       <section className="w-full flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col gap-1 px-4 pb-4">
