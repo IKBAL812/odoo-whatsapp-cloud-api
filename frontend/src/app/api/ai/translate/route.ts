@@ -92,7 +92,7 @@ Translate the text to the customer's language.`;
         },
       ],
       temperature: 0.3, // Lower temperature for more consistent translations
-      max_tokens: 500,
+      max_completion_tokens: 500,
       stream: true,
     });
 
