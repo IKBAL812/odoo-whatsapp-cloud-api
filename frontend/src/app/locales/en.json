@@ -23,7 +23,8 @@
       "all": "All",
       "unread": "Unread",
       "favorites": "Favorites",
-      "groups": "Groups"
+      "groups": "Groups",
+      "readAll": "Read All"
     },
     "backendSelector": {
       "selectBackend": "Backend",

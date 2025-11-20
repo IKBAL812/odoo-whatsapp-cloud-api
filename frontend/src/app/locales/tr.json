@@ -23,7 +23,8 @@
       "all": "Tümü",
       "unread": "Okunmamış",
       "favorites": "Favoriler",
-      "groups": "Gruplar"
+      "groups": "Gruplar",
+      "readAll": "Tümünü Oku"
     },
     "backendSelector": {
       "selectBackend": "Arka Uç",

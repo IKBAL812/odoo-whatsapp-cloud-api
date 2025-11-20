@@ -29,6 +29,17 @@ class WhatsAppBackend(models.Model):
     _description = "WhatsApp Cloud API Backend"
     # _inherit = ["mail.thread", "mail.activity.mixin"]
 
+    def _get_domain_user_ids(self):
+        whatsapp_group_user = self.env.ref(
+            "whatsapp_cloud_api_backend.group_whatsapp_backend_user"
+        )
+        whatsapp_group_manager = self.env.ref(
+            "whatsapp_cloud_api_backend.group_whatsapp_backend_manager"
+        )
+        return [
+            ("id", "in", (whatsapp_group_user.users + whatsapp_group_manager.users).ids)
+        ]
+
     name = fields.Char(required=True)
     active = fields.Boolean(default=True)
     api_token = fields.Char(string="API Token", required=True)
@@ -45,6 +56,7 @@ class WhatsAppBackend(models.Model):
         comodel_name="res.users",
         string="Users",
         help="Users who can use this WhatsApp backend to send messages.",
+        domain=lambda self: self._get_domain_user_ids(),
     )
     message_ids = fields.One2many(
         comodel_name="whatsapp.message",
@@ -101,7 +113,7 @@ class WhatsAppBackend(models.Model):
             "Content-Type": "application/json",
         }
         try:
-            response = requests.post(url, headers=headers, json=payload, timeout=15)
+            response = requests.post(url, headers=headers, json=payload, timeout=60)
         except RequestException as exc:
             _logger.exception("WhatsApp API request failed")
             raise UserError(_("Unable to contact WhatsApp API: %s") % exc) from exc
@@ -168,7 +180,7 @@ class WhatsAppBackend(models.Model):
 
         try:
             response = requests.post(
-                url, headers=headers, files=files, data=data, timeout=30
+                url, headers=headers, files=files, data=data, timeout=60
             )
         except RequestException as exc:
             _logger.exception("WhatsApp media upload failed")

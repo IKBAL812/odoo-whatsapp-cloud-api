@@ -113,7 +113,7 @@ Please generate an appropriate response message based on this conversation.`;
         },
       ],
       temperature: 0.7,
-      max_tokens: 500,
+      max_completion_tokens: 500,
       stream: true,
     });
 

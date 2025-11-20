@@ -41,7 +41,7 @@ class WebhookSender:
 
         try:
             response = requests.post(
-                webhook_url, data=payload_json, headers=headers, timeout=5
+                webhook_url, data=payload_json, headers=headers, timeout=60
             )
 
             response.raise_for_status()
