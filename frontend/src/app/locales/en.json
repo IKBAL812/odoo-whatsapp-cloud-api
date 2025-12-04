@@ -52,7 +52,10 @@
     "aiImproving": "Improving...",
     "aiImproveError": "Failed to improve text with AI",
     "translate": "Translate to customer's language",
-    "translateError": "Failed to translate text"
+    "translateError": "Failed to translate text",
+    "ragGenerate": "Generate AI response (RAG)",
+    "ragGenerating": "Generating...",
+    "ragGenerateError": "Failed to generate AI response"
   },
   "chatList": {
     "title": "Chats",

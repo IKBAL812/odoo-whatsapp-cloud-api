@@ -52,7 +52,10 @@
     "aiImproving": "İyileştiriliyor...",
     "aiImproveError": "Metin yapay zeka ile iyileştirilemedi",
     "translate": "Müşteri diline çevir",
-    "translateError": "Metin çevrilemedi"
+    "translateError": "Metin çevrilemedi",
+    "ragGenerate": "Yapay zeka yanıtı oluştur (RAG)",
+    "ragGenerating": "Oluşturuluyor...",
+    "ragGenerateError": "Yapay zeka yanıtı oluşturulamadı"
   },
   "chatList": {
     "title": "Sohbetler",

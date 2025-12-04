@@ -9,7 +9,12 @@ import AttachmentPicker from "../message/attachment-picker";
 import DragDropZone from "../message/drag-drop-zone";
 import { useTranslations } from "@/app/context/translation-provider";
 import { useContacts } from "@/app/hooks/use-contacts";
-import { XCircleIcon, Sparkle, TranslateIcon } from "@phosphor-icons/react";
+import {
+  XCircleIcon,
+  Sparkle,
+  TranslateIcon,
+  Robot,
+} from "@phosphor-icons/react";
 
 export default function CurrentChat() {
   const {
@@ -32,6 +37,7 @@ export default function CurrentChat() {
   const [droppedFile, setDroppedFile] = useState<File | null>(null);
   const [isAiImproving, setIsAiImproving] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
+  const [isRagGenerating, setIsRagGenerating] = useState(false);
   const [isTypingAnimation, setIsTypingAnimation] = useState(false);
   const { t } = useTranslations();
   const { contacts } = useContacts();
@@ -326,6 +332,47 @@ export default function CurrentChat() {
     }
   };
 
+  const handleRagGenerate = async () => {
+    setIsRagGenerating(true);
+    setIsTypingAnimation(true);
+    setSendError(null);
+    setMessageText("");
+
+    try {
+      // Get contact name from the current chat
+      const currentContact = contacts.find((c) => c.id === chatId);
+      const contactName = currentContact?.displayName || "Customer";
+
+      const response = await fetch("/api/ai/rag-generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messages: messages.slice(-10), // Last 10 messages
+          contactName: contactName,
+          userName: "Support Agent",
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to generate response");
+      }
+
+      const data = await response.json();
+      if (data.response) {
+        setMessageText(data.response);
+      }
+    } catch (error) {
+      const err = error as Error;
+      setSendError(err.message || t("chatInput.ragGenerateError"));
+    } finally {
+      setIsRagGenerating(false);
+      setIsTypingAnimation(false);
+    }
+  };
+
   const annotatedMessages = useMemo(() => {
     const items: Array<
       | { type: "label"; day: dayjs.Dayjs; key: string }
@@ -534,6 +581,7 @@ export default function CurrentChat() {
                   disabled={
                     isTranslating ||
                     isAiImproving ||
+                    isRagGenerating ||
                     isSending ||
                     messageText.trim().length === 0
                   }
@@ -560,6 +608,7 @@ export default function CurrentChat() {
                   disabled={
                     isAiImproving ||
                     isTranslating ||
+                    isRagGenerating ||
                     isSending ||
                     messages.length === 0
                   }
@@ -577,6 +626,33 @@ export default function CurrentChat() {
                     weight={isAiImproving ? "fill" : "regular"}
                     style={
                       isAiImproving ? { animationDuration: "2s" } : undefined
+                    }
+                  />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRagGenerate}
+                  disabled={
+                    isRagGenerating ||
+                    isAiImproving ||
+                    isTranslating ||
+                    isSending ||
+                    messages.length === 0
+                  }
+                  className={`text-[rgb(var(--text-secondary))] hover:text-[rgb(var(--accent-primary))] disabled:opacity-40 disabled:cursor-not-allowed transition-all p-2 mb-1 active:scale-95 ${
+                    isRagGenerating
+                      ? "animate-pulse text-[rgb(var(--accent-primary))]"
+                      : ""
+                  }`}
+                  title={t("chatInput.ragGenerate")}
+                >
+                  <Robot
+                    className={`size-5 md:size-5 transition-transform ${
+                      isRagGenerating ? "animate-spin" : ""
+                    }`}
+                    weight={isRagGenerating ? "fill" : "regular"}
+                    style={
+                      isRagGenerating ? { animationDuration: "2s" } : undefined
                     }
                   />
                 </button>

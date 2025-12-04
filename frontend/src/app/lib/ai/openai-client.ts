@@ -33,3 +33,18 @@ export function isAIEnabled(): boolean {
 export function getOpenAIModel(): string {
   return process.env.OPENAI_MODEL || "openai/gpt-4o";
 }
+
+/**
+ * Gets the configured RAG-supported chat URL
+ */
+export function getRagChatUrl(): string | null {
+  return process.env.RAG_SUPPORTED_CHAT_URL || null;
+}
+
+/**
+ * Checks if RAG-based AI response generation is enabled
+ */
+export function isRagEnabled(): boolean {
+  const url = getRagChatUrl();
+  return !!url && url.trim().length > 0;
+}
