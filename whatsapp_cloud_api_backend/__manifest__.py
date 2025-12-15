@@ -17,6 +17,7 @@
         "views/whatsapp_message_views.xml",
         "views/whatsapp_thread_views.xml",
         "views/whatsapp_chatbot_views.xml",
+        "views/res_partner_views.xml",
     ],
     "assets": {
         "web.assets_backend": [

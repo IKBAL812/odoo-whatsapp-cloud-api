@@ -1,11 +1,62 @@
 # Copyright 2025 Erol Develi (https://github.com/erlinberg)
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
-from odoo import models
+from urllib.parse import quote
+
+from odoo import fields, models
+from odoo.http import request
 
 
 class ResPartner(models.Model):
     _inherit = "res.partner"
+
+    has_whatsapp_conversation = fields.Boolean(
+        compute="_compute_has_whatsapp_conversation",
+        string="Has WhatsApp Conversation",
+        help="Indicates if this partner has any WhatsApp conversation threads.",
+    )
+    whatsapp_thread_ids = fields.One2many(
+        comodel_name="whatsapp.thread",
+        inverse_name="partner_id",
+        string="WhatsApp Threads",
+    )
+
+    def _compute_has_whatsapp_conversation(self):
+        """Compute whether the partner has any WhatsApp conversation threads."""
+        for partner in self:
+            partner.has_whatsapp_conversation = bool(partner.whatsapp_thread_ids)
+
+    def action_open_whatsapp_chat(self):
+        """
+        Open the WhatsApp frontend with this partner's most recent conversation.
+
+        This method:
+        1. Finds the most recent WhatsApp thread for this partner
+        2. Generates an SSO URL with the thread ID
+        3. Returns an action to open the URL in a new browser tab
+        """
+        self.ensure_one()
+        thread = fields.first(self.whatsapp_thread_ids)
+        backend = thread.backend_id
+        # Extract base URL from webhook URL
+        frontend_webhook_url = backend.frontend_webhook_url
+        base_url = frontend_webhook_url.replace("/api/webhooks/whatsapp", "")
+
+        # Get current session ID
+        session_id = request.session.sid
+
+        # Construct SSO URL with thread ID parameter
+        sso_url = (
+            f"{base_url}/api/auth/sso-login"
+            f"?session={quote(session_id, safe='')}"
+            f"&thread_id={thread.id}"
+        )
+
+        return {
+            "type": "ir.actions.act_url",
+            "url": sso_url,
+            "target": "new",
+        }
 
     def _compute_avatar(self, avatar_field, image_field):
         """

@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useRef,
+  PropsWithChildren,
+} from "react";
 import TabActivePanel from "./components/tab-active-panel";
 import TabIcons from "./components/tab-icons";
 import TabPanel from "./components/tab-panel";
@@ -25,9 +32,94 @@ import {
 } from "./context/mobile-navigation-provider";
 import { useResponsive } from "./hooks/use-responsive";
 import { useChats } from "./hooks/use-chats";
+import { useCurrentChat } from "./hooks/use-current-chat";
 import TabSyncProvider from "./context/tab-sync-provider";
 import { useTabSync } from "./hooks/use-tab-sync";
 import SessionBlockedOverlay from "./components/session-blocked-overlay";
+
+// Context to pass initial thread_id to child components
+const InitialThreadContext = createContext<string | null>(null);
+
+function useInitialThread() {
+  return useContext(InitialThreadContext);
+}
+
+function InitialThreadProvider({
+  children,
+  threadId,
+}: PropsWithChildren<{ threadId: string | null }>) {
+  return (
+    <InitialThreadContext.Provider value={threadId}>
+      {children}
+    </InitialThreadContext.Provider>
+  );
+}
+
+/**
+ * Auto-selects a chat based on the initial thread_id from URL.
+ * This component runs after authentication and waits for chats to load.
+ */
+function AutoSelectChat() {
+  const initialThreadId = useInitialThread();
+  const { chats } = useChats();
+  const { loadCurrentChat, chatId } = useCurrentChat();
+  const { setCurrentView } = useMobileNavigation();
+  const hasAutoSelected = useRef(false);
+
+  useEffect(() => {
+    // Only auto-select once, when we have a thread_id and chats are loaded
+    if (
+      !initialThreadId ||
+      hasAutoSelected.current ||
+      chats.isLoading ||
+      chats.complete.length === 0
+    ) {
+      return;
+    }
+
+    // Find the chat with the matching thread_id
+    const targetChat = chats.complete.find(
+      (chat) => chat.id === initialThreadId
+    );
+
+    if (targetChat && chatId !== initialThreadId) {
+      hasAutoSelected.current = true;
+
+      // Load the chat
+      loadCurrentChat({
+        chatId: targetChat.id,
+        contact: null,
+        messages: [],
+        group: null,
+        page: 0,
+        isLoading: true,
+        isPaginationLoading: false,
+        hasMoreMessages: true,
+        threadName: targetChat.threadName || null,
+        phoneNumber: targetChat.phoneNumber || null,
+        backendId: targetChat.backendId || null,
+        partnerId: targetChat.partnerId || null,
+        partnerName: targetChat.partnerName || null,
+        partnerAvatar: targetChat.partnerAvatar || null,
+        hasAvatar: targetChat.hasAvatar || false,
+        isSending: false,
+        replyTo: null,
+      });
+
+      // On mobile, switch to chat view
+      setCurrentView("activeChat");
+    }
+  }, [
+    initialThreadId,
+    chats.isLoading,
+    chats.complete,
+    chatId,
+    loadCurrentChat,
+    setCurrentView,
+  ]);
+
+  return null;
+}
 
 function ResponsiveLayout() {
   const { isMobile, isInitialized } = useResponsive();
@@ -82,14 +174,17 @@ function PageTitleUpdater() {
 }
 
 function AppShell() {
+  const initialThreadId = useInitialThread();
+
   return (
     <ProfileProvider>
       <TabProvider>
         <ContactsProvider>
-          <ChatsProvider>
+          <ChatsProvider includeThreadId={initialThreadId}>
             <PageTitleUpdater />
             <CurrentChatProvider>
               <MobileNavigationProvider>
+                <AutoSelectChat />
                 <ResponsiveLayout />
               </MobileNavigationProvider>
             </CurrentChatProvider>
@@ -116,6 +211,7 @@ function AuthenticatedApp() {
   const [isSsoLoading, setIsSsoLoading] = useState(false);
   const [ssoError, setSsoError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
+  const [initialThreadId, setInitialThreadId] = useState<string | null>(null);
   const ssoAttemptedRef = useRef(false);
 
   // Mark as client-side after hydration to prevent hydration mismatch
@@ -129,7 +225,13 @@ function AuthenticatedApp() {
 
     const params = new URLSearchParams(window.location.search);
     const ssoSession = params.get("sso_session");
+    const threadId = params.get("thread_id");
     const error = params.get("error");
+
+    // Store thread_id for later use (before cleaning URL)
+    if (threadId) {
+      setInitialThreadId(threadId);
+    }
 
     // Handle error from SSO endpoint
     if (error) {
@@ -192,10 +294,10 @@ function AuthenticatedApp() {
   }
 
   return (
-    <>
+    <InitialThreadProvider threadId={initialThreadId}>
       <TabSyncGuard />
       <AppShell />
-    </>
+    </InitialThreadProvider>
   );
 }
 

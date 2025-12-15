@@ -258,7 +258,14 @@ function showBrowserNotification(
   }
 }
 
-export default function ChatsProvider({ children }: PropsWithChildren) {
+type ChatsProviderProps = PropsWithChildren<{
+  includeThreadId?: string | null;
+}>;
+
+export default function ChatsProvider({
+  children,
+  includeThreadId,
+}: ChatsProviderProps) {
   const [filter, setFilter] = useState<Filters>(Filters.ALL);
   const [selectedBackendId, setSelectedBackendId] = useState<number | null>(
     null
@@ -889,7 +896,13 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
       }
 
       try {
-        const response = await fetch("/api/threads", {
+        // Build URL with optional includeThreadId parameter
+        let url = "/api/threads";
+        if (includeThreadId) {
+          url += `?includeThreadId=${encodeURIComponent(includeThreadId)}`;
+        }
+
+        const response = await fetch(url, {
           headers: {
             "x-session-id": sessionId,
           },
@@ -924,7 +937,7 @@ export default function ChatsProvider({ children }: PropsWithChildren) {
         isFetchingRef.current = false;
       }
     },
-    [sessionId, transformThreads, applyFilter]
+    [sessionId, transformThreads, applyFilter, includeThreadId]
   );
 
   useEffect(() => {
