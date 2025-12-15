@@ -23,8 +23,13 @@ class ResPartner(models.Model):
 
     def _compute_has_whatsapp_conversation(self):
         """Compute whether the partner has any WhatsApp conversation threads."""
+        user_has_access = self.env["whatsapp.thread"].check_access_rights(
+            "read", raise_exception=False
+        )
         for partner in self:
-            partner.has_whatsapp_conversation = bool(partner.whatsapp_thread_ids)
+            partner.has_whatsapp_conversation = bool(
+                user_has_access and partner.whatsapp_thread_ids
+            )
 
     def action_open_whatsapp_chat(self):
         """
