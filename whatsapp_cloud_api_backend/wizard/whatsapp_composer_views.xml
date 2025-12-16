@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- WhatsApp Composer Wizard Form View -->
+    <record id="whatsapp_composer_form_view" model="ir.ui.view">
+        <field name="name">whatsapp.composer.form</field>
+        <field name="model">whatsapp.composer</field>
+        <field name="arch" type="xml">
+            <form string="Send WhatsApp Template">
+                <sheet>
+                    <group>
+                        <group string="Message Settings">
+                            <field name="res_model" invisible="1"/>
+                            <field name="res_id" invisible="1"/>
+                            <field name="backend_id" options="{'no_create': True, 'no_open': True}"/>
+                            <field name="template_id" options="{'no_create': True, 'no_open': True}"/>
+                        </group>
+                        <group string="Recipient">
+                            <field name="partner_id" options="{'no_create': True}"/>
+                            <field name="phone_number"/>
+                        </group>
+                    </group>
+                    <h2 class="o_horizontal_separator mt-4 mb-3 text-uppercase fw-bolder small">Message Preview</h2>
+                    <field name="preview_header" nolabel="1" attrs="{'invisible': [('preview_header', '=', False)]}" readonly="1" class="font-weight-bold"/>
+                    <field name="preview_body" nolabel="1" readonly="1" widget="text"/>
+                    <field name="preview_footer" nolabel="1" attrs="{'invisible': [('preview_footer', '=', False)]}" readonly="1" class="text-muted font-italic"/>
+                    <field name="preview_buttons" nolabel="1" attrs="{'invisible': [('preview_buttons', '=', False)]}" readonly="1" widget="text" class="mt-2"/>
+
+                </sheet>
+                <footer>
+                    <button name="action_send" string="Send" type="object" class="btn-primary" icon="fa-paper-plane"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Base action for the wizard (to be called from other models) -->
+    <record id="whatsapp_composer_action" model="ir.actions.act_window">
+        <field name="name">Send WhatsApp Message</field>
+        <field name="res_model">whatsapp.composer</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="whatsapp_composer_form_view"/>
+        <field name="target">new</field>
+        <field name="binding_model_id" eval="False"/>
+    </record>
+</odoo>

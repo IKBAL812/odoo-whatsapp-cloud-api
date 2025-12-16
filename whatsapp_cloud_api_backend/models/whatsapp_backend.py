@@ -92,6 +92,27 @@ class WhatsAppBackend(models.Model):
         help="If enabled, incoming messages will be handled by the chatbot",
     )
 
+    # Template configuration
+    waba_id = fields.Char(
+        string="WhatsApp Business Account ID",
+        help="WABA ID required for fetching message templates. "
+        "Find this in Meta Business Suite > WhatsApp Manager > Settings.",
+    )
+    template_count = fields.Integer(
+        compute="_compute_template_count",
+        string="Template Count",
+    )
+
+    def _compute_template_count(self):
+        Template = self.env["whatsapp.template"]
+        for record in self:
+            if record.waba_id:
+                record.template_count = Template.search_count(
+                    [("waba_id", "=", record.waba_id)]
+                )
+            else:
+                record.template_count = 0
+
     # -------------------------------------------------------------------------
     # WhatsApp Cloud API helpers
     # -------------------------------------------------------------------------
@@ -102,6 +123,16 @@ class WhatsAppBackend(models.Model):
             raise UserError(_("Phone number ID is required to use the WhatsApp API."))
         version = self.api_version or "v17.0"
         return f"https://graph.facebook.com/{version}/{self.phone_number_id}"
+
+    def _waba_api_base_url(self):
+        """Get base URL for WABA-level API calls (templates, etc.)"""
+        self.ensure_one()
+        if not self.waba_id:
+            raise UserError(
+                _("WhatsApp Business Account ID is required for this operation.")
+            )
+        version = self.api_version or "v17.0"
+        return f"https://graph.facebook.com/{version}/{self.waba_id}"
 
     def _call_whatsapp_api(self, endpoint, payload):
         self.ensure_one()
@@ -218,6 +249,111 @@ class WhatsAppBackend(models.Model):
         except ValueError as exc:
             _logger.exception("Invalid JSON response received from WhatsApp API")
             raise UserError(_("Invalid response from WhatsApp API.")) from exc
+
+    # ---------------------------------------------------------------------
+    # Template operations
+    # ---------------------------------------------------------------------
+
+    def action_sync_templates(self):
+        """Fetch templates from WhatsApp Cloud API and sync to Odoo"""
+        self.ensure_one()
+
+        if not self.waba_id:
+            raise UserError(
+                _("WhatsApp Business Account ID is required to sync templates.")
+            )
+
+        Template = self.env["whatsapp.template"]
+
+        # Fetch templates from WhatsApp API
+        url = f"{self._waba_api_base_url()}/message_templates"
+        headers = {
+            "Authorization": f"Bearer {self.api_token}",
+        }
+
+        try:
+            response = requests.get(url, headers=headers, timeout=60)
+        except RequestException as exc:
+            _logger.exception("WhatsApp template sync failed")
+            raise UserError(_("Unable to fetch templates: %s") % exc) from exc
+
+        if response.status_code >= 400:
+            try:
+                error_content = response.json()
+            except ValueError:
+                error_content = response.text
+
+            if isinstance(error_content, dict):
+                error_message = (
+                    error_content.get("error", {}).get("message")
+                    or error_content.get("message")
+                    or str(error_content)
+                )
+            else:
+                error_message = error_content
+
+            raise UserError(_("Failed to fetch templates: %s") % error_message)
+
+        try:
+            data = response.json()
+        except ValueError as exc:
+            raise UserError(_("Invalid response from WhatsApp API.")) from exc
+
+        templates_data = data.get("data", [])
+
+        synced_count = 0
+        for tpl_data in templates_data:
+            # Find existing template by template_id, waba_id, and language
+            existing = Template.search(
+                [
+                    ("template_id", "=", tpl_data["id"]),
+                    ("waba_id", "=", self.waba_id),
+                    ("language", "=", tpl_data.get("language")),
+                ],
+                limit=1,
+            )
+
+            vals = {
+                "name": tpl_data["name"],
+                "template_id": tpl_data["id"],
+                "status": tpl_data.get("status", "PENDING"),
+                "category": tpl_data.get("category"),
+                "language": tpl_data.get("language"),
+                "components": tpl_data.get("components", []),
+                "waba_id": self.waba_id,
+                "last_synced": fields.Datetime.now(),
+            }
+
+            if existing:
+                existing.write(vals)
+            else:
+                Template.create(vals)
+
+            synced_count += 1
+
+        _logger.info("Synced %d templates for backend %s", synced_count, self.name)
+
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "title": _("Templates Synced"),
+                "message": _("%d templates synchronized from WhatsApp.") % synced_count,
+                "type": "success",
+            },
+        }
+
+    def action_view_templates(self):
+        """Open templates view for this WABA"""
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Message Templates"),
+            "res_model": "whatsapp.template",
+            "view_mode": "tree,form",
+            "domain": [("waba_id", "=", self.waba_id)],
+            "context": {"default_waba_id": self.waba_id},
+        }
 
     # ---------------------------------------------------------------------
     # Thread helpers
@@ -459,3 +595,26 @@ class WhatsAppBackend(models.Model):
             caption=caption,
             attachment=attachment,
         )
+
+    def send_template_message(
+        self,
+        phone_number,
+        template,
+        *,
+        record=None,
+        partner=None,
+        contact_name=None,
+    ):
+        """Send a template message via WhatsApp
+
+        Args:
+            phone_number: Recipient phone number
+            template: whatsapp.template record or template ID
+            record: Optional Odoo record for variable mapping
+            partner: Optional partner record
+            contact_name: Optional contact name
+        """
+        thread = self._get_or_create_thread(
+            phone_number, partner=partner, contact_name=contact_name
+        )
+        return thread.send_template_message(template, record=record)

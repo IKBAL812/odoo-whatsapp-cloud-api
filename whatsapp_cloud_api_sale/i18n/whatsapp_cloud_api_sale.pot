@@ -1,0 +1,88 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* whatsapp_cloud_api_sale
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 16.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-12-16 06:24+0000\n"
+"PO-Revision-Date: 2025-12-16 06:24+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. module: whatsapp_cloud_api_sale
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_sale.field_whatsapp_composer__changeset_change_ids
+msgid "Changeset Changes"
+msgstr ""
+
+#. module: whatsapp_cloud_api_sale
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_sale.field_whatsapp_composer__changeset_ids
+msgid "Changesets"
+msgstr ""
+
+#. module: whatsapp_cloud_api_sale
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_sale.field_whatsapp_composer__count_changesets
+msgid "Count Changesets"
+msgstr ""
+
+#. module: whatsapp_cloud_api_sale
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_sale.field_whatsapp_composer__count_pending_changeset_changes
+msgid "Count Pending Changeset Changes"
+msgstr ""
+
+#. module: whatsapp_cloud_api_sale
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_sale.field_whatsapp_composer__count_pending_changesets
+msgid "Count Pending Changesets"
+msgstr ""
+
+#. module: whatsapp_cloud_api_sale
+#. odoo-python
+#: code:addons/whatsapp_cloud_api_sale/wizard/whatsapp_composer.py:0
+#, python-format
+msgid "Quotation sent via WhatsApp."
+msgstr ""
+
+#. module: whatsapp_cloud_api_sale
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_sale.sale_order_form_whatsapp_button
+msgid "Send WhatsApp"
+msgstr ""
+
+#. module: whatsapp_cloud_api_sale
+#: model:ir.actions.act_window,name:whatsapp_cloud_api_sale.action_sale_order_send_whatsapp
+msgid "Send WhatsApp Template"
+msgstr ""
+
+#. module: whatsapp_cloud_api_sale
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_sale.field_whatsapp_composer__smart_search
+msgid "Smart Search"
+msgstr ""
+
+#. module: whatsapp_cloud_api_sale
+#: model:ir.model.fields,help:whatsapp_cloud_api_sale.field_whatsapp_composer__count_pending_changeset_changes
+msgid "The number of pending changes of this record"
+msgstr ""
+
+#. module: whatsapp_cloud_api_sale
+#: model:ir.model.fields,help:whatsapp_cloud_api_sale.field_whatsapp_composer__count_pending_changesets
+msgid "The number of pending changesets of this record"
+msgstr ""
+
+#. module: whatsapp_cloud_api_sale
+#: model:ir.model.fields,help:whatsapp_cloud_api_sale.field_whatsapp_composer__count_changesets
+msgid "The overall number of changesets of this record"
+msgstr ""
+
+#. module: whatsapp_cloud_api_sale
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_sale.field_whatsapp_composer__user_can_see_changeset
+msgid "User Can See Changeset"
+msgstr ""
+
+#. module: whatsapp_cloud_api_sale
+#: model:ir.model,name:whatsapp_cloud_api_sale.model_whatsapp_composer
+msgid "WhatsApp Template Message Composer"
+msgstr ""

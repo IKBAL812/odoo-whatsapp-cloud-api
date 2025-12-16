@@ -608,3 +608,51 @@ class WhatsAppThread(models.Model):
             body=body_value,
             attachment=attachment,
         )
+
+    def send_template_message(self, template, record=None):
+        """Send a template message to this thread
+
+        Args:
+            template: whatsapp.template record
+            record: Optional Odoo record for variable substitution
+
+        Returns:
+            dict with message info
+        """
+        self.ensure_one()
+
+        if not template:
+            raise UserError(_("A template is required to send a template message."))
+
+        if template.status != "APPROVED":
+            raise UserError(
+                _("Template '%s' is not approved and cannot be sent.") % template.name
+            )
+
+        # Verify template belongs to this backend's WABA
+        if template.waba_id != self.backend_id.waba_id:
+            raise UserError(
+                _(
+                    "Template '%s' belongs to a different WhatsApp Business Account "
+                    "and cannot be used with this backend."
+                )
+                % template.name
+            )
+
+        # Build template payload
+        template_payload = template.build_payload_for_record(record)
+
+        payload = {
+            "type": "template",
+            "template": template_payload,
+        }
+
+        # Generate rendered body for message record (with variables substituted)
+        body_preview = template.render_message_preview(record)
+
+        return self._send_message(
+            payload=payload,
+            message_type="template",
+            body=body_preview,
+            extra_vals={"template_id": template.id},
+        )

@@ -104,6 +104,13 @@ class WhatsAppMessage(models.Model):
 
     reaction_emoji = fields.Char()
 
+    template_id = fields.Many2one(
+        comodel_name="whatsapp.template",
+        string="Template Used",
+        help="Template used for this message, if any.",
+        ondelete="set null",
+    )
+
     timestamp = fields.Integer(
         required=True,
     )

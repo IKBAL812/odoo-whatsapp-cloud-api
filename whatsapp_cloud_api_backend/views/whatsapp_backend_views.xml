@@ -19,7 +19,26 @@
         <field name="model">whatsapp.backend</field>
         <field name="arch" type="xml">
             <form string="WhatsApp Backend">
+                <header>
+                    <button
+                        name="action_sync_templates"
+                        string="Sync Templates"
+                        type="object"
+                        class="btn-primary"
+                        attrs="{'invisible': [('waba_id', '=', False)]}"
+                    />
+                </header>
                 <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button
+                            name="action_view_templates"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-file-text-o"
+                        >
+                            <field name="template_count" widget="statinfo" string="Templates" />
+                        </button>
+                    </div>
                     <group>
                         <group>
                             <field name="name" />
@@ -34,6 +53,7 @@
                             <field name="phone_number_id" />
                             <field name="api_token" password="True" />
                             <field name="api_version" />
+                            <field name="waba_id" />
                             <field name="webhook_secret" />
 
                             <field name="frontend_webhook_url" />

@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+    <!-- WhatsApp Template Tree View -->
+    <record id="view_whatsapp_template_tree" model="ir.ui.view">
+        <field name="name">whatsapp.template.tree</field>
+        <field name="model">whatsapp.template</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name" />
+                <field
+                    name="status"
+                    decoration-success="status == 'APPROVED'"
+                    decoration-warning="status == 'PENDING'"
+                    decoration-danger="status in ('REJECTED', 'DISABLED', 'PAUSED')"
+                    widget="badge"
+                />
+                <field name="category" />
+                <field name="language" />
+                <field name="model_id" optional="show" />
+                <field name="variable_count" string="Variables" />
+                <field name="last_synced" optional="hide" />
+            </tree>
+        </field>
+    </record>
+
+    <!-- WhatsApp Template Form View -->
+    <record id="view_whatsapp_template_form" model="ir.ui.view">
+        <field name="name">whatsapp.template.form</field>
+        <field name="model">whatsapp.template</field>
+        <field name="arch" type="xml">
+            <form string="WhatsApp Template">
+                <header>
+                    <button
+                        name="action_parse_variables"
+                        string="Parse Variables"
+                        type="object"
+                        class="btn-secondary"
+                        attrs="{'invisible': [('model_id', '=', False)]}"
+                    />
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button
+                            name="toggle_active"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-archive"
+                        >
+                            <field
+                                name="active"
+                                widget="boolean_button"
+                                options='{"terminology": "archive"}'
+                            />
+                        </button>
+                    </div>
+                    <widget
+                        name="web_ribbon"
+                        title="Approved"
+                        bg_color="bg-success"
+                        attrs="{'invisible': [('status', '!=', 'APPROVED')]}"
+                    />
+                    <widget
+                        name="web_ribbon"
+                        title="Pending"
+                        bg_color="bg-warning"
+                        attrs="{'invisible': [('status', '!=', 'PENDING')]}"
+                    />
+                    <widget
+                        name="web_ribbon"
+                        title="Rejected"
+                        bg_color="bg-danger"
+                        attrs="{'invisible': [('status', '!=', 'REJECTED')]}"
+                    />
+                    <div class="oe_title">
+                        <label for="name" />
+                        <h1>
+                            <field name="name" readonly="1" />
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Template Info">
+                            <field name="template_id" readonly="1" />
+                            <field name="waba_id" readonly="1" />
+                            <field name="status" readonly="1" />
+                            <field name="category" readonly="1" />
+                            <field name="language" readonly="1" />
+                            <field name="last_synced" readonly="1" />
+                        </group>
+                        <group string="Odoo Configuration">
+                            <field
+                                name="model_id"
+                                options="{'no_create': True}"
+                                help="Select a model to map template variables to record fields"
+                            />
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Preview" name="preview">
+                            <field name="buttons_data" invisible="1" />
+                            <group>
+                                <field
+                                    name="header_text"
+                                    readonly="1"
+                                    string="Header"
+                                    attrs="{'invisible': [('header_text', '=', False)]}"
+                                />
+                                <field name="body_text" readonly="1" string="Body" />
+                                <field
+                                    name="footer_text"
+                                    readonly="1"
+                                    string="Footer"
+                                    attrs="{'invisible': [('footer_text', '=', False)]}"
+                                />
+                            </group>
+                            <div
+                                class="alert alert-info"
+                                role="alert"
+                                attrs="{'invisible': [('model_id', '!=', False)]}"
+                            >
+                                <strong>Tip:</strong> Select an "Associated Model" above to enable variable mapping.
+                                Then click "Parse Variables" to extract variables from the template text.
+                            </div>
+                        </page>
+                        <page
+                            string="Variable Mappings"
+                            name="variables"
+                            attrs="{'invisible': [('model_id', '=', False)]}"
+                        >
+                            <field name="variable_ids">
+                                <tree editable="bottom">
+                                    <field name="component_type" readonly="1" />
+                                    <field name="button_index" readonly="1" attrs="{'column_invisible': [('parent.buttons_data', '=', [])]}" string="Button #" />
+                                    <field name="variable_position" readonly="1" string="{{N}}" />
+                                    <field name="variable_name" />
+                                    <field name="template_model_id" invisible="1" />
+                                    <field
+                                        name="field_id"
+                                        domain="[('model_id', '=', template_model_id)]"
+                                        options="{'no_create': True}"
+                                    />
+                                </tree>
+                            </field>
+                            <div class="alert alert-warning" role="alert">
+                                <strong>Note:</strong> Map each variable ({{1}}, {{2}}, etc.) to an Odoo field.
+                                When sending the template, values will be automatically filled from the record.
+                            </div>
+                        </page>
+                        <page string="Raw Components (JSON)" name="raw">
+                            <field name="components" readonly="1" />
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- WhatsApp Template Search View -->
+    <record id="view_whatsapp_template_search" model="ir.ui.view">
+        <field name="name">whatsapp.template.search</field>
+        <field name="model">whatsapp.template</field>
+        <field name="arch" type="xml">
+            <search string="Search Templates">
+                <field name="name" />
+                <field name="category" />
+                <field name="language" />
+                <filter
+                    name="approved"
+                    string="Approved"
+                    domain="[('status', '=', 'APPROVED')]"
+                />
+                <filter
+                    name="pending"
+                    string="Pending"
+                    domain="[('status', '=', 'PENDING')]"
+                />
+                <filter
+                    name="rejected"
+                    string="Rejected"
+                    domain="[('status', '=', 'REJECTED')]"
+                />
+                <separator />
+                <filter name="utility" string="Utility" domain="[('category', '=', 'UTILITY')]" />
+                <filter
+                    name="marketing"
+                    string="Marketing"
+                    domain="[('category', '=', 'MARKETING')]"
+                />
+                <filter
+                    name="authentication"
+                    string="Authentication"
+                    domain="[('category', '=', 'AUTHENTICATION')]"
+                />
+                <separator />
+                <filter
+                    name="inactive"
+                    string="Archived"
+                    domain="[('active', '=', False)]"
+                />
+                <group expand="0" string="Group By">
+                    <filter
+                        name="group_status"
+                        string="Status"
+                        context="{'group_by': 'status'}"
+                    />
+                    <filter
+                        name="group_category"
+                        string="Category"
+                        context="{'group_by': 'category'}"
+                    />
+                    <filter
+                        name="group_model"
+                        string="Model"
+                        context="{'group_by': 'model_id'}"
+                    />
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_whatsapp_template" model="ir.actions.act_window">
+        <field name="name">Message Templates</field>
+        <field name="res_model">whatsapp.template</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_whatsapp_template_search" />
+        <field name="context">{'search_default_approved': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No templates yet
+            </p>
+            <p>
+                Sync templates from WhatsApp Business Manager using the "Sync Templates"
+                button on your WhatsApp Backend configuration.
+            </p>
+        </field>
+    </record>
+
+    <!-- Menu -->
+    <menuitem
+        id="menu_whatsapp_template"
+        name="Templates"
+        parent="menu_whatsapp_backend_root"
+        action="action_whatsapp_template"
+        sequence="15"
+    />
+</odoo>

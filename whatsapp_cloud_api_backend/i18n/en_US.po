@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 16.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-10-24 11:58+0000\n"
-"PO-Revision-Date: 2025-10-24 11:58+0000\n"
+"POT-Creation-Date: 2025-12-16 06:23+0000\n"
+"PO-Revision-Date: 2025-12-16 06:23+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -27,6 +27,13 @@ msgid ""
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
+#. odoo-python
+#: code:addons/whatsapp_cloud_api_backend/models/whatsapp_backend.py:0
+#, python-format
+msgid "%d templates synchronized from WhatsApp."
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
 #: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_backend_form
 msgid "<i class=\"fa fa-circle\" role=\"img\" aria-label=\"Active\" title=\"Active\"/>"
 msgstr ""
@@ -39,6 +46,25 @@ msgstr ""
 #. module: whatsapp_cloud_api_backend
 #: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_backend_form
 msgid "<i class=\"fa fa-envelope\" role=\"img\" aria-label=\"Login\"/>"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_partner_form_whatsapp
+msgid "<span class=\"o_stat_text\">WhatsApp</span>"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_template_form
+msgid ""
+"<strong>Note:</strong> Map each variable ({{1}}, {{2}}, etc.) to an Odoo field.\n"
+"                                When sending the template, values will be automatically filled from the record."
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_template_form
+msgid ""
+"<strong>Tip:</strong> Select an \"Associated Model\" above to enable variable mapping.\n"
+"                                Then click \"Parse Variables\" to extract variables from the template text."
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
@@ -58,6 +84,13 @@ msgstr ""
 #: code:addons/whatsapp_cloud_api_backend/models/whatsapp_backend.py:0
 #, python-format
 msgid "A phone number is required to identify the WhatsApp thread."
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#. odoo-python
+#: code:addons/whatsapp_cloud_api_backend/models/whatsapp_thread.py:0
+#, python-format
+msgid "A template is required to send a template message."
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
@@ -92,6 +125,7 @@ msgstr ""
 #. module: whatsapp_cloud_api_backend
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_backend__active
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot__active
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template__active
 #: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_chatbot_search
 msgid "Active"
 msgstr ""
@@ -102,9 +136,23 @@ msgid "Active Chatbot"
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields.selection,name:whatsapp_cloud_api_backend.selection__whatsapp_template__status__approved
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_template_form
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_template_search
+msgid "Approved"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
 #: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_chatbot_form
 #: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_chatbot_search
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_template_search
 msgid "Archived"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template__model_id
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template_variable__template_model_id
+msgid "Associated Model"
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
@@ -127,6 +175,12 @@ msgid "Attachment is required to upload media."
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields.selection,name:whatsapp_cloud_api_backend.selection__whatsapp_template__category__authentication
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_template_search
+msgid "Authentication"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
 #: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_backend_form
 msgid "Avatar"
 msgstr ""
@@ -144,7 +198,19 @@ msgstr ""
 
 #. module: whatsapp_cloud_api_backend
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_message__body
+#: model:ir.model.fields.selection,name:whatsapp_cloud_api_backend.selection__whatsapp_template_variable__component_type__body
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_template_form
 msgid "Body"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_composer__preview_body
+msgid "Body Preview"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template__body_text
+msgid "Body Text"
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
@@ -183,6 +249,31 @@ msgid "Body text is required for button messages."
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_template_form
+msgid "Button #"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template_variable__button_index
+msgid "Button Index"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields.selection,name:whatsapp_cloud_api_backend.selection__whatsapp_template_variable__component_type__button
+msgid "Button URL"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template__buttons_data
+msgid "Buttons Data"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_composer__preview_buttons
+msgid "Buttons Preview"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
 #. odoo-python
 #: code:addons/whatsapp_cloud_api_backend/models/whatsapp_thread.py:0
 #, python-format
@@ -197,13 +288,27 @@ msgid "CTA button text and URL are required."
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.whatsapp_composer_form_view
+msgid "Cancel"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template__category
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_template_search
+msgid "Category"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_res_partner__changeset_change_ids
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_backend__changeset_change_ids
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot__changeset_change_ids
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script__changeset_change_ids
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script_option__changeset_change_ids
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_composer__changeset_change_ids
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_message__changeset_change_ids
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_message_read_status__changeset_change_ids
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template__changeset_change_ids
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template_variable__changeset_change_ids
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_thread__changeset_change_ids
 msgid "Changeset Changes"
 msgstr ""
@@ -214,8 +319,11 @@ msgstr ""
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot__changeset_ids
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script__changeset_ids
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script_option__changeset_ids
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_composer__changeset_ids
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_message__changeset_ids
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_message_read_status__changeset_ids
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template__changeset_ids
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template_variable__changeset_ids
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_thread__changeset_ids
 msgid "Changesets"
 msgstr ""
@@ -287,6 +395,16 @@ msgid "Company"
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template_variable__component_type
+msgid "Component Type"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template__components
+msgid "Components"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
 #: model:ir.model,name:whatsapp_cloud_api_backend.model_res_partner
 msgid "Contact"
 msgstr ""
@@ -313,8 +431,11 @@ msgstr ""
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot__count_changesets
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script__count_changesets
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script_option__count_changesets
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_composer__count_changesets
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_message__count_changesets
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_message_read_status__count_changesets
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template__count_changesets
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template_variable__count_changesets
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_thread__count_changesets
 msgid "Count Changesets"
 msgstr ""
@@ -325,8 +446,11 @@ msgstr ""
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot__count_pending_changeset_changes
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script__count_pending_changeset_changes
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script_option__count_pending_changeset_changes
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_composer__count_pending_changeset_changes
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_message__count_pending_changeset_changes
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_message_read_status__count_pending_changeset_changes
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template__count_pending_changeset_changes
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template_variable__count_pending_changeset_changes
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_thread__count_pending_changeset_changes
 msgid "Count Pending Changeset Changes"
 msgstr ""
@@ -337,8 +461,11 @@ msgstr ""
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot__count_pending_changesets
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script__count_pending_changesets
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script_option__count_pending_changesets
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_composer__count_pending_changesets
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_message__count_pending_changesets
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_message_read_status__count_pending_changesets
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template__count_pending_changesets
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template_variable__count_pending_changesets
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_thread__count_pending_changesets
 msgid "Count Pending Changesets"
 msgstr ""
@@ -363,8 +490,11 @@ msgstr ""
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot__create_uid
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script__create_uid
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script_option__create_uid
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_composer__create_uid
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_message__create_uid
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_message_read_status__create_uid
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template__create_uid
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template_variable__create_uid
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_thread__create_uid
 msgid "Created by"
 msgstr ""
@@ -374,8 +504,11 @@ msgstr ""
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot__create_date
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script__create_date
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script_option__create_date
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_composer__create_date
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_message__create_date
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_message_read_status__create_date
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template__create_date
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template_variable__create_date
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_thread__create_date
 msgid "Created on"
 msgstr ""
@@ -421,8 +554,18 @@ msgid "Delivered"
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_template_variable__variable_name
+msgid "Descriptive name for this variable"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_message__direction
 msgid "Direction"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields.selection,name:whatsapp_cloud_api_backend.selection__whatsapp_template__status__disabled
+msgid "Disabled"
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
@@ -430,8 +573,11 @@ msgstr ""
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot__display_name
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script__display_name
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script_option__display_name
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_composer__display_name
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_message__display_name
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_message_read_status__display_name
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template__display_name
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template_variable__display_name
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_thread__display_name
 msgid "Display Name"
 msgstr ""
@@ -479,10 +625,42 @@ msgid "Failed"
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
+#. odoo-python
+#: code:addons/whatsapp_cloud_api_backend/models/whatsapp_backend.py:0
+#, python-format
+msgid "Failed to fetch templates: %s"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
 #. odoo-javascript
 #: code:addons/whatsapp_cloud_api_backend/static/src/js/user_menu.js:0
 #, python-format
 msgid "Failed to open WhatsApp. Please contact your administrator."
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template_variable__field_name
+msgid "Field Name"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_template_variable__field_id
+msgid "Field to read value from"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_template_form
+msgid "Footer"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_composer__preview_footer
+msgid "Footer Preview"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template__footer_text
+msgid "Footer Text"
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
@@ -496,8 +674,35 @@ msgid "Frontend Webhook URL"
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_template_search
+msgid "Group By"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_thread__has_avatar
 msgid "Has Avatar"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_res_partner__has_whatsapp_conversation
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_res_users__has_whatsapp_conversation
+msgid "Has WhatsApp Conversation"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields.selection,name:whatsapp_cloud_api_backend.selection__whatsapp_template_variable__component_type__header
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_template_form
+msgid "Header"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_composer__preview_header
+msgid "Header Preview"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template__header_text
+msgid "Header Text"
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
@@ -505,8 +710,11 @@ msgstr ""
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot__id
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script__id
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script_option__id
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_composer__id
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_message__id
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_message_read_status__id
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template__id
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template_variable__id
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_thread__id
 msgid "ID"
 msgstr ""
@@ -557,6 +765,17 @@ msgid "Incoming"
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_template_variable__button_index
+msgid "Index of the button (0-based) when component_type is 'button'"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_res_partner__has_whatsapp_conversation
+#: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_res_users__has_whatsapp_conversation
+msgid "Indicates if this partner has any WhatsApp conversation threads."
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
 #: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_message__direction
 msgid "Indicates whether the message was received from or sent to WhatsApp."
 msgstr ""
@@ -597,6 +816,7 @@ msgstr ""
 #. odoo-python
 #: code:addons/whatsapp_cloud_api_backend/models/whatsapp_backend.py:0
 #: code:addons/whatsapp_cloud_api_backend/models/whatsapp_backend.py:0
+#: code:addons/whatsapp_cloud_api_backend/models/whatsapp_backend.py:0
 #, python-format
 msgid "Invalid response from WhatsApp API."
 msgstr ""
@@ -609,6 +829,11 @@ msgstr ""
 #. module: whatsapp_cloud_api_backend
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_backend__language
 msgid "Language"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template__language
+msgid "Language Code"
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
@@ -631,10 +856,18 @@ msgstr ""
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot____last_update
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script____last_update
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script_option____last_update
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_composer____last_update
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_message____last_update
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_message_read_status____last_update
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template____last_update
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template_variable____last_update
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_thread____last_update
 msgid "Last Modified on"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template__last_synced
+msgid "Last Synced"
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
@@ -642,8 +875,11 @@ msgstr ""
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot__write_uid
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script__write_uid
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script_option__write_uid
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_composer__write_uid
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_message__write_uid
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_message_read_status__write_uid
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template__write_uid
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template_variable__write_uid
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_thread__write_uid
 msgid "Last Updated by"
 msgstr ""
@@ -653,8 +889,11 @@ msgstr ""
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot__write_date
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script__write_date
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script_option__write_date
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_composer__write_date
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_message__write_date
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_message_read_status__write_date
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template__write_date
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template_variable__write_date
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_thread__write_date
 msgid "Last Updated on"
 msgstr ""
@@ -680,6 +919,12 @@ msgid "Main Menu Button Text"
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields.selection,name:whatsapp_cloud_api_backend.selection__whatsapp_template__category__marketing
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_template_search
+msgid "Marketing"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
 #: model:ir.model.fields.selection,name:whatsapp_cloud_api_backend.selection__whatsapp_message__message_type__media
 msgid "Media"
 msgstr ""
@@ -697,6 +942,24 @@ msgstr ""
 #. module: whatsapp_cloud_api_backend
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_message__message_id
 msgid "Message ID"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.whatsapp_composer_form_view
+msgid "Message Preview"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.whatsapp_composer_form_view
+msgid "Message Settings"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#. odoo-python
+#: code:addons/whatsapp_cloud_api_backend/models/whatsapp_backend.py:0
+#: model:ir.actions.act_window,name:whatsapp_cloud_api_backend.action_whatsapp_template
+#, python-format
+msgid "Message Templates"
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
@@ -731,7 +994,14 @@ msgid "Messages sent or received via this backend."
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template__model_name
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_template_search
+msgid "Model"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_backend__name
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template__name
 msgid "Name"
 msgstr ""
 
@@ -743,6 +1013,29 @@ msgstr ""
 #. module: whatsapp_cloud_api_backend
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script_option__next_script_id
 msgid "Next Step"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#. odoo-python
+#: code:addons/whatsapp_cloud_api_backend/models/whatsapp_template.py:0
+#, python-format
+msgid "No"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model_terms:ir.actions.act_window,help:whatsapp_cloud_api_backend.action_whatsapp_template
+msgid "No templates yet"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_template_form
+msgid "Odoo Configuration"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_template__model_id
+#: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_template_variable__template_model_id
+msgid "Odoo model to use for populating template variables"
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
@@ -807,9 +1100,24 @@ msgid "Parent step that leads to this step"
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_template_form
+msgid "Parse Variables"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_template__buttons_data
+msgid "Parsed button data from template"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_message__partner_id
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_thread__partner_id
 msgid "Partner"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields.selection,name:whatsapp_cloud_api_backend.selection__whatsapp_template__status__paused
+msgid "Paused"
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
@@ -820,10 +1128,14 @@ msgstr ""
 
 #. module: whatsapp_cloud_api_backend
 #: model:ir.model.fields.selection,name:whatsapp_cloud_api_backend.selection__whatsapp_message__status__pending
+#: model:ir.model.fields.selection,name:whatsapp_cloud_api_backend.selection__whatsapp_template__status__pending
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_template_form
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_template_search
 msgid "Pending"
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_composer__phone_number
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_message__phone_number
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_thread__phone_number
 msgid "Phone Number"
@@ -850,10 +1162,12 @@ msgid "Please select an option:"
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
-#. odoo-python
-#: code:addons/whatsapp_cloud_api_backend/models/whatsapp_chatbot_script.py:0
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_template_form
+msgid "Preview"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
 #: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script__interactive_code
-#, python-format
 msgid ""
 "Python code to compute dynamic responses for interactive steps.\n"
 "\n"
@@ -877,6 +1191,16 @@ msgid ""
 "  values['END'] = True  # Stop until next button click\n"
 "\n"
 "Available modules: datetime, re, requests"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_template_form
+msgid "Raw Components (JSON)"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_template__components
+msgid "Raw component data from WhatsApp API"
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
@@ -934,8 +1258,38 @@ msgid "Read by Me"
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_composer__partner_id
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.whatsapp_composer_form_view
+msgid "Recipient"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#. odoo-python
+#: code:addons/whatsapp_cloud_api_backend/wizard/whatsapp_composer.py:0
+#, python-format
+msgid "Recipient phone number is required."
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
 #: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_message__replied_message_id
 msgid "Reference to the message this message is replying to, if any."
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields.selection,name:whatsapp_cloud_api_backend.selection__whatsapp_template__status__rejected
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_template_form
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_template_search
+msgid "Rejected"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_composer__res_id
+msgid "Related Document ID"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_composer__res_model
+msgid "Related Document Model"
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
@@ -976,6 +1330,11 @@ msgid "Search Chatbots"
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_template_search
+msgid "Search Templates"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
 #: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_backend__frontend_webhook_secret
 msgid "Secret token to authenticate frontend webhook requests."
 msgstr ""
@@ -986,6 +1345,36 @@ msgstr ""
 #: code:addons/whatsapp_cloud_api_backend/controllers/webhook.py:0
 #, python-format
 msgid "Select"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_template_form
+msgid "Select a model to map template variables to record fields"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_composer__backend_id
+msgid "Select the WhatsApp phone number to send from"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_composer__partner_id
+msgid "Select the recipient partner"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.whatsapp_composer_form_view
+msgid "Send"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.actions.act_window,name:whatsapp_cloud_api_backend.whatsapp_composer_action
+msgid "Send WhatsApp Message"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.whatsapp_composer_form_view
+msgid "Send WhatsApp Template"
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
@@ -1011,15 +1400,25 @@ msgstr ""
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot__smart_search
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script__smart_search
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script_option__smart_search
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_composer__smart_search
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_message__smart_search
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_message_read_status__smart_search
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template__smart_search
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template_variable__smart_search
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_thread__smart_search
 msgid "Smart Search"
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template_variable__field_id
+msgid "Source Field"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_message__status
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template__status
 #: model:ir.model.fields.selection,name:whatsapp_cloud_api_backend.selection__whatsapp_message__message_type__status
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_template_search
 msgid "Status"
 msgstr ""
 
@@ -1039,8 +1438,90 @@ msgid "Subject"
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_backend_form
+msgid "Sync Templates"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model_terms:ir.actions.act_window,help:whatsapp_cloud_api_backend.action_whatsapp_template
+msgid ""
+"Sync templates from WhatsApp Business Manager using the \"Sync Templates\"\n"
+"                button on your WhatsApp Backend configuration."
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_composer__template_id
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template_variable__template_id
 #: model:ir.model.fields.selection,name:whatsapp_cloud_api_backend.selection__whatsapp_message__message_type__template
 msgid "Template"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#. odoo-python
+#: code:addons/whatsapp_cloud_api_backend/models/whatsapp_thread.py:0
+#, python-format
+msgid ""
+"Template '%s' belongs to a different WhatsApp Business Account and cannot be"
+" used with this backend."
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#. odoo-python
+#: code:addons/whatsapp_cloud_api_backend/wizard/whatsapp_composer.py:0
+#, python-format
+msgid "Template '%s' belongs to a different WhatsApp Business Account."
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#. odoo-python
+#: code:addons/whatsapp_cloud_api_backend/models/whatsapp_thread.py:0
+#, python-format
+msgid "Template '%s' is not approved and cannot be sent."
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_backend__template_count
+msgid "Template Count"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_template_form
+msgid "Template Info"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_message__template_id
+msgid "Template Used"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_message__template_id
+msgid "Template used for this message, if any."
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#. odoo-python
+#: code:addons/whatsapp_cloud_api_backend/models/whatsapp_template.py:0
+#, python-format
+msgid "Template variables have been extracted."
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.constraint,message:whatsapp_cloud_api_backend.constraint_whatsapp_template_template_waba_language_unique
+msgid "Template with this language already exists for this WABA."
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.ui.menu,name:whatsapp_cloud_api_backend.menu_whatsapp_template
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_backend_form
+msgid "Templates"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#. odoo-python
+#: code:addons/whatsapp_cloud_api_backend/models/whatsapp_backend.py:0
+#, python-format
+msgid "Templates Synced"
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
@@ -1069,8 +1550,11 @@ msgstr ""
 #: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_chatbot__count_pending_changeset_changes
 #: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script__count_pending_changeset_changes
 #: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script_option__count_pending_changeset_changes
+#: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_composer__count_pending_changeset_changes
 #: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_message__count_pending_changeset_changes
 #: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_message_read_status__count_pending_changeset_changes
+#: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_template__count_pending_changeset_changes
+#: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_template_variable__count_pending_changeset_changes
 #: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_thread__count_pending_changeset_changes
 msgid "The number of pending changes of this record"
 msgstr ""
@@ -1081,8 +1565,11 @@ msgstr ""
 #: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_chatbot__count_pending_changesets
 #: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script__count_pending_changesets
 #: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script_option__count_pending_changesets
+#: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_composer__count_pending_changesets
 #: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_message__count_pending_changesets
 #: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_message_read_status__count_pending_changesets
+#: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_template__count_pending_changesets
+#: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_template_variable__count_pending_changesets
 #: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_thread__count_pending_changesets
 msgid "The number of pending changesets of this record"
 msgstr ""
@@ -1093,10 +1580,20 @@ msgstr ""
 #: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_chatbot__count_changesets
 #: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script__count_changesets
 #: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script_option__count_changesets
+#: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_composer__count_changesets
 #: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_message__count_changesets
 #: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_message_read_status__count_changesets
+#: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_template__count_changesets
+#: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_template_variable__count_changesets
 #: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_thread__count_changesets
 msgid "The overall number of changesets of this record"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#. odoo-python
+#: code:addons/whatsapp_cloud_api_backend/wizard/whatsapp_composer.py:0
+#, python-format
+msgid "The source record no longer exists."
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
@@ -1145,6 +1642,13 @@ msgstr ""
 #. odoo-python
 #: code:addons/whatsapp_cloud_api_backend/models/whatsapp_backend.py:0
 #, python-format
+msgid "Unable to fetch templates: %s"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#. odoo-python
+#: code:addons/whatsapp_cloud_api_backend/models/whatsapp_backend.py:0
+#, python-format
 msgid "Unable to upload media to WhatsApp: %s"
 msgstr ""
 
@@ -1174,8 +1678,11 @@ msgstr ""
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot__user_can_see_changeset
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script__user_can_see_changeset
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_chatbot_script_option__user_can_see_changeset
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_composer__user_can_see_changeset
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_message__user_can_see_changeset
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_message_read_status__user_can_see_changeset
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template__user_can_see_changeset
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template_variable__user_can_see_changeset
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_thread__user_can_see_changeset
 msgid "User Can See Changeset"
 msgstr ""
@@ -1203,6 +1710,50 @@ msgid "Users who can use this WhatsApp backend to send messages."
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields.selection,name:whatsapp_cloud_api_backend.selection__whatsapp_template__category__utility
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_template_search
+msgid "Utility"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template__variable_count
+msgid "Variable Count"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template__variable_ids
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_template_form
+msgid "Variable Mappings"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template_variable__variable_name
+msgid "Variable Name"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template_variable__variable_position
+msgid "Variable Position"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_template_variable__variable_position
+msgid "Variable position number (1 for {{1}}, 2 for {{2}}, etc.)"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_template_tree
+msgid "Variables"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#. odoo-python
+#: code:addons/whatsapp_cloud_api_backend/models/whatsapp_template.py:0
+#, python-format
+msgid "Variables Parsed"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
 #. odoo-python
 #: code:addons/whatsapp_cloud_api_backend/models/whatsapp_thread.py:0
 #, python-format
@@ -1214,6 +1765,20 @@ msgstr ""
 #: code:addons/whatsapp_cloud_api_backend/models/whatsapp_thread.py:0
 #, python-format
 msgid "Video message requires either an attachment, media ID, or a link."
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_backend__waba_id
+msgid ""
+"WABA ID required for fetching message templates. Find this in Meta Business "
+"Suite > WhatsApp Manager > Settings."
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_template__waba_id
+msgid ""
+"WABA ID this template belongs to. Any backend with matching WABA ID can use "
+"this template."
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
@@ -1262,6 +1827,26 @@ msgid "WhatsApp Backends"
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_backend__waba_id
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template__waba_id
+msgid "WhatsApp Business Account ID"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#. odoo-python
+#: code:addons/whatsapp_cloud_api_backend/models/whatsapp_backend.py:0
+#, python-format
+msgid "WhatsApp Business Account ID is required for this operation."
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#. odoo-python
+#: code:addons/whatsapp_cloud_api_backend/models/whatsapp_backend.py:0
+#, python-format
+msgid "WhatsApp Business Account ID is required to sync templates."
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
 #: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_chatbot_form
 msgid "WhatsApp Chatbot"
 msgstr ""
@@ -1307,11 +1892,41 @@ msgid "WhatsApp Message Read Status"
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
+#: model:ir.model,name:whatsapp_cloud_api_backend.model_whatsapp_template
+msgid "WhatsApp Message Template"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
 #: model:ir.actions.act_window,name:whatsapp_cloud_api_backend.action_whatsapp_message
 #: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_thread__whatsapp_message_ids
 #: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_message_search
 #: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_thread_form
 msgid "WhatsApp Messages"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_composer__backend_id
+msgid "WhatsApp Number"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_template_form
+msgid "WhatsApp Template"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_whatsapp_template__template_id
+msgid "WhatsApp Template ID"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model,name:whatsapp_cloud_api_backend.model_whatsapp_composer
+msgid "WhatsApp Template Message Composer"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model,name:whatsapp_cloud_api_backend.model_whatsapp_template_variable
+msgid "WhatsApp Template Variable Mapping"
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
@@ -1325,6 +1940,8 @@ msgstr ""
 
 #. module: whatsapp_cloud_api_backend
 #: model:ir.actions.act_window,name:whatsapp_cloud_api_backend.action_whatsapp_thread
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_res_partner__whatsapp_thread_ids
+#: model:ir.model.fields,field_description:whatsapp_cloud_api_backend.field_res_users__whatsapp_thread_ids
 #: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_thread_search
 msgid "WhatsApp Threads"
 msgstr ""
@@ -1344,6 +1961,18 @@ msgid "WhatsApp supports maximum 3 reply buttons."
 msgstr ""
 
 #. module: whatsapp_cloud_api_backend
+#. odoo-python
+#: code:addons/whatsapp_cloud_api_backend/models/whatsapp_template.py:0
+#, python-format
+msgid "Yes"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
 #: model_terms:ir.ui.view,arch_db:whatsapp_cloud_api_backend.view_whatsapp_chatbot_form
 msgid "e.g., Customer Support Bot"
+msgstr ""
+
+#. module: whatsapp_cloud_api_backend
+#: model:ir.model.fields,help:whatsapp_cloud_api_backend.field_whatsapp_template__language
+msgid "e.g., en_US, tr"
 msgstr ""
