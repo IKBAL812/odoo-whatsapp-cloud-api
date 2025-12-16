@@ -150,9 +150,7 @@ class WhatsAppComposer(models.TransientModel):
             wizard.preview_footer = template.footer_text or ""
 
             # Render buttons preview
-            wizard.preview_buttons = wizard._render_buttons_preview(
-                template, record
-            )
+            wizard.preview_buttons = wizard._render_buttons_preview(template, record)
 
     def _render_buttons_preview(self, template, record):
         """Render buttons preview with URLs substituted"""

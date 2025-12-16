@@ -5,7 +5,6 @@ import re
 from datetime import date, datetime
 
 from odoo import _, api, fields, models
-from odoo.tools.safe_eval import safe_eval
 
 
 class WhatsAppTemplate(models.Model):
@@ -40,7 +39,8 @@ class WhatsAppTemplate(models.Model):
         string="WhatsApp Business Account ID",
         required=True,
         index=True,
-        help="WABA ID this template belongs to. Any backend with matching WABA ID can use this template.",
+        help="WABA ID this template belongs to. Any backend with"
+        " matching WABA ID can use this template.",
     )
 
     # Odoo model association for variable mapping
@@ -227,7 +227,7 @@ class WhatsAppTemplate(models.Model):
         ).sorted(lambda v: v.variable_position)
 
         for var in variables:
-            placeholder = "{{%d}}" % var.variable_position
+            placeholder = f"{{{{{var.variable_position}}}}}"
             value = var.get_value_from_record(record) if record else ""
             result = result.replace(placeholder, str(value) if value else "")
 
@@ -289,7 +289,7 @@ class WhatsAppTemplate(models.Model):
         ).sorted(lambda v: v.variable_position)
 
         for var in variables:
-            placeholder = "{{%d}}" % var.variable_position
+            placeholder = f"{{{{{var.variable_position}}}}}"
             value = var.get_value_from_record(record) if record else ""
             result = result.replace(placeholder, str(value) if value else "")
 
@@ -467,7 +467,7 @@ class WhatsAppTemplateVariable(models.Model):
             if hasattr(value, "display_name"):
                 return value.display_name
             # Handle dates
-            if isinstance(value, (date, datetime)):
+            if isinstance(value, date | datetime):
                 return str(value)
             # Handle boolean
             if isinstance(value, bool):

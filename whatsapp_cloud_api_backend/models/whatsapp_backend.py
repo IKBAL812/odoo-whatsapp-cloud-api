@@ -100,7 +100,6 @@ class WhatsAppBackend(models.Model):
     )
     template_count = fields.Integer(
         compute="_compute_template_count",
-        string="Template Count",
     )
 
     def _compute_template_count(self):
