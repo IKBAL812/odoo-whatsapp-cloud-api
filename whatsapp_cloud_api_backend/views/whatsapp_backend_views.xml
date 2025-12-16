@@ -43,6 +43,7 @@
                         <group>
                             <field name="name" />
                             <field name="active" />
+                            <field name="main_backend" />
                             <field
                                 name="company_id"
                                 options="{'no_create': True, 'no_open': True}"

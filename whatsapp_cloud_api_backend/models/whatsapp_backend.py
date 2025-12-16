@@ -42,6 +42,7 @@ class WhatsAppBackend(models.Model):
 
     name = fields.Char(required=True)
     active = fields.Boolean(default=True)
+    main_backend = fields.Boolean(string="Main Backend", default=False)
     api_token = fields.Char(string="API Token", required=True)
     phone_number_id = fields.Char(string="Phone Number ID", required=True)
     api_version = fields.Char(string="API Version", required=True, default="v23.0")
@@ -101,6 +102,14 @@ class WhatsAppBackend(models.Model):
     template_count = fields.Integer(
         compute="_compute_template_count",
     )
+
+    _sql_constraints = [
+        (
+            "main_backend_unique",
+            "unique(main_backend)",
+            "There can be only one main WhatsApp backend.",
+        ),
+    ]
 
     def _compute_template_count(self):
         Template = self.env["whatsapp.template"]

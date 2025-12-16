@@ -40,7 +40,9 @@ class SmsApi(models.AbstractModel):
             # Get the last used backend (whatsapp threads are already ordered)
             backend_id = fields.first(
                 partner_id.whatsapp_thread_ids
-            ).backend_id or self.env["whatsapp.backend"].search([], limit=1)
+            ).backend_id or self.env["whatsapp.backend"].search(
+                [("main_backend", "=", True)], limit=1
+            )
             if not backend_id:
                 sms_list.append(msg)
                 continue
@@ -63,7 +65,9 @@ class SmsApi(models.AbstractModel):
             )
             if not result.get("error"):
                 # Render the template message with buttons as links
-                rendered_message = template.render_message_preview(record)
+                rendered_message = (
+                    f"[WhatsApp]\n{template.render_message_preview(record)}"
+                )
                 sms_record.mail_message_id.body = rendered_message
                 whatsapp_result.append(
                     {
