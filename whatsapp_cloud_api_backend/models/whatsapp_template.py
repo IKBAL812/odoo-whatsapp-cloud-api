@@ -5,6 +5,7 @@ import re
 from datetime import date, datetime
 
 from odoo import _, api, fields, models
+from odoo.tools.safe_eval import safe_eval
 
 
 class WhatsAppTemplate(models.Model):
@@ -233,11 +234,12 @@ class WhatsAppTemplate(models.Model):
 
         return result
 
-    def render_message_preview(self, record):
+    def render_message_preview(self, record, include_buttons=True):
         """Render the full template message as it will appear to the recipient
 
         Args:
             record: Odoo record for variable substitution
+            include_buttons: Whether to include buttons in the preview
 
         Returns:
             str: Fully rendered message text
@@ -264,6 +266,30 @@ class WhatsAppTemplate(models.Model):
         # Footer (no variables)
         if self.footer_text:
             parts.append(self.footer_text)
+
+        # Render buttons
+        if include_buttons and self.buttons_data:
+            button_lines = []
+            for btn in self.buttons_data:
+                btn_type = btn.get("type", "").upper()
+                btn_text = btn.get("text", "")
+                btn_idx = btn.get("index", 0)
+
+                if btn_type == "URL":
+                    url = btn.get("url", "")
+                    if btn.get("has_variable"):
+                        url = self._render_button_url_with_variables(
+                            url, record, btn_idx
+                        )
+                    button_lines.append(f"[{btn_text}]({url})")
+                elif btn_type == "PHONE_NUMBER":
+                    phone = btn.get("phone_number", "")
+                    button_lines.append(f"[{btn_text}](tel:{phone})")
+                elif btn_type == "QUICK_REPLY":
+                    button_lines.append(f"[{btn_text}]")
+
+            if button_lines:
+                parts.append("\n".join(button_lines))
 
         return "\n\n".join(parts) if parts else f"[Template: {self.name}]"
 
@@ -426,6 +452,17 @@ class WhatsAppTemplateVariable(models.Model):
     # User-friendly name
     variable_name = fields.Char(help="Descriptive name for this variable")
 
+    # Value type selection
+    value_type = fields.Selection(
+        selection=[
+            ("field", "Field Value"),
+            ("code", "Python Code"),
+        ],
+        default="field",
+        required=True,
+        help="How to compute the variable value",
+    )
+
     # For field type: reference to model field
     field_id = fields.Many2one(
         comodel_name="ir.model.fields",
@@ -434,6 +471,22 @@ class WhatsAppTemplateVariable(models.Model):
         ondelete="set null",
     )
     field_name = fields.Char(related="field_id.name", readonly=True)
+
+    # For code type: Python code to compute value
+    python_code = fields.Text(
+        string="Python Code",
+        help=(
+            "Python code to compute the variable value.\n\n"
+            "Available variables:\n"
+            "  • record: Source record (e.g., sale.order)\n"
+            "  • env: Odoo environment\n"
+            "  • datetime, date: datetime module\n"
+            "  • result: Set this to your computed value\n\n"
+            "Example:\n"
+            "  result = record.partner_id.name.upper()\n"
+            "  result = record.amount_total * 1.18"
+        ),
+    )
 
     # Related model from template (for domain filtering)
     template_model_id = fields.Many2one(
@@ -458,9 +511,25 @@ class WhatsAppTemplateVariable(models.Model):
         """
         self.ensure_one()
 
-        if not self.field_name or not record:
+        if not record:
             return ""
 
+        if self.value_type == "code" and self.python_code:
+            return self._eval_python_code(record)
+        elif self.value_type == "field" and self.field_name:
+            return self._get_field_value(record)
+
+        return ""
+
+    def _get_field_value(self, record):
+        """Get value from a field on the record
+
+        Args:
+            record: Odoo record to extract value from
+
+        Returns:
+            str: The field value formatted as string
+        """
         try:
             value = record[self.field_name]
             # Handle Many2one - get display name
@@ -476,5 +545,46 @@ class WhatsAppTemplateVariable(models.Model):
             if value == 0:
                 return "0"
             return str(value) if value else ""
+        except Exception:
+            return ""
+
+    def _eval_python_code(self, record):
+        """Execute Python code and return computed value
+
+        Args:
+            record: Odoo record available in sandbox
+
+        Returns:
+            str: The computed value from Python code
+        """
+        # Prepare sandbox for safe_eval
+        sandbox = {
+            "datetime": datetime,
+            "date": date,
+            "record": record,
+            "env": self.env,
+            "_": _,
+            "str": str,
+            "int": int,
+            "float": float,
+            "bool": bool,
+            "len": len,
+            "list": list,
+            "dict": dict,
+            "getattr": getattr,
+            "hasattr": hasattr,
+            "result": "",
+        }
+
+        try:
+            safe_eval(
+                self.python_code,
+                sandbox,
+                sandbox,
+                mode="exec",
+                nocopy=True,
+            )
+            result = sandbox.get("result", "")
+            return str(result) if result or result == 0 else ""
         except Exception:
             return ""

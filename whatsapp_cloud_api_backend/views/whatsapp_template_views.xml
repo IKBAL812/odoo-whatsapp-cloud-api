@@ -132,17 +132,26 @@
                                     <field name="button_index" readonly="1" attrs="{'column_invisible': [('parent.buttons_data', '=', [])]}" string="Button #" />
                                     <field name="variable_position" readonly="1" string="{{N}}" />
                                     <field name="variable_name" />
+                                    <field name="value_type" />
                                     <field name="template_model_id" invisible="1" />
                                     <field
                                         name="field_id"
                                         domain="[('model_id', '=', template_model_id)]"
                                         options="{'no_create': True}"
+                                        attrs="{'invisible': [('value_type', '!=', 'field')], 'required': [('value_type', '=', 'field')]}"
+                                    />
+                                    <field
+                                        name="python_code"
+                                        attrs="{'invisible': [('value_type', '!=', 'code')], 'required': [('value_type', '=', 'code')]}"
                                     />
                                 </tree>
                             </field>
-                            <div class="alert alert-warning" role="alert">
-                                <strong>Note:</strong> Map each variable ({{1}}, {{2}}, etc.) to an Odoo field.
-                                When sending the template, values will be automatically filled from the record.
+                            <div class="alert alert-info" role="alert">
+                                <strong>Note:</strong> Map each variable ({{1}}, {{2}}, etc.) to either:
+                                <ul class="mb-0">
+                                    <li><strong>Field Value:</strong> Select an Odoo field directly</li>
+                                    <li><strong>Python Code:</strong> Write code that sets <code>result</code> variable (e.g., <code>result = record.name.upper()</code>)</li>
+                                </ul>
                             </div>
                         </page>
                         <page string="Raw Components (JSON)" name="raw">
