@@ -9,7 +9,7 @@
     "license": "LGPL-3",
     "category": "Tools",
     "depends": ["base", "mail", "queue_job", "web"],
-    "external_dependencies": {"python": ["requests"]},
+    "external_dependencies": {"python": ["requests", "phonenumbers"]},
     "data": [
         "security/whatsapp_security.xml",
         "security/ir.model.access.csv",

@@ -389,11 +389,14 @@ class WhatsAppCloudAPIWebhookController(http.Controller):
             return False
 
     def _find_or_create_thread(self, backend, phone_number, partner, contact):
+        # Normalize phone number for consistent matching
+        normalized_phone = backend._normalize_phone_number(phone_number)
+
         thread_model = request.env["whatsapp.thread"].sudo()
         thread = thread_model.search(
             [
                 ("backend_id", "=", backend.id),
-                ("phone_number", "=", phone_number),
+                ("phone_number", "=", normalized_phone),
             ],
             limit=1,
         )
@@ -402,7 +405,7 @@ class WhatsAppCloudAPIWebhookController(http.Controller):
         if not thread:
             vals = {
                 "backend_id": backend.id,
-                "phone_number": phone_number,
+                "phone_number": normalized_phone,
                 "partner_id": partner.id if partner else False,
             }
             if display_name:

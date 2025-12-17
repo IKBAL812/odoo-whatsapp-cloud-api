@@ -13,8 +13,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import logging
+import re
 import secrets
 
+import phonenumbers
 import requests
 from requests import RequestException
 
@@ -367,22 +369,44 @@ class WhatsAppBackend(models.Model):
     # Thread helpers
     # ---------------------------------------------------------------------
 
+    def _normalize_phone_number(self, phone, default_region="TR"):
+        """
+        Normalize phone number to E.164 format (without +).
+        WhatsApp uses this format: country code + national number (e.g., 905551234567)
+        """
+        if not phone:
+            return phone
+        try:
+            parsed = phonenumbers.parse(phone, default_region)
+            if phonenumbers.is_valid_number(parsed):
+                e164 = phonenumbers.format_number(
+                    parsed, phonenumbers.PhoneNumberFormat.E164
+                )
+                return e164.lstrip("+")
+        except phonenumbers.NumberParseException:
+            pass
+        # Fallback: just strip non-digit characters
+        return re.sub(r"\D", "", phone)
+
     def _get_or_create_thread(self, phone_number, partner=None, contact_name=None):
         self.ensure_one()
         if not phone_number:
             raise UserError(
                 _("A phone number is required to identify the WhatsApp thread.")
             )
+        # Normalize phone number for consistent matching
+        normalized_phone = self._normalize_phone_number(phone_number)
+
         thread_model = self.env["whatsapp.thread"].sudo()
         thread = thread_model.search(
-            [("backend_id", "=", self.id), ("phone_number", "=", phone_number)],
+            [("backend_id", "=", self.id), ("phone_number", "=", normalized_phone)],
             limit=1,
         )
         create_vals = None
         if not thread:
             create_vals = {
                 "backend_id": self.id,
-                "phone_number": phone_number,
+                "phone_number": normalized_phone,
                 "partner_id": partner.id if partner else False,
             }
             if contact_name:
@@ -625,4 +649,6 @@ class WhatsAppBackend(models.Model):
         thread = self._get_or_create_thread(
             phone_number, partner=partner, contact_name=contact_name
         )
+        # Set human handoff mode - chatbot should not respond after template message
+        thread.chatbot_ended = True
         return thread.send_template_message(template, record=record)
