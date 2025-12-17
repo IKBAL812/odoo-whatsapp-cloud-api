@@ -10,6 +10,7 @@ type RagGenerateRequest = {
   messages: Message[];
   contactName?: string;
   userName?: string;
+  style?: string;
 };
 
 type RagApiResponse = {
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body: RagGenerateRequest = await request.json();
-    const { messages, contactName, userName } = body;
+    const { messages, contactName, userName, style } = body;
 
     // Validate that there are messages to work with
     if (!messages || messages.length === 0) {
@@ -76,6 +77,7 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         messages: formattedMessages,
+        ...(style && { style }),
       }),
     });
 

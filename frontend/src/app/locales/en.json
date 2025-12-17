@@ -55,7 +55,10 @@
     "translateError": "Failed to translate text",
     "ragGenerate": "Generate AI response (RAG)",
     "ragGenerating": "Generating...",
-    "ragGenerateError": "Failed to generate AI response"
+    "ragGenerateError": "Failed to generate AI response",
+    "suggestionsLoading": "Generating suggestions...",
+    "suggestionsError": "Failed to generate suggestions",
+    "refreshSuggestions": "Refresh suggestions"
   },
   "chatList": {
     "title": "Chats",

@@ -55,7 +55,10 @@
     "translateError": "Metin çevrilemedi",
     "ragGenerate": "Yapay zeka yanıtı oluştur (RAG)",
     "ragGenerating": "Oluşturuluyor...",
-    "ragGenerateError": "Yapay zeka yanıtı oluşturulamadı"
+    "ragGenerateError": "Yapay zeka yanıtı oluşturulamadı",
+    "suggestionsLoading": "Öneriler oluşturuluyor...",
+    "suggestionsError": "Öneriler oluşturulamadı",
+    "refreshSuggestions": "Önerileri yenile"
   },
   "chatList": {
     "title": "Sohbetler",

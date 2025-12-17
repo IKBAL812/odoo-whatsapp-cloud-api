@@ -1,5 +1,12 @@
 import dayjs from "dayjs";
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import {
+  FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Message } from "@/app/context/chats-provider";
 import { useCurrentChat } from "@/app/hooks/use-current-chat";
 import Reaction from "../message/reaction";
@@ -7,6 +14,7 @@ import ContactHeader from "./contact-header";
 import ChatMessage from "./chat-message";
 import AttachmentPicker from "../message/attachment-picker";
 import DragDropZone from "../message/drag-drop-zone";
+import SuggestionChips from "../message/suggestion-chips";
 import { useTranslations } from "@/app/context/translation-provider";
 import { useContacts } from "@/app/hooks/use-contacts";
 import {
@@ -39,12 +47,17 @@ export default function CurrentChat() {
   const [isTranslating, setIsTranslating] = useState(false);
   const [isRagGenerating, setIsRagGenerating] = useState(false);
   const [isTypingAnimation, setIsTypingAnimation] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [isSuggestionsLoading, setIsSuggestionsLoading] = useState(false);
+  const lastProcessedIncomingIdRef = useRef<string | null>(null);
   const { t } = useTranslations();
   const { contacts } = useContacts();
 
   useEffect(() => {
     setMessageText("");
     setSendError(null);
+    setSuggestions([]);
+    lastProcessedIncomingIdRef.current = null;
   }, [chatId]);
 
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -373,6 +386,81 @@ export default function CurrentChat() {
     }
   };
 
+  // Generate suggestions with 3 different writing styles
+  const generateSuggestions = useCallback(async () => {
+    if (messages.length === 0) {
+      return;
+    }
+
+    setIsSuggestionsLoading(true);
+    setSuggestions([]);
+
+    const styles = ["Aşırı kısa ve açıklayıcı", "Profesyonel ve teknik"];
+
+    // Get contact name from the current chat
+    const currentContact = contacts.find((c) => c.id === chatId);
+    const contactName = currentContact?.displayName || "Customer";
+
+    try {
+      // Make 3 parallel API calls with different styles
+      const promises = styles.map((style) =>
+        fetch("/api/ai/rag-generate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            messages: messages.slice(-10),
+            contactName: contactName,
+            userName: "Support Agent",
+            style,
+          }),
+        })
+          .then((r) => r.json())
+          .then((data) => data.response || null)
+          .catch(() => null)
+      );
+
+      const results = await Promise.all(promises);
+      const validSuggestions = results.filter(
+        (r): r is string => r !== null && r.length > 0
+      );
+      setSuggestions(validSuggestions);
+    } catch {
+      setSuggestions([]);
+    } finally {
+      setIsSuggestionsLoading(false);
+    }
+  }, [messages, contacts, chatId]);
+
+  // Handle suggestion selection - populate textarea
+  const handleSuggestionSelect = (suggestion: string) => {
+    setMessageText(suggestion);
+    textareaRef.current?.focus();
+  };
+
+  // Detect new incoming messages and generate suggestions
+  useEffect(() => {
+    if (messages.length === 0) {
+      return;
+    }
+
+    // Find the latest incoming message (from customer, not from user)
+    const latestIncoming = [...messages]
+      .reverse()
+      .find((m) => !m.isSentFromUser);
+
+    if (!latestIncoming?.id) {
+      return;
+    }
+
+    // Only generate suggestions if this is a new incoming message
+    if (latestIncoming.id !== lastProcessedIncomingIdRef.current) {
+      lastProcessedIncomingIdRef.current = latestIncoming.id;
+      generateSuggestions();
+    }
+  }, [messages, generateSuggestions]);
+
   const annotatedMessages = useMemo(() => {
     const items: Array<
       | { type: "label"; day: dayjs.Dayjs; key: string }
@@ -543,6 +631,13 @@ export default function CurrentChat() {
           </div>
 
           <section className="w-full z-50 p-4">
+            <SuggestionChips
+              suggestions={suggestions}
+              isLoading={isSuggestionsLoading}
+              onSelect={handleSuggestionSelect}
+              onRefresh={generateSuggestions}
+              disabled={isSending || isTypingAnimation}
+            />
             {replyTo && (
               <div className="bg-[rgb(var(--bg-input)/var(--bg-input-opacity))] border-l-2 border-[rgb(var(--accent-primary))] px-3 py-2 rounded-lg mb-2 flex justify-between items-start gap-3">
                 <div className="flex flex-col">
