@@ -30,7 +30,7 @@
       "selectBackend": "Backend",
       "allBackends": "All Backends"
     },
-    "searchPlaceholder": "Search or start a new chat",
+    "searchPlaceholder": "Search in chats",
     "loading": "Loading...",
     "loadingOlderMessages": "Loading older messages...",
     "loadingOlderThreads": "Loading older chats...",
@@ -44,7 +44,8 @@
     "openInOdoo": "Odoo Page",
     "openInOdooTitle": "Open partner in Odoo",
     "noResults": "No chats found",
-    "noResultsHint": "Try a different search term"
+    "noResultsHint": "Try a different search term",
+    "translated": "Translated"
   },
   "chatInput": {
     "placeholder": "Type a message",
@@ -70,7 +71,7 @@
     "newGroup": "New Group",
     "newContact": "New Contact",
     "newCommunity": "New Community",
-    "searchPlaceholder": "Search or start a new chat",
+    "searchPlaceholder": "Search in chats",
     "emptyProfileSubtitle": "Message yourself"
   },
   "navigation": {

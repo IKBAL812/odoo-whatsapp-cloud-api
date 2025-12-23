@@ -45,7 +45,14 @@ export default function CurrentChat() {
   const [isSuggestionsLoading, setIsSuggestionsLoading] = useState(false);
   const lastProcessedIncomingIdRef = useRef<string | null>(null);
   const suggestionsAbortControllerRef = useRef<AbortController | null>(null);
-  const { t } = useTranslations();
+  // Message translation state
+  const [translations, setTranslations] = useState<
+    Map<string, { original: string; translated: string }>
+  >(new Map());
+  const [translatingMessageId, setTranslatingMessageId] = useState<
+    string | null
+  >(null);
+  const { t, locale } = useTranslations();
   const { contacts } = useContacts();
 
   useEffect(() => {
@@ -59,6 +66,9 @@ export default function CurrentChat() {
     setSuggestions([]);
     setIsSuggestionsLoading(false);
     lastProcessedIncomingIdRef.current = null;
+    // Clear message translations when switching threads
+    setTranslations(new Map());
+    setTranslatingMessageId(null);
   }, [chatId]);
 
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -346,6 +356,55 @@ export default function CurrentChat() {
     }
   };
 
+  // Handle message translation (translate individual messages in chat)
+  const handleTranslateMessage = useCallback(
+    async (message: Message) => {
+      if (!message.id || !message.message) return;
+
+      // If already translated, toggle back to original (revert)
+      if (translations.has(message.id)) {
+        setTranslations((prev) => {
+          const newMap = new Map(prev);
+          newMap.delete(message.id!);
+          return newMap;
+        });
+        return;
+      }
+
+      setTranslatingMessageId(message.id);
+
+      try {
+        const response = await fetch("/api/ai/translate-message", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: message.message,
+            targetLanguage: locale,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to translate message");
+        }
+
+        const data = await response.json();
+
+        setTranslations((prev) =>
+          new Map(prev).set(message.id!, {
+            original: message.message,
+            translated: data.translatedText,
+          })
+        );
+      } catch (error) {
+        console.error("Message translation error:", error);
+        // Optionally show error toast here
+      } finally {
+        setTranslatingMessageId(null);
+      }
+    },
+    [locale, translations]
+  );
+
   // Generate suggestions with server-side caching
   const generateSuggestions = useCallback(
     async (forceRefresh = false) => {
@@ -603,9 +662,28 @@ export default function CurrentChat() {
                                 ? (emoji) => sendReaction(message, emoji)
                                 : undefined
                             }
+                            onTranslate={
+                              message.message
+                                ? () => handleTranslateMessage(message)
+                                : undefined
+                            }
+                            isTranslating={translatingMessageId === message.id}
+                            isTranslated={
+                              message.id ? translations.has(message.id) : false
+                            }
                           />
                         )}
-                        <ChatMessage message={message} />
+                        <ChatMessage
+                          message={message}
+                          translatedText={
+                            message.id
+                              ? translations.get(message.id)?.translated
+                              : undefined
+                          }
+                          isTranslated={
+                            message.id ? translations.has(message.id) : false
+                          }
+                        />
                         {!message.isSentFromUser && (
                           <Reaction
                             isSentFromUser={false}
@@ -618,6 +696,15 @@ export default function CurrentChat() {
                               message.whatsappId
                                 ? (emoji) => sendReaction(message, emoji)
                                 : undefined
+                            }
+                            onTranslate={
+                              message.message
+                                ? () => handleTranslateMessage(message)
+                                : undefined
+                            }
+                            isTranslating={translatingMessageId === message.id}
+                            isTranslated={
+                              message.id ? translations.has(message.id) : false
                             }
                           />
                         )}

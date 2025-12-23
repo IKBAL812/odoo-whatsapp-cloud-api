@@ -30,7 +30,7 @@
       "selectBackend": "Arka Uç",
       "allBackends": "Tüm Arka Uçlar"
     },
-    "searchPlaceholder": "Ara veya yeni sohbet başlat",
+    "searchPlaceholder": "Sohbetler içinde ara",
     "loading": "Yükleniyor...",
     "loadingOlderMessages": "Eski mesajlar yükleniyor...",
     "loadingOlderThreads": "Eski sohbetler yükleniyor...",
@@ -44,7 +44,8 @@
     "openInOdoo": "Odoo Sayfası",
     "openInOdooTitle": "Odoo'da partneri aç",
     "noResults": "Sohbet bulunamadı",
-    "noResultsHint": "Farklı bir arama terimi deneyin"
+    "noResultsHint": "Farklı bir arama terimi deneyin",
+    "translated": "Çevrildi"
   },
   "chatInput": {
     "placeholder": "Mesaj yazın",
@@ -70,7 +71,7 @@
     "newGroup": "Yeni grup",
     "newContact": "Yeni kişi",
     "newCommunity": "Yeni topluluk",
-    "searchPlaceholder": "Ara veya yeni sohbet başlat",
+    "searchPlaceholder": "Sohbetler içinde ara",
     "emptyProfileSubtitle": "Kendinize mesaj gönderin"
   },
   "navigation": {

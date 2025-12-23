@@ -1,4 +1,9 @@
-import { ArrowBendUpLeftIcon, SmileyIcon } from "@phosphor-icons/react";
+import {
+  ArrowBendUpLeftIcon,
+  SmileyIcon,
+  TranslateIcon,
+  SpinnerGapIcon,
+} from "@phosphor-icons/react";
 import { MouseEvent, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 
@@ -13,12 +18,18 @@ type ReactionProps = {
   isSentFromUser: boolean;
   onReply?: () => void;
   onReaction?: (emoji: string) => void;
+  onTranslate?: () => void;
+  isTranslating?: boolean;
+  isTranslated?: boolean;
 };
 
 export default function Reaction({
   isSentFromUser,
   onReply,
   onReaction,
+  onTranslate,
+  isTranslating = false,
+  isTranslated = false,
 }: ReactionProps) {
   const [showReactionEmoji, setShowReactionEmoji] = useState(false);
   const [reactionMenuOpen, setReactionMenuOpen] = useState(false);
@@ -60,6 +71,11 @@ export default function Reaction({
   const handleReplyClick = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
     onReply?.();
+  };
+
+  const handleTranslateClick = (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    onTranslate?.();
   };
 
   const handleReactionClick = (
@@ -139,6 +155,27 @@ export default function Reaction({
           onClick={handleReplyClick}
         >
           <ArrowBendUpLeftIcon className="size-4" weight="bold" />
+        </button>
+      )}
+      {onTranslate && (
+        <button
+          type="button"
+          className={`transition ${
+            isTranslated
+              ? "text-[rgb(var(--accent-primary))]"
+              : "text-[rgb(var(--text-secondary)/var(--text-tertiary-opacity))] hover:text-[rgb(var(--text-primary))]"
+          }`}
+          onClick={handleTranslateClick}
+          disabled={isTranslating}
+        >
+          {isTranslating ? (
+            <SpinnerGapIcon className="size-4 animate-spin" weight="bold" />
+          ) : (
+            <TranslateIcon
+              className="size-4"
+              weight={isTranslated ? "fill" : "bold"}
+            />
+          )}
         </button>
       )}
       {reactionMenuOpen && renderReactionMenu()}
