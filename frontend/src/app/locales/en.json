@@ -33,6 +33,8 @@
     "searchPlaceholder": "Search or start a new chat",
     "loading": "Loading...",
     "loadingOlderMessages": "Loading older messages...",
+    "loadingOlderThreads": "Loading older chats...",
+    "loadOlderThreads": "Load older chats",
     "typing": "typing...",
     "statusTyping": "typing",
     "statusOnline": "online",
@@ -40,7 +42,9 @@
     "dayYesterday": "Yesterday",
     "reply": "Reply",
     "openInOdoo": "Odoo Page",
-    "openInOdooTitle": "Open partner in Odoo"
+    "openInOdooTitle": "Open partner in Odoo",
+    "noResults": "No chats found",
+    "noResultsHint": "Try a different search term"
   },
   "chatInput": {
     "placeholder": "Type a message",

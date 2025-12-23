@@ -68,6 +68,25 @@ export async function GET(request: NextRequest) {
   const includeThreadId = includeThreadIdParam
     ? parseInt(includeThreadIdParam, 10)
     : null;
+  const limitParam = request.nextUrl.searchParams.get("limit");
+  const offsetParam = request.nextUrl.searchParams.get("offset");
+  const searchQuery = request.nextUrl.searchParams.get("search");
+  const limit = limitParam ? Number(limitParam) : 30;
+  const offset = offsetParam ? Number(offsetParam) : 0;
+
+  if (!Number.isFinite(limit) || limit <= 0) {
+    return NextResponse.json(
+      { error: "limit must be a valid positive number" },
+      { status: 400 }
+    );
+  }
+
+  if (!Number.isFinite(offset) || offset < 0) {
+    return NextResponse.json(
+      { error: "offset must be a valid non-negative number" },
+      { status: 400 }
+    );
+  }
 
   const protocolEnv: "http" | "https" =
     process.env.ODOO_JSONRPC_PROTOCOL === "https" ? "https" : "http";
@@ -90,12 +109,25 @@ export async function GET(request: NextRequest) {
   const sessionClient = odooClient.createSession(sessionId);
 
   try {
+    // Build search domain
+    // Using Odoo's Polish notation for OR: "|" operator before the conditions
+    type DomainElement = [string, string, unknown] | string;
+    const domain: DomainElement[] = [];
+    if (searchQuery && searchQuery.trim().length > 0) {
+      const query = searchQuery.trim();
+      // OR condition: search in thread name OR partner name
+      domain.push("|");
+      domain.push(["name", "ilike", query]);
+      domain.push(["partner_id.display_name", "ilike", query]);
+    }
+
     // Fetch recent threads
     const threads = await sessionClient.searchRead<ThreadRecord[]>(
       "whatsapp.thread",
-      [],
+      domain,
       {
-        limit: 30,
+        limit: Math.min(limit, 100),
+        offset,
         select: THREAD_FIELDS,
         order: "write_date desc",
       }
@@ -103,6 +135,7 @@ export async function GET(request: NextRequest) {
 
     // If a specific thread ID is requested and not in the results, fetch it separately
     if (
+      offset === 0 &&
       includeThreadId &&
       !isNaN(includeThreadId) &&
       !threads.some((t) => t.id === includeThreadId)

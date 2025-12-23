@@ -91,6 +91,9 @@ export const ChatsContext = createContext<
       filter: string;
       updateFilter: (filter: string) => void;
       chats: Chats;
+      hasMoreThreads: boolean;
+      isLoadingMoreThreads: boolean;
+      loadMoreThreads: () => void;
       updateThreadPreview: (
         chatId: string,
         preview: string,
@@ -100,6 +103,9 @@ export const ChatsContext = createContext<
       totalUnreadCount: number;
       selectedBackendId: number | null;
       setSelectedBackendId: (backendId: number | null) => void;
+      searchQuery: string;
+      updateSearchQuery: (query: string) => void;
+      clearSearch: () => void;
     }
 >(undefined);
 
@@ -108,6 +114,7 @@ const NOTIFICATION_STATE_KEY = "whatsapp.notificationState.threads";
 const NOTIFIED_MESSAGES_KEY = "whatsapp.notificationState.messages";
 const MESSAGE_NOTIFICATION_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
 const NOTIFICATION_PERMISSION_KEY = "whatsapp.notificationPermission.dismissed";
+const THREADS_PAGE_SIZE = 30;
 
 // Helper to load notification state from localStorage
 function loadNotificationState(): Map<string, number> {
@@ -275,6 +282,12 @@ export default function ChatsProvider({
     filtered: [],
     isLoading: false,
   });
+  const [hasMoreThreads, setHasMoreThreads] = useState(true);
+  const [isLoadingMoreThreads, setIsLoadingMoreThreads] = useState(false);
+  const [nextThreadsOffset, setNextThreadsOffset] = useState(0);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState<string>("");
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { sessionId, backendId: authBackendId } = useAuth();
   const { reportApiError, reportConnectionRestored } = useConnection();
   const isFetchingRef = useRef(false);
@@ -735,6 +748,35 @@ export default function ChatsProvider({
     setFilter(filter as Filters);
   };
 
+  // Search query handler with debouncing
+  const updateSearchQuery = useCallback((query: string) => {
+    setSearchQuery(query);
+
+    // Clear existing timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    // Debounce the actual search (300ms delay)
+    searchTimeoutRef.current = setTimeout(() => {
+      setDebouncedSearchQuery(query);
+      // Reset pagination when search changes
+      setNextThreadsOffset(0);
+      setHasMoreThreads(true);
+    }, 300);
+  }, []);
+
+  // Clear search function
+  const clearSearch = useCallback(() => {
+    setSearchQuery("");
+    setDebouncedSearchQuery("");
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    setNextThreadsOffset(0);
+    setHasMoreThreads(true);
+  }, []);
+
   const updateThreadPreview = useCallback(
     (chatId: string, preview: string, timestamp: number) => {
       setChats((prev) => {
@@ -881,7 +923,15 @@ export default function ChatsProvider({
   );
 
   const fetchThreads = useCallback(
-    async ({ showLoading = false }: { showLoading?: boolean } = {}) => {
+    async ({
+      showLoading = false,
+      append = false,
+      offset = 0,
+    }: {
+      showLoading?: boolean;
+      append?: boolean;
+      offset?: number;
+    } = {}) => {
       if (!sessionId) {
         return;
       }
@@ -894,12 +944,18 @@ export default function ChatsProvider({
       if (showLoading) {
         setChats((prev) => ({ ...prev, isLoading: true }));
       }
+      if (append) {
+        setIsLoadingMoreThreads(true);
+      }
 
       try {
-        // Build URL with optional includeThreadId parameter
-        let url = "/api/threads";
-        if (includeThreadId) {
-          url += `?includeThreadId=${encodeURIComponent(includeThreadId)}`;
+        // Build URL with optional includeThreadId and search parameters
+        let url = `/api/threads?limit=${THREADS_PAGE_SIZE}&offset=${offset}`;
+        if (includeThreadId && offset === 0) {
+          url += `&includeThreadId=${encodeURIComponent(includeThreadId)}`;
+        }
+        if (debouncedSearchQuery.trim().length > 0) {
+          url += `&search=${encodeURIComponent(debouncedSearchQuery.trim())}`;
         }
 
         const response = await fetch(url, {
@@ -920,14 +976,40 @@ export default function ChatsProvider({
           ? data.threads
           : [];
         const mappedChats = transformThreads(threads);
-        const filteredChats = applyFilter(mappedChats);
+        const hasMore = threads.length >= THREADS_PAGE_SIZE;
 
-        setChats((prev) => ({
-          ...prev,
-          complete: mappedChats,
-          filtered: filteredChats,
-          isLoading: false,
-        }));
+        setHasMoreThreads(hasMore);
+        setNextThreadsOffset(offset + THREADS_PAGE_SIZE);
+
+        setChats((prev) => {
+          if (!append) {
+            const filteredChats = applyFilter(mappedChats);
+            return {
+              ...prev,
+              complete: mappedChats,
+              filtered: filteredChats,
+              isLoading: false,
+            };
+          }
+
+          const merged = new Map(prev.complete.map((chat) => [chat.id, chat]));
+          mappedChats.forEach((chat) => {
+            if (!merged.has(chat.id)) {
+              merged.set(chat.id, chat);
+            }
+          });
+
+          const mergedList = Array.from(merged.values()).sort(
+            (a, b) => (b.lastMessageAt || 0) - (a.lastMessageAt || 0)
+          );
+
+          return {
+            ...prev,
+            complete: mergedList,
+            filtered: applyFilter(mergedList),
+            isLoading: false,
+          };
+        });
       } catch {
         setChats((prev) => ({
           ...prev,
@@ -935,14 +1017,38 @@ export default function ChatsProvider({
         }));
       } finally {
         isFetchingRef.current = false;
+        setIsLoadingMoreThreads(false);
       }
     },
-    [sessionId, transformThreads, applyFilter, includeThreadId]
+    [
+      sessionId,
+      transformThreads,
+      applyFilter,
+      includeThreadId,
+      debouncedSearchQuery,
+    ]
   );
+
+  const loadMoreThreads = useCallback(() => {
+    if (!sessionId || isLoadingMoreThreads || !hasMoreThreads) {
+      return;
+    }
+
+    fetchThreads({ append: true, offset: nextThreadsOffset });
+  }, [
+    fetchThreads,
+    hasMoreThreads,
+    isLoadingMoreThreads,
+    nextThreadsOffset,
+    sessionId,
+  ]);
 
   useEffect(() => {
     if (!sessionId) {
       isFetchingRef.current = false;
+      setHasMoreThreads(false);
+      setIsLoadingMoreThreads(false);
+      setNextThreadsOffset(0);
       setChats((prev) => ({
         ...prev,
         complete: [],
@@ -953,7 +1059,10 @@ export default function ChatsProvider({
     }
 
     // Initial fetch only - SSE will handle updates
-    fetchThreads({ showLoading: true });
+    setHasMoreThreads(true);
+    setIsLoadingMoreThreads(false);
+    setNextThreadsOffset(0);
+    fetchThreads({ showLoading: true, offset: 0 });
 
     return () => {
       isFetchingRef.current = false;
@@ -970,6 +1079,21 @@ export default function ChatsProvider({
     });
   }, [filter, applyFilter, chats.complete]);
 
+  // Refetch when search query changes
+  useEffect(() => {
+    if (!sessionId) return;
+
+    // Skip on initial mount (empty string)
+    // The initial fetch effect will handle the first load
+    if (debouncedSearchQuery === "" && chats.complete.length === 0) {
+      return;
+    }
+
+    // Fetch with new search query
+    fetchThreads({ showLoading: true, offset: 0 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearchQuery, sessionId]);
+
   // Calculate total unread count
   const totalUnreadCount = chats.complete.reduce((total, chat) => {
     return total + (chat.unreadCount ?? 0);
@@ -981,11 +1105,17 @@ export default function ChatsProvider({
         chats,
         filter,
         updateFilter,
+        hasMoreThreads,
+        isLoadingMoreThreads,
+        loadMoreThreads,
         updateThreadPreview,
         markChatAsRead,
         totalUnreadCount,
         selectedBackendId,
         setSelectedBackendId,
+        searchQuery,
+        updateSearchQuery,
+        clearSearch,
       }}
     >
       {children}

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { UsersThreeIcon } from "@phosphor-icons/react";
+import { useEffect, useRef, useState } from "react";
+import { UsersThreeIcon, MagnifyingGlass, X } from "@phosphor-icons/react";
 import { useChats } from "@/app/hooks/use-chats";
 import { Chat, Filters, Message } from "@/app/context/chats-provider";
 import Profile from "../profile";
@@ -19,8 +19,14 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
     filter,
     updateFilter,
     chats: { filtered, isLoading, complete },
+    hasMoreThreads,
+    isLoadingMoreThreads,
+    loadMoreThreads,
     markChatAsRead,
     totalUnreadCount,
+    searchQuery,
+    updateSearchQuery,
+    clearSearch,
   } = useChats();
   const { getContact } = useContacts();
   const { loadCurrentChat, contact, chatId: currentChatId } = useCurrentChat();
@@ -29,6 +35,51 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
   const { isMobile } = useResponsive();
   const { sessionId } = useAuth();
   const [isMarkingAllRead, setIsMarkingAllRead] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const sentinel = loadMoreRef.current;
+    const root = scrollContainerRef.current;
+
+    if (!sentinel || !root || !hasMoreThreads) {
+      return;
+    }
+
+    if (isLoadingMoreThreads || isLoading) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0]?.isIntersecting) {
+          return;
+        }
+
+        if (!hasMoreThreads || isLoadingMoreThreads || isLoading) {
+          return;
+        }
+
+        loadMoreThreads();
+      },
+      {
+        root,
+        rootMargin: "400px",
+      }
+    );
+
+    observer.observe(sentinel);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [
+    hasMoreThreads,
+    isLoading,
+    isLoadingMoreThreads,
+    loadMoreThreads,
+    filtered.length,
+  ]);
 
   const getMetaMessage = (chat: Chat, message?: Message): string => {
     if (!message) {
@@ -226,6 +277,16 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
       );
     }
 
+    // Empty state for search with no results
+    if (filtered.length === 0 && searchQuery.length > 0) {
+      return (
+        <div className="w-full h-full flex flex-col justify-center items-center text-[rgb(var(--text-secondary)/var(--text-secondary-opacity))] gap-2">
+          <p className="text-lg">{t("chat.noResults")}</p>
+          <p className="text-sm">{t("chat.noResultsHint")}</p>
+        </div>
+      );
+    }
+
     return filtered.map(renderChat);
   };
 
@@ -237,6 +298,33 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
         </p>
       </section>
       <BackendSelector />
+      {/* Search Input */}
+      <section className="w-full px-4">
+        <div className="relative">
+          <MagnifyingGlass
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 size-5 text-[rgb(var(--text-secondary)/var(--text-secondary-opacity))]"
+            weight="regular"
+          />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => updateSearchQuery(e.target.value)}
+            placeholder={t("chat.searchPlaceholder")}
+            className="w-full pl-10 pr-10 py-2.5 bg-[rgb(var(--bg-input)/var(--bg-input-opacity))] border border-[rgb(var(--border-primary)/var(--border-primary-opacity))] rounded-lg text-[rgb(var(--text-primary))] placeholder-[rgb(var(--text-secondary)/var(--text-secondary-opacity))] focus:outline-none focus:border-[rgb(var(--accent-primary))] transition-colors"
+          />
+          {searchQuery.length > 0 && (
+            <button
+              onClick={clearSearch}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 hover:bg-[rgb(var(--bg-secondary)/var(--bg-secondary-opacity))] rounded-full transition-colors"
+            >
+              <X
+                className="size-4 text-[rgb(var(--text-secondary)/var(--text-secondary-opacity))]"
+                weight="bold"
+              />
+            </button>
+          )}
+        </div>
+      </section>
       <section className="w-full flex flex-col gap-1 px-4">
         <div className="flex justify-start items-center text-[rgb(var(--text-primary))] gap-2">
           {[Filters.ALL, Filters.UNREAD].map((f: string) => (
@@ -266,8 +354,19 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
           )}
         </div>
       </section>
-      <section className="w-full flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col gap-1 px-4 pb-4">
+      <section
+        ref={scrollContainerRef}
+        className="w-full flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col gap-1 px-4 pb-4"
+      >
         {renderChats()}
+        {hasMoreThreads && (
+          <div
+            ref={loadMoreRef}
+            className="flex justify-center py-2 text-sm text-[rgb(var(--text-secondary)/var(--text-secondary-opacity))]"
+          >
+            {isLoadingMoreThreads ? t("chat.loadingOlderThreads") : ""}
+          </div>
+        )}
       </section>
     </section>
   );

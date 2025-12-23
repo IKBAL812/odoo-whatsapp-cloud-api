@@ -11,6 +11,7 @@ import { useTranslations } from "@/app/context/translation-provider";
 import { useMobileNavigation } from "@/app/context/mobile-navigation-provider";
 import { useResponsive } from "@/app/hooks/use-responsive";
 import { useState, useEffect } from "react";
+import { useAuth } from "@/app/hooks/use-auth";
 
 export default function ContactHeader() {
   const {
@@ -24,8 +25,13 @@ export default function ContactHeader() {
     partnerName,
     partnerAvatar,
     hasAvatar,
+    backendId,
   } = useCurrentChat();
+  const { backendNames } = useAuth();
   const { t } = useTranslations();
+
+  // Get backend name from backendId
+  const backendName = backendId ? backendNames[backendId] : null;
   const { showChatList } = useMobileNavigation();
   const { isMobile } = useResponsive();
   const [odooBaseUrl, setOdooBaseUrl] = useState<string | null>(null);
@@ -110,7 +116,14 @@ export default function ContactHeader() {
             </div>
           </Profile>
           <div className="flex flex-col">
-            <p className="text-[rgb(var(--text-primary))]">{group.name}</p>
+            <p className="text-[rgb(var(--text-primary))]">
+              {group.name}
+              {backendName && (
+                <span className="text-[rgb(var(--text-secondary)/var(--text-secondary-opacity))] text-sm font-normal ml-2">
+                  ({backendName})
+                </span>
+              )}
+            </p>
             <p className="text-[rgb(var(--text-secondary)/var(--text-secondary-opacity))] text-xs">
               {renderGroupContactNames()}
             </p>
@@ -147,10 +160,21 @@ export default function ContactHeader() {
           />
           <div className="flex flex-col">
             <p className="text-[rgb(var(--text-primary))]">
-              {partnerName ??
-                contact?.displayName ??
-                threadName ??
-                t("chatList.title")}
+              <div className="grid grid-flow-col grid-rows-2">
+                <div className="col-span-2">
+                  {partnerName ??
+                    contact?.displayName ??
+                    threadName ??
+                    t("chatList.title")}{" "}
+                </div>
+                <div className="col-span-2">
+                  {backendName && (
+                    <span className="text-[rgb(var(--text-secondary)/var(--text-secondary-opacity))] text-xs font-normal">
+                      {backendName}
+                    </span>
+                  )}
+                </div>
+              </div>
             </p>
             {renderContactStatus()}
           </div>

@@ -33,6 +33,8 @@
     "searchPlaceholder": "Ara veya yeni sohbet başlat",
     "loading": "Yükleniyor...",
     "loadingOlderMessages": "Eski mesajlar yükleniyor...",
+    "loadingOlderThreads": "Eski sohbetler yükleniyor...",
+    "loadOlderThreads": "Eski sohbetleri yükle",
     "typing": "yazıyor...",
     "statusTyping": "yazıyor",
     "statusOnline": "çevrimiçi",
@@ -40,7 +42,9 @@
     "dayYesterday": "Dün",
     "reply": "Yanıtla",
     "openInOdoo": "Odoo Sayfası",
-    "openInOdooTitle": "Odoo'da partneri aç"
+    "openInOdooTitle": "Odoo'da partneri aç",
+    "noResults": "Sohbet bulunamadı",
+    "noResultsHint": "Farklı bir arama terimi deneyin"
   },
   "chatInput": {
     "placeholder": "Mesaj yazın",
