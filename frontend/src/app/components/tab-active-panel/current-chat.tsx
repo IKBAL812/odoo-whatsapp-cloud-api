@@ -17,12 +17,7 @@ import DragDropZone from "../message/drag-drop-zone";
 import SuggestionChips from "../message/suggestion-chips";
 import { useTranslations } from "@/app/context/translation-provider";
 import { useContacts } from "@/app/hooks/use-contacts";
-import {
-  XCircleIcon,
-  Sparkle,
-  TranslateIcon,
-  Robot,
-} from "@phosphor-icons/react";
+import { XCircleIcon, Sparkle, TranslateIcon } from "@phosphor-icons/react";
 
 export default function CurrentChat() {
   const {
@@ -45,18 +40,24 @@ export default function CurrentChat() {
   const [droppedFile, setDroppedFile] = useState<File | null>(null);
   const [isAiImproving, setIsAiImproving] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
-  const [isRagGenerating, setIsRagGenerating] = useState(false);
   const [isTypingAnimation, setIsTypingAnimation] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isSuggestionsLoading, setIsSuggestionsLoading] = useState(false);
   const lastProcessedIncomingIdRef = useRef<string | null>(null);
+  const suggestionsAbortControllerRef = useRef<AbortController | null>(null);
   const { t } = useTranslations();
   const { contacts } = useContacts();
 
   useEffect(() => {
+    // Abort any ongoing suggestion requests when switching threads
+    if (suggestionsAbortControllerRef.current) {
+      suggestionsAbortControllerRef.current.abort();
+      suggestionsAbortControllerRef.current = null;
+    }
     setMessageText("");
     setSendError(null);
     setSuggestions([]);
+    setIsSuggestionsLoading(false);
     lastProcessedIncomingIdRef.current = null;
   }, [chatId]);
 
@@ -345,99 +346,110 @@ export default function CurrentChat() {
     }
   };
 
-  const handleRagGenerate = async () => {
-    setIsRagGenerating(true);
-    setIsTypingAnimation(true);
-    setSendError(null);
-    setMessageText("");
+  // Generate suggestions with server-side caching
+  const generateSuggestions = useCallback(
+    async (forceRefresh = false) => {
+      if (messages.length === 0 || !chatId) {
+        return;
+      }
 
-    try {
-      // Get contact name from the current chat
+      // Find the latest incoming message ID for cache key
+      const latestIncoming = [...messages]
+        .reverse()
+        .find((m) => !m.isSentFromUser);
+
+      const lastMessageId = latestIncoming?.id;
+      if (!lastMessageId) {
+        return;
+      }
+
+      // Abort any previous ongoing request
+      if (suggestionsAbortControllerRef.current) {
+        suggestionsAbortControllerRef.current.abort();
+      }
+
+      // Create new AbortController for this request
+      const abortController = new AbortController();
+      suggestionsAbortControllerRef.current = abortController;
+
+      setIsSuggestionsLoading(true);
+
+      // If not forcing refresh, try to get from cache first
+      if (!forceRefresh) {
+        try {
+          const cacheResponse = await fetch(
+            `/api/ai/rag-suggestions?threadId=${chatId}&lastMessageId=${lastMessageId}`,
+            { signal: abortController.signal }
+          );
+
+          if (cacheResponse.ok) {
+            const cacheData = await cacheResponse.json();
+            if (cacheData.cached && cacheData.suggestions?.length > 0) {
+              setSuggestions(cacheData.suggestions);
+              setIsSuggestionsLoading(false);
+              return; // Cache hit, done!
+            }
+          }
+        } catch (error) {
+          // If aborted, stop processing
+          if (error instanceof Error && error.name === "AbortError") {
+            return;
+          }
+          // Cache check failed, proceed with generation
+        }
+      }
+
+      // Cache miss or force refresh - generate new suggestions
+      setSuggestions([]);
+
       const currentContact = contacts.find((c) => c.id === chatId);
       const contactName = currentContact?.displayName || "Customer";
 
-      const response = await fetch("/api/ai/rag-generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          messages: messages.slice(-10), // Last 10 messages
-          contactName: contactName,
-          userName: "Support Agent",
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to generate response");
-      }
-
-      const data = await response.json();
-      if (data.response) {
-        setMessageText(data.response);
-      }
-    } catch (error) {
-      const err = error as Error;
-      setSendError(err.message || t("chatInput.ragGenerateError"));
-    } finally {
-      setIsRagGenerating(false);
-      setIsTypingAnimation(false);
-    }
-  };
-
-  // Generate suggestions with 3 different writing styles
-  const generateSuggestions = useCallback(async () => {
-    if (messages.length === 0) {
-      return;
-    }
-
-    setIsSuggestionsLoading(true);
-    setSuggestions([]);
-
-    const styles = ["Aşırı kısa ve açıklayıcı", "Profesyonel ve teknik"];
-
-    // Get contact name from the current chat
-    const currentContact = contacts.find((c) => c.id === chatId);
-    const contactName = currentContact?.displayName || "Customer";
-
-    try {
-      // Make 3 parallel API calls with different styles
-      const promises = styles.map((style) =>
-        fetch("/api/ai/rag-generate", {
+      try {
+        const response = await fetch("/api/ai/rag-suggestions", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            threadId: chatId,
+            lastMessageId,
             messages: messages.slice(-10),
-            contactName: contactName,
+            contactName,
             userName: "Support Agent",
-            style,
+            forceRefresh,
           }),
-        })
-          .then((r) => r.json())
-          .then((data) => data.response || null)
-          .catch(() => null)
-      );
+          signal: abortController.signal,
+        });
 
-      const results = await Promise.all(promises);
-      const validSuggestions = results.filter(
-        (r): r is string => r !== null && r.length > 0
-      );
-      setSuggestions(validSuggestions);
-    } catch {
-      setSuggestions([]);
-    } finally {
-      setIsSuggestionsLoading(false);
-    }
-  }, [messages, contacts, chatId]);
+        if (response.ok) {
+          const data = await response.json();
+          setSuggestions(data.suggestions || []);
+        }
+      } catch (error) {
+        // If aborted, don't update state (thread switched)
+        if (error instanceof Error && error.name === "AbortError") {
+          return;
+        }
+        setSuggestions([]);
+      } finally {
+        // Only update loading state if this request wasn't aborted
+        if (!abortController.signal.aborted) {
+          setIsSuggestionsLoading(false);
+        }
+      }
+    },
+    [messages, contacts, chatId]
+  );
 
   // Handle suggestion selection - populate textarea
   const handleSuggestionSelect = (suggestion: string) => {
     setMessageText(suggestion);
     textareaRef.current?.focus();
   };
+
+  // Handle refresh button - force regenerate suggestions
+  const handleRefreshSuggestions = useCallback(() => {
+    generateSuggestions(true); // Force refresh
+  }, [generateSuggestions]);
 
   // Detect new incoming messages and generate suggestions
   useEffect(() => {
@@ -457,7 +469,7 @@ export default function CurrentChat() {
     // Only generate suggestions if this is a new incoming message
     if (latestIncoming.id !== lastProcessedIncomingIdRef.current) {
       lastProcessedIncomingIdRef.current = latestIncoming.id;
-      generateSuggestions();
+      generateSuggestions(false); // Use cache if available
     }
   }, [messages, generateSuggestions]);
 
@@ -635,7 +647,7 @@ export default function CurrentChat() {
               suggestions={suggestions}
               isLoading={isSuggestionsLoading}
               onSelect={handleSuggestionSelect}
-              onRefresh={generateSuggestions}
+              onRefresh={handleRefreshSuggestions}
               disabled={isSending || isTypingAnimation}
             />
             {replyTo && (
@@ -676,7 +688,6 @@ export default function CurrentChat() {
                   disabled={
                     isTranslating ||
                     isAiImproving ||
-                    isRagGenerating ||
                     isSending ||
                     messageText.trim().length === 0
                   }
@@ -703,7 +714,6 @@ export default function CurrentChat() {
                   disabled={
                     isAiImproving ||
                     isTranslating ||
-                    isRagGenerating ||
                     isSending ||
                     messages.length === 0
                   }
@@ -721,33 +731,6 @@ export default function CurrentChat() {
                     weight={isAiImproving ? "fill" : "regular"}
                     style={
                       isAiImproving ? { animationDuration: "2s" } : undefined
-                    }
-                  />
-                </button>
-                <button
-                  type="button"
-                  onClick={handleRagGenerate}
-                  disabled={
-                    isRagGenerating ||
-                    isAiImproving ||
-                    isTranslating ||
-                    isSending ||
-                    messages.length === 0
-                  }
-                  className={`text-[rgb(var(--text-secondary))] hover:text-[rgb(var(--accent-primary))] disabled:opacity-40 disabled:cursor-not-allowed transition-all p-2 mb-1 active:scale-95 ${
-                    isRagGenerating
-                      ? "animate-pulse text-[rgb(var(--accent-primary))]"
-                      : ""
-                  }`}
-                  title={t("chatInput.ragGenerate")}
-                >
-                  <Robot
-                    className={`size-5 md:size-5 transition-transform ${
-                      isRagGenerating ? "animate-spin" : ""
-                    }`}
-                    weight={isRagGenerating ? "fill" : "regular"}
-                    style={
-                      isRagGenerating ? { animationDuration: "2s" } : undefined
                     }
                   />
                 </button>
