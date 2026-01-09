@@ -516,6 +516,15 @@ export default function CurrentChat() {
       return;
     }
 
+    // Get the last message in the conversation
+    const lastMessage = messages[messages.length - 1];
+
+    // Skip if the last message is from us (agent), not the customer
+    // No need to generate suggestions if we already sent a reply
+    if (lastMessage.isSentFromUser) {
+      return;
+    }
+
     // Find the latest incoming message (from customer, not from user)
     const latestIncoming = [...messages]
       .reverse()
