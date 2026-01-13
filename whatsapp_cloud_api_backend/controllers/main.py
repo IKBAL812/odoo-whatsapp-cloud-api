@@ -35,9 +35,9 @@ class WhatsAppCloudAPIBackendController(http.Controller):
         Attachment = http.request.env["ir.attachment"].sudo()
         attachment = Attachment.browse(attachment_id)
         if not attachment.exists():
-            return http.request.not_found()
+            raise http.request.not_found()
         if not attachment.mimetype or not attachment.datas:
-            return http.request.not_found()
+            raise http.request.not_found()
         filecontent = base64.b64decode(attachment.datas)
         # Normalize filename to ASCII for fallback
         ascii_filename = unicodedata.normalize("NFKD", attachment.name)
@@ -102,9 +102,9 @@ class WhatsAppCloudAPIBackendController(http.Controller):
         partner = Partner.browse(partner_id)
         commercial_partner = partner.commercial_partner_id
         if not commercial_partner.exists():
-            return http.request.not_found()
+            raise http.request.not_found()
         if not commercial_partner.with_context(whatsapp_connector=True).avatar_256:
-            return http.request.not_found()
+            raise http.request.not_found()
 
         filecontent = base64.b64decode(commercial_partner.avatar_256)
         headers = [
