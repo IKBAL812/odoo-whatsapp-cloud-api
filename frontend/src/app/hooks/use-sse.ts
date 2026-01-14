@@ -32,7 +32,6 @@ export const useSSE = (callbacks: SSECallbacks, options: SSEOptions = {}) => {
     threadId = null,
     enabled = true,
     reconnectInterval = 3000, // Start with 3s
-    maxReconnectAttempts = Infinity, // Unlimited retries
     maxBackoff = 60000, // Max 60 seconds backoff
   } = options;
 
@@ -209,7 +208,6 @@ export const useSSE = (callbacks: SSECallbacks, options: SSEOptions = {}) => {
     sessionId,
     threadId,
     reconnectInterval,
-    maxReconnectAttempts,
     maxBackoff,
     loginWithSessionId,
   ]);

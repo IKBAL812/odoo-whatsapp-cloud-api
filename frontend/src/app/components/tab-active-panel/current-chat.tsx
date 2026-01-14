@@ -522,6 +522,7 @@ export default function CurrentChat() {
     // Skip if the last message is from us (agent), not the customer
     // No need to generate suggestions if we already sent a reply
     if (lastMessage.isSentFromUser) {
+      setSuggestions([]); // Clear suggestions when user sent the last message
       return;
     }
 
