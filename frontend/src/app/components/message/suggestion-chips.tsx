@@ -1,5 +1,6 @@
 import { ArrowsClockwise } from "@phosphor-icons/react";
 import { useTranslations } from "@/app/context/translation-provider";
+import FormattedText from "./formatted-text";
 
 type SuggestionChipsProps = {
   suggestions: string[];
@@ -50,7 +51,7 @@ export default function SuggestionChips({
                 disabled:opacity-50 disabled:cursor-not-allowed
                 active:scale-[0.99]"
             >
-              {suggestion}
+              <FormattedText text={suggestion} />
             </button>
           ))}
         </>
