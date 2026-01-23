@@ -7,16 +7,12 @@ import {
 import { ragSuggestionCache } from "@/app/lib/rag-suggestion-cache";
 import { Message } from "@/app/context/chats-provider";
 
-// Predefined suggestion styles
-const DEFAULT_STYLES = ["Aşırı kısa ve açıklayıcı", "Profesyonel ve teknik"];
-
 type RagSuggestionsRequest = {
   threadId: string;
   lastMessageId: string;
   messages: Message[];
   contactName?: string;
   userName?: string;
-  styles?: string[];
   forceRefresh?: boolean;
 };
 
@@ -100,7 +96,6 @@ export async function POST(request: NextRequest) {
       messages,
       contactName,
       userName,
-      styles = DEFAULT_STYLES,
       forceRefresh = false,
     } = body;
 
@@ -122,8 +117,8 @@ export async function POST(request: NextRequest) {
     // Check cache unless force refresh
     if (!forceRefresh) {
       const cached = ragSuggestionCache.get(threadId, lastMessageId);
-      if (cached && cached.length >= styles.length) {
-        // Cache hit with sufficient suggestions
+      if (cached && cached.length > 0) {
+        // Cache hit
         return NextResponse.json({
           suggestions: cached,
           cached: true,
@@ -156,46 +151,47 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate suggestions for all styles in parallel
-    const promises = styles.map(async (style) => {
-      try {
-        const response = await fetch(ragUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            messages: formattedMessages,
-            style,
-          }),
+    // Generate a single suggestion
+    try {
+      const response = await fetch(ragUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: formattedMessages,
+        }),
+      });
+
+      if (!response.ok) {
+        console.error("RAG API error:", response.status);
+        return NextResponse.json({
+          suggestions: [],
+          cached: false,
+          cacheKey: `${threadId}:${lastMessageId}`,
         });
-
-        if (!response.ok) {
-          console.error(`RAG API error for style "${style}":`, response.status);
-          return null;
-        }
-
-        const data: RagApiResponse = await response.json();
-        return data.response || null;
-      } catch (error) {
-        console.error(`RAG generation failed for style "${style}":`, error);
-        return null;
       }
-    });
 
-    const results = await Promise.all(promises);
-    const suggestions = results.filter(
-      (r): r is string => r !== null && r.length > 0
-    );
+      const data: RagApiResponse = await response.json();
+      const suggestions =
+        data.response && data.response.length > 0 ? [data.response] : [];
 
-    // Cache the results
-    if (suggestions.length > 0) {
-      ragSuggestionCache.set(threadId, lastMessageId, suggestions);
+      // Cache the result
+      if (suggestions.length > 0) {
+        ragSuggestionCache.set(threadId, lastMessageId, suggestions);
+      }
+
+      return NextResponse.json({
+        suggestions,
+        cached: false,
+        cacheKey: `${threadId}:${lastMessageId}`,
+      });
+    } catch (error) {
+      console.error("RAG generation failed:", error);
+      return NextResponse.json({
+        suggestions: [],
+        cached: false,
+        cacheKey: `${threadId}:${lastMessageId}`,
+      });
     }
-
-    return NextResponse.json({
-      suggestions,
-      cached: false,
-      cacheKey: `${threadId}:${lastMessageId}`,
-    });
   } catch (error) {
     console.error("RAG suggestions POST error:", error);
     const errorMessage =

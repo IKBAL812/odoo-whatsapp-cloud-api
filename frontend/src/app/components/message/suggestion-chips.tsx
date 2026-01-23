@@ -26,17 +26,12 @@ export default function SuggestionChips({
   return (
     <div className="flex flex-col gap-1 mb-2">
       {isLoading ? (
-        // Loading skeleton rows
-        <>
-          {[1, 2].map((i) => (
-            <div
-              key={i}
-              className="w-full px-3 py-1.5 rounded-lg animate-pulse
-                bg-[rgb(var(--bg-secondary)/var(--bg-secondary-opacity))]
-                h-8"
-            />
-          ))}
-        </>
+        // Loading skeleton row
+        <div
+          className="w-full px-3 py-1.5 rounded-lg animate-pulse
+            bg-[rgb(var(--bg-secondary)/var(--bg-secondary-opacity))]
+            h-8"
+        />
       ) : (
         // Suggestion rows
         <>
