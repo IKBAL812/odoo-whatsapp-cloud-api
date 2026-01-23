@@ -7,6 +7,7 @@ import { formatTime } from "@/app/utils";
 import { useAuth } from "@/app/hooks/use-auth";
 import { useTranslations } from "@/app/context/translation-provider";
 import AttachmentDisplay from "../message/attachment";
+import FormattedText from "../message/formatted-text";
 
 const getRandomContactColor = (): string => {
   const colors = [
@@ -116,7 +117,7 @@ export default function ChatMessage({
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
                     <p className="text-[rgb(var(--text-primary))] text-sm max-w-xs break-words">
-                      {displayText}
+                      <FormattedText text={displayText} />
                     </p>
                     <div className="flex items-center gap-1 flex-shrink-0">
                       <p className="text-[rgb(var(--text-message-time)/var(--text-message-time-opacity))] text-xs whitespace-nowrap">
@@ -191,7 +192,7 @@ export default function ChatMessage({
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-2">
                   <p className="text-[rgb(var(--text-primary))] text-sm max-w-xs break-words">
-                    {displayText}
+                    <FormattedText text={displayText} />
                   </p>
                   <div className="flex items-center gap-1 flex-shrink-0">
                     <p className="text-[rgb(var(--text-message-time)/var(--text-message-time-opacity))] text-xs whitespace-nowrap">
