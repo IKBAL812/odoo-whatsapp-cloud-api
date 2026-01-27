@@ -19,8 +19,11 @@ export default function SuggestionChips({
 }: SuggestionChipsProps) {
   const { t } = useTranslations();
 
+  // Filter out "NO_RESPONSE" suggestions (fallback in case API didn't filter)
+  const filteredSuggestions = suggestions.filter((s) => s !== "NO_RESPONSE");
+
   // Don't render if no suggestions and not loading
-  if (!isLoading && suggestions.length === 0) {
+  if (!isLoading && filteredSuggestions.length === 0) {
     return null;
   }
 
@@ -36,7 +39,7 @@ export default function SuggestionChips({
       ) : (
         // Suggestion rows
         <>
-          {suggestions.map((suggestion, index) => (
+          {filteredSuggestions.map((suggestion, index) => (
             <button
               key={index}
               type="button"

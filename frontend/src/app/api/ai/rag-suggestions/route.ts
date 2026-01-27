@@ -171,8 +171,13 @@ export async function POST(request: NextRequest) {
       }
 
       const data: RagApiResponse = await response.json();
+      // Filter out "NO_RESPONSE" - means the RAG system has no suggestion
       const suggestions =
-        data.response && data.response.length > 0 ? [data.response] : [];
+        data.response &&
+        data.response.length > 0 &&
+        data.response !== "NO_RESPONSE"
+          ? [data.response]
+          : [];
 
       // Cache the result
       if (suggestions.length > 0) {
