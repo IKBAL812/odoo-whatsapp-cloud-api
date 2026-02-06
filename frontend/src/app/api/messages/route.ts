@@ -95,6 +95,22 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const aroundIdParam = request.nextUrl.searchParams.get("aroundId");
+  const aroundId =
+    aroundIdParam && aroundIdParam.length > 0
+      ? Number(aroundIdParam)
+      : undefined;
+
+  if (
+    typeof aroundId !== "undefined" &&
+    (Number.isNaN(aroundId) || aroundId <= 0)
+  ) {
+    return NextResponse.json(
+      { error: "aroundId must be a valid positive number" },
+      { status: 400 }
+    );
+  }
+
   const sessionId = request.headers.get("x-session-id");
   if (!sessionId) {
     return NextResponse.json(
@@ -124,6 +140,51 @@ export async function GET(request: NextRequest) {
   const sessionClient = odooClient.createSession(sessionId);
 
   try {
+    if (typeof aroundId === "number") {
+      const halfLimit = Math.ceil(limit / 2);
+      const selectFields = [
+        "create_date",
+        "body",
+        "status",
+        "direction",
+        "attachment_id",
+        "create_uid",
+        "message_id",
+        "replied_message_id",
+        "write_date",
+        "timestamp",
+        "reaction_emoji",
+      ];
+
+      const olderMessages = await sessionClient.searchRead<OdooMessageRecord[]>(
+        "whatsapp.message",
+        [
+          ["thread_id", "=", threadId],
+          ["id", "<=", aroundId],
+        ],
+        { limit: halfLimit, order: "id DESC", select: selectFields }
+      );
+
+      const newerMessages = await sessionClient.searchRead<OdooMessageRecord[]>(
+        "whatsapp.message",
+        [
+          ["thread_id", "=", threadId],
+          ["id", ">", aroundId],
+        ],
+        { limit: halfLimit, select: selectFields }
+      );
+
+      const combined = [
+        ...(olderMessages ?? []).reverse(),
+        ...(newerMessages ?? []),
+      ];
+      return NextResponse.json({
+        threadId,
+        messages: combined,
+        targetMessageId: aroundId,
+      });
+    }
+
     const domain: Array<[string, string, string | number]> = [
       ["thread_id", "=", threadId],
     ];

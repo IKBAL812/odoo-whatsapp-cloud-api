@@ -46,6 +46,7 @@ export type CurrentChatData = {
   hasAvatar: boolean;
   isSending: boolean;
   replyTo: Message | null;
+  targetMessageId: number | null;
 };
 
 export type CurrentChat = CurrentChatData & {
@@ -230,10 +231,12 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
     hasAvatar: false,
     isSending: false,
     replyTo: null,
+    targetMessageId: null,
   });
   const latestMessageTimestampRef = useRef<number | null>(null);
   const latestMessageIdRef = useRef<number | null>(null);
   const oldestMessageIdRef = useRef<number | null>(null);
+  const targetMessageIdRef = useRef<number | null>(null);
   const notificationAudioRef = useRef<HTMLAudioElement | null>(null);
   const initialNotificationRef = useRef(true);
 
@@ -573,12 +576,14 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
       signal,
       direction = "forward",
       isPagination = false,
+      aroundId,
     }: {
       replace?: boolean;
       lastId?: number | null;
       signal?: AbortSignal;
       direction?: "forward" | "backward";
       isPagination?: boolean;
+      aroundId?: number | null;
     } = {}) => {
       if (!chatId || !sessionId) {
         return;
@@ -589,29 +594,33 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
         limit: String(MESSAGE_BATCH_SIZE),
       });
 
-      // Determine which ID to use
-      const effectiveLastId =
-        typeof lastId === "number"
-          ? lastId
-          : replace
-            ? null
-            : direction === "backward"
-              ? oldestMessageIdRef.current
-              : latestMessageIdRef.current;
+      if (typeof aroundId === "number") {
+        searchParams.set("aroundId", String(aroundId));
+      } else {
+        // Determine which ID to use
+        const effectiveLastId =
+          typeof lastId === "number"
+            ? lastId
+            : replace
+              ? null
+              : direction === "backward"
+                ? oldestMessageIdRef.current
+                : latestMessageIdRef.current;
 
-      if (
-        !replace &&
-        (effectiveLastId === null || typeof effectiveLastId === "undefined")
-      ) {
-        return;
-      }
+        if (
+          !replace &&
+          (effectiveLastId === null || typeof effectiveLastId === "undefined")
+        ) {
+          return;
+        }
 
-      if (typeof effectiveLastId === "number") {
-        searchParams.set("lastId", String(effectiveLastId));
-      }
+        if (typeof effectiveLastId === "number") {
+          searchParams.set("lastId", String(effectiveLastId));
+        }
 
-      if (direction === "backward") {
-        searchParams.set("direction", "backward");
+        if (direction === "backward") {
+          searchParams.set("direction", "backward");
+        }
       }
 
       if (replace) {
@@ -888,7 +897,9 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
     }
 
     const abortController = new AbortController();
-    fetchMessages({ replace: true, signal: abortController.signal });
+    const aroundId = targetMessageIdRef.current;
+    targetMessageIdRef.current = null;
+    fetchMessages({ replace: true, signal: abortController.signal, aroundId });
 
     return () => {
       abortController.abort();
@@ -968,6 +979,9 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
   }, [complete, contacts, currentChat.chatId]);
 
   const loadCurrentChat = (chat: Partial<CurrentChatData>) => {
+    const isSameChat =
+      chat.chatId != null && chat.chatId === currentChat.chatId;
+
     setCurrentChat((prev) => ({
       ...prev,
       ...chat,
@@ -976,7 +990,10 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
       hasMoreMessages: true,
       replyTo: null,
     }));
+    targetMessageIdRef.current =
+      typeof chat.targetMessageId === "number" ? chat.targetMessageId : null;
     latestMessageTimestampRef.current = null;
+
     latestMessageIdRef.current = null;
     oldestMessageIdRef.current = null;
     // Don't clear global notification tracker - it persists across thread switches
@@ -995,6 +1012,11 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
       }).catch(() => {
         // Silently fail - not critical if mark as read fails
       });
+    }
+    // If navigating to a target message in the same thread,
+    // fetch directly since the useEffect won't re-fire (chatId unchanged)
+    if (isSameChat && typeof chat.targetMessageId === "number") {
+      fetchMessages({ replace: true, aroundId: chat.targetMessageId });
     }
   };
 

@@ -45,7 +45,9 @@
     "openInOdooTitle": "Odoo'da partneri aç",
     "noResults": "Sohbet bulunamadı",
     "noResultsHint": "Farklı bir arama terimi deneyin",
-    "translated": "Çevrildi"
+    "translated": "Çevrildi",
+    "searchSectionContacts": "Kişiler",
+    "searchSectionMessages": "Mesajlar"
   },
   "chatInput": {
     "placeholder": "Mesaj yazın",
