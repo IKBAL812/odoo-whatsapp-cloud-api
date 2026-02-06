@@ -45,7 +45,7 @@ jobs:
           key: pre-commit|${{ env.PY }}|${{ hashFiles('.pre-commit-config.yaml') }}
 
       - name: Install pre-commit
-        run: pip install pre-commit
+        run: pip install pre-commit==4.5.1
 
       - name: Frontend pre-commit checks
         run: |
