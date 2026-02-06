@@ -44,7 +44,7 @@ class WhatsAppBackend(models.Model):
 
     name = fields.Char(required=True)
     active = fields.Boolean(default=True)
-    main_backend = fields.Boolean(string="Main Backend", default=False)
+    main_backend = fields.Boolean(default=False)
     api_token = fields.Char(string="API Token", required=True)
     phone_number_id = fields.Char(string="Phone Number ID", required=True)
     api_version = fields.Char(string="API Version", required=True, default="v23.0")
@@ -384,7 +384,7 @@ class WhatsAppBackend(models.Model):
                 )
                 return e164.lstrip("+")
         except phonenumbers.NumberParseException:
-            pass
+            _logger.debug("Could not parse phone number: %s", phone)
         # Fallback: just strip non-digit characters
         return re.sub(r"\D", "", phone)
 

@@ -24,6 +24,9 @@
     "assets": {
         "web.assets_backend": [
             "whatsapp_cloud_api_backend/static/src/js/user_menu.js",
+            "whatsapp_cloud_api_backend/static/src/components/whatsapp_systray/whatsapp_systray.js",
+            "whatsapp_cloud_api_backend/static/src/components/whatsapp_systray/whatsapp_systray.xml",
+            "whatsapp_cloud_api_backend/static/src/components/whatsapp_systray/whatsapp_systray.scss",
         ],
     },
     "installable": True,

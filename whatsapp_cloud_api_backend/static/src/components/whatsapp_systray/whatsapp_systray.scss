@@ -1,0 +1,29 @@
+.o_whatsapp_systray {
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+  position: relative;
+
+  .o_whatsapp_icon {
+    font-size: 1.5em;
+  }
+
+  &:hover {
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+  }
+
+  .o_whatsapp_counter {
+    position: absolute;
+    top: -2px;
+    right: -6px;
+    font-size: 9px;
+    min-width: 14px;
+    height: 14px;
+    line-height: 14px;
+    padding: 0 3px;
+    text-align: center;
+    pointer-events: none;
+  }
+}

@@ -117,7 +117,8 @@
                                 role="alert"
                                 attrs="{'invisible': [('model_id', '!=', False)]}"
                             >
-                                <strong>Tip:</strong> Select an "Associated Model" above to enable variable mapping.
+                                <strong
+                            >Tip:</strong> Select an "Associated Model" above to enable variable mapping.
                                 Then click "Parse Variables" to extract variables from the template text.
                             </div>
                         </page>
@@ -129,8 +130,17 @@
                             <field name="variable_ids">
                                 <tree editable="bottom">
                                     <field name="component_type" readonly="1" />
-                                    <field name="button_index" readonly="1" attrs="{'column_invisible': [('parent.buttons_data', '=', [])]}" string="Button #" />
-                                    <field name="variable_position" readonly="1" string="{{N}}" />
+                                    <field
+                                        name="button_index"
+                                        readonly="1"
+                                        attrs="{'column_invisible': [('parent.buttons_data', '=', [])]}"
+                                        string="Button #"
+                                    />
+                                    <field
+                                        name="variable_position"
+                                        readonly="1"
+                                        string="{{N}}"
+                                    />
                                     <field name="variable_name" />
                                     <field name="value_type" />
                                     <field name="template_model_id" invisible="1" />
@@ -147,11 +157,16 @@
                                 </tree>
                             </field>
                             <div class="alert alert-info" role="alert">
-                                <strong>Note:</strong> Map each variable ({{1}}, {{2}}, etc.) to either:
+                                <strong
+                            >Note:</strong> Map each variable ({{1}}, {{2}}, etc.) to either:
                                 <ul class="mb-0">
-                                    <li><strong>Field Value:</strong> Select an Odoo field directly</li>
-                                    <li><strong>Python Code:</strong> Write code that sets <code>result</code> variable (e.g., <code>result = record.name.upper()</code>)</li>
-                                </ul>
+                                <li><strong
+                                >Field Value:</strong> Select an Odoo field directly</li>
+                                <li><strong
+                                >Python Code:</strong> Write code that sets <code
+                                >result</code> variable (e.g., <code
+                                >result = record.name.upper()</code>)</li>
+                            </ul>
                             </div>
                         </page>
                         <page string="Raw Components (JSON)" name="raw">
@@ -188,7 +203,11 @@
                     domain="[('status', '=', 'REJECTED')]"
                 />
                 <separator />
-                <filter name="utility" string="Utility" domain="[('category', '=', 'UTILITY')]" />
+                <filter
+                    name="utility"
+                    string="Utility"
+                    domain="[('category', '=', 'UTILITY')]"
+                />
                 <filter
                     name="marketing"
                     string="Marketing"

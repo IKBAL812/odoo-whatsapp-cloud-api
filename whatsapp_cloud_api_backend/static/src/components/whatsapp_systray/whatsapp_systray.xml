@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<templates xml:space="preserve">
+
+    <t t-name="whatsapp_cloud_api_backend.WhatsAppSystray" owl="1">
+        <div t-if="state.hasAccess" class="d-flex align-items-center">
+            <div
+                class="o_whatsapp_systray px-2"
+                t-on-click="openWhatsApp"
+                role="button"
+                title="Open WhatsApp"
+            >
+                <i class="fa fa-whatsapp text-white o_whatsapp_icon" />
+                <span
+                    t-if="state.unreadCount > 0"
+                    class="o_whatsapp_counter badge rounded-pill bg-danger"
+                >
+                    <t t-esc="state.unreadCount > 99 ? '99+' : state.unreadCount" />
+                </span>
+            </div>
+        </div>
+    </t>
+
+</templates>

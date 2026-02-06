@@ -17,6 +17,7 @@ import unicodedata
 from urllib.parse import quote
 
 from odoo import http
+from odoo.http import request
 
 WP_ATTACHMENT_DOWNLOAD_PATH = "/whatsapp/attachment/download/"
 WP_ATTACHMENT_UPLOAD_PATH = "/whatsapp/attachment/upload/"
@@ -116,3 +117,43 @@ class WhatsAppCloudAPIBackendController(http.Controller):
             ),
         ]
         return http.request.make_response(filecontent, headers)
+
+    @http.route(
+        "/whatsapp/unread_count",
+        type="json",
+        auth="user",
+        methods=["POST"],
+    )
+    def get_unread_count_endpoint(self, **kwargs):
+        """Get total unread WhatsApp message count for current user."""
+        backend_ids = request.env["whatsapp.backend"].search(
+            [("user_ids", "in", request.env.user.id)]
+        )
+        available_thread_ids = [
+            x["id"]
+            for x in request.env["whatsapp.thread"].search_read(
+                [("backend_id", "in", backend_ids.ids)], fields=["id"]
+            )
+        ]
+        total_unread = request.env["whatsapp.message.read.status"].search_count(
+            [
+                ("is_read", "=", False),
+                ("user_id", "=", request.env.user.id),
+                ("message_id.thread_id.id", "in", available_thread_ids),
+            ]
+        )
+        return {"unread_count": total_unread}
+
+    @http.route(
+        "/whatsapp/mark_all_read",
+        type="json",
+        auth="user",
+        methods=["POST"],
+    )
+    def mark_all_as_read_endpoint(self, **kwargs):
+        """Mark all unread WhatsApp messages as read for current user."""
+        backend_ids = request.env["whatsapp.backend"].search(
+            [("user_ids", "in", request.env.user.id)]
+        )
+        result = request.env["whatsapp.thread"].mark_all_as_read(backend_ids)
+        return result

@@ -101,9 +101,7 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
   const handleMarkAllRead = async () => {
     if (!sessionId) return;
 
-    // Get all unread chats
     const unreadChats = complete.filter((chat) => !chat.read);
-
     if (unreadChats.length === 0) return;
 
     setIsMarkingAllRead(true);
@@ -113,22 +111,19 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
       markChatAsRead(chat.id);
     });
 
-    // Call API for each unread chat (in parallel)
-    const promises = unreadChats.map((chat) =>
-      fetch("/api/threads/mark-read", {
+    // Single API call to mark all as read
+    try {
+      await fetch("/api/threads/mark-all-read", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "x-session-id": sessionId,
         },
-        body: JSON.stringify({ threadId: chat.id }),
-      }).catch((err) => {
-        console.error(`Failed to mark chat ${chat.id} as read:`, err);
-        return null; // Don't fail entire operation
-      })
-    );
+      });
+    } catch (err) {
+      console.error("Failed to mark all chats as read:", err);
+    }
 
-    await Promise.allSettled(promises);
     setIsMarkingAllRead(false);
   };
 

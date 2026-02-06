@@ -9,11 +9,22 @@ import { browser } from "@web/core/browser/browser";
  * Adds "Open WhatsApp" button to the user menu dropdown that performs SSO login
  * to the WhatsApp frontend application.
  */
+let hasWhatsAppAccess = null;
+
 function whatsappMenuItem(env) {
+    if (hasWhatsAppAccess === null) {
+        hasWhatsAppAccess = false;
+        env.services.user
+            .hasGroup("whatsapp_cloud_api_backend.group_whatsapp_backend_user")
+            .then((result) => {
+                hasWhatsAppAccess = result;
+            });
+    }
     return {
         type: "item",
         id: "whatsapp",
         description: env._t("Open WhatsApp"),
+        hide: !hasWhatsAppAccess,
         callback: async () => {
             try {
                 const result = await env.services.rpc("/whatsapp/frontend/sso-url");

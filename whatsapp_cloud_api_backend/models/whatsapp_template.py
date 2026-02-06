@@ -474,7 +474,6 @@ class WhatsAppTemplateVariable(models.Model):
 
     # For code type: Python code to compute value
     python_code = fields.Text(
-        string="Python Code",
         help=(
             "Python code to compute the variable value.\n\n"
             "Available variables:\n"

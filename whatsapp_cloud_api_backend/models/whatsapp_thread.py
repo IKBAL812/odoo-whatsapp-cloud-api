@@ -309,6 +309,49 @@ class WhatsAppThread(models.Model):
 
         return True
 
+    @api.model
+    def mark_all_as_read(self, backend_ids):
+        """
+        Mark ALL unread messages as read for the current user.
+        Works across all threads, not just loaded ones.
+
+        Args:
+            backend_ids: Optional list of backend IDs to filter.
+                        If None, uses all backends the user has access to.
+        """
+        user = self.env.user
+
+        if not backend_ids:
+            return {"marked_count": 0}
+
+        # # Find all unread message statuses for this user in accessible threads
+        # unread_statuses = self.env["whatsapp.message.read.status"].search([
+        #     ("is_read", "=", False),
+        #     ("user_id", "=", user.id),
+        #     ("message_id.thread_id.backend_id", "in", backend_ids.ids),
+        # ])
+
+        # # Mark them all as read
+        # unread_statuses.write({"is_read": True})
+
+        # return {"marked_count": len(unread_statuses)}
+
+        query = """
+            UPDATE whatsapp_message_read_status rs
+            SET is_read = TRUE
+            FROM whatsapp_message m
+            JOIN whatsapp_thread t ON m.thread_id = t.id
+            WHERE rs.message_id = m.id
+                AND rs.is_read = FALSE
+                AND rs.user_id = %s
+                AND t.backend_id IN %s
+        """
+        self.env.cr.execute(query, (user.id, tuple(backend_ids.ids)))
+        marked_count = self.env.cr.rowcount
+        self.env["whatsapp.message.read.status"].invalidate_cache(["is_read"])
+
+        return {"marked_count": marked_count}
+
     # -------------------------------------------------------------------------
     # Sending API
     # -------------------------------------------------------------------------
