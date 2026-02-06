@@ -14,7 +14,6 @@ export class WhatsAppSystray extends Component {
 
         onWillStart(async () => {
             this.state.hasAccess = await this.user.hasGroup(
-                
                 "whatsapp_cloud_api_backend.group_whatsapp_backend_user"
             );
             if (this.state.hasAccess) {
