@@ -159,7 +159,7 @@ export default function ContactHeader() {
             seed={partnerId ?? undefined}
           />
           <div className="flex flex-col">
-            <p className="text-[rgb(var(--text-primary))]">
+            <div className="text-[rgb(var(--text-primary))]">
               <div className="grid grid-flow-col grid-rows-2">
                 <div className="col-span-2">
                   {partnerName ??
@@ -175,7 +175,7 @@ export default function ContactHeader() {
                   )}
                 </div>
               </div>
-            </p>
+            </div>
             {renderContactStatus()}
           </div>
         </div>

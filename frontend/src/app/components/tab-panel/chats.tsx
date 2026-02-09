@@ -195,7 +195,7 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
           }
         }}
         className={`outline-none grid grid-cols-6 w-full gap-4 p-3 md:p-2.5 hover:bg-[rgb(var(--bg-secondary)/var(--bg-secondary-opacity))] rounded-xl cursor-pointer active:bg-[rgb(var(--bg-secondary)/var(--bg-quaternary-opacity))] transition-colors ${
-          typeof chat.contactId === "string" && chat.contactId === contact?.id
+          chat.id === currentChatId
             ? "bg-[rgb(var(--bg-secondary)/var(--bg-secondary-opacity))]"
             : ""
         }`}
@@ -306,7 +306,11 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
             showActiveChat();
           }
         }}
-        className="outline-none grid grid-cols-6 w-full gap-4 p-3 md:p-2.5 hover:bg-[rgb(var(--bg-secondary)/var(--bg-secondary-opacity))] rounded-xl cursor-pointer active:bg-[rgb(var(--bg-secondary)/var(--bg-quaternary-opacity))] transition-colors"
+        className={`outline-none grid grid-cols-6 w-full gap-4 p-3 md:p-2.5 hover:bg-[rgb(var(--bg-secondary)/var(--bg-secondary-opacity))] rounded-xl cursor-pointer active:bg-[rgb(var(--bg-secondary)/var(--bg-quaternary-opacity))] transition-colors ${
+          threadId === currentChatId
+            ? "bg-[rgb(var(--bg-secondary)/var(--bg-secondary-opacity))]"
+            : ""
+        }`}
       >
         <div className="col-span-1">
           <Profile size="12" alt={name} seed={result.partnerId ?? undefined} />

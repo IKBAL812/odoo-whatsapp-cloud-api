@@ -779,11 +779,13 @@ export default function CurrentChatProvider({ children }: PropsWithChildren) {
           }
 
           // Merge messages - prepend for backward pagination, append for forward
-          const mergedMessages = isInitialLoad
-            ? incomingMessages
-            : direction === "backward"
-              ? [...incomingMessages, ...prev.messages] // Prepend older messages
-              : [...prev.messages, ...incomingMessages]; // Append new messages
+          const mergedMessages = (
+            isInitialLoad
+              ? incomingMessages
+              : direction === "backward"
+                ? [...incomingMessages, ...prev.messages]
+                : [...prev.messages, ...incomingMessages]
+          ).sort((a, b) => a.timestamp - b.timestamp);
 
           nextLatestTimestamp =
             mergedMessages.length > 0

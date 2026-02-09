@@ -68,9 +68,9 @@ export default function ChatMessage({
       ? t("common.you")
       : (getContact(message.replyTo.contactId)?.displayName ?? t("common.you"));
     return (
-      <div className="bg-[rgb(var(--bg-reply-preview)/var(--bg-reply-preview-opacity))] border-l-2 border-[rgb(var(--accent-primary))] px-2 py-1 rounded text-[rgb(var(--text-secondary)/var(--text-tertiary-opacity))] text-xs w-full mb-1">
+      <div className="bg-[rgb(var(--bg-reply-preview)/var(--bg-reply-preview-opacity))] border-l-2 border-[rgb(var(--accent-primary))] px-2 py-1 rounded text-[rgb(var(--text-secondary)/var(--text-tertiary-opacity))] text-xs w-full max-w-xs mb-1">
         <p className="font-semibold truncate">{name}</p>
-        <p className="truncate">{message.replyTo.message}</p>
+        <p className="line-clamp-2 break-words">{message.replyTo.message}</p>
       </div>
     );
   };
