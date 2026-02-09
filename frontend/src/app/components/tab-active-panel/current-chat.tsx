@@ -34,6 +34,7 @@ export default function CurrentChat() {
     cancelReply,
     startReply,
     loadPreviousMessages,
+    targetMessageId,
   } = useCurrentChat();
   const [messageText, setMessageText] = useState("");
   const [sendError, setSendError] = useState<string | null>(null);
@@ -80,11 +81,11 @@ export default function CurrentChat() {
   // Auto-scroll to bottom on initial load and new messages
   useEffect(() => {
     const container = scrollContainerRef.current;
-    if (container && !isLoadingPaginationRef.current) {
+    if (container && !isLoadingPaginationRef.current && !targetMessageId) {
       container.scrollTop = container.scrollHeight;
       hasScrolledRef.current = true;
     }
-  }, [messages.length, isLoading]);
+  }, [messages.length, isLoading, targetMessageId]);
 
   // Handle scroll event for pagination
   useEffect(() => {
@@ -125,6 +126,33 @@ export default function CurrentChat() {
       container.removeEventListener("scroll", handleScroll);
     };
   }, [hasMoreMessages, isPaginationLoading, isLoading, loadPreviousMessages]);
+
+  // Scroll to target message from search results
+  useEffect(() => {
+    if (!targetMessageId || isLoading || messages.length === 0) return;
+
+    const targetId = String(targetMessageId);
+    const el = document.getElementById(`msg-${targetId}`);
+    if (!el) return;
+
+    requestAnimationFrame(() => {
+      el.scrollIntoView({ block: "center", behavior: "instant" });
+      hasScrolledRef.current = true;
+
+      // Flash highlight
+      el.style.transition = "background-color 0.5s ease-in-out";
+      el.style.backgroundColor = "rgba(255, 213, 79, 0.3)";
+      el.style.borderRadius = "12px";
+      setTimeout(() => {
+        el.style.backgroundColor = "transparent";
+        setTimeout(() => {
+          el.style.transition = "";
+          el.style.backgroundColor = "";
+          el.style.borderRadius = "";
+        }, 500);
+      }, 1500);
+    });
+  }, [targetMessageId, isLoading, messages.length]);
 
   // Preserve scroll position after pagination loads
   useEffect(() => {
@@ -648,6 +676,7 @@ export default function CurrentChat() {
 
                   return (
                     <div
+                      id={message.id ? `msg-${message.id}` : undefined}
                       className={`w-full flex items-center ${
                         message.isSentFromUser ? "justify-end" : "justify-start"
                       }`}

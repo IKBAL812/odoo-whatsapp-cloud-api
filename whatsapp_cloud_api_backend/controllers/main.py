@@ -157,3 +157,18 @@ class WhatsAppCloudAPIBackendController(http.Controller):
         )
         result = request.env["whatsapp.thread"].mark_all_as_read(backend_ids)
         return result
+
+    @http.route(
+        "/whatsapp/message/search",
+        type="json",
+        auth="user",
+        methods=["POST"],
+    )
+    def search_messages_endpoint(self, **kwargs):
+        """Search WhatsApp messages by content."""
+        query = kwargs.get("query", "")
+        limit = kwargs.get("limit", 20)
+        offset = kwargs.get("offset", 0)
+        return request.env["whatsapp.thread"].search_messages_by_content(
+            query, limit=limit, offset=offset
+        )

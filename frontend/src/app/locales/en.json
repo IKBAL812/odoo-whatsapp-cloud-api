@@ -45,7 +45,9 @@
     "openInOdooTitle": "Open partner in Odoo",
     "noResults": "No chats found",
     "noResultsHint": "Try a different search term",
-    "translated": "Translated"
+    "translated": "Translated",
+    "searchSectionContacts": "Contacts",
+    "searchSectionMessages": "Messages"
   },
   "chatInput": {
     "placeholder": "Type a message",

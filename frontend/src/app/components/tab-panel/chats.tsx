@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { UsersThreeIcon, MagnifyingGlass, X } from "@phosphor-icons/react";
 import { useChats } from "@/app/hooks/use-chats";
-import { Chat, Filters, Message } from "@/app/context/chats-provider";
+import {
+  Chat,
+  Filters,
+  Message,
+  MessageSearchResult,
+} from "@/app/context/chats-provider";
 import Profile from "../profile";
 import { useContacts } from "@/app/hooks/use-contacts";
 import { useCurrentChat } from "@/app/hooks/use-current-chat";
@@ -27,6 +32,11 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
     searchQuery,
     updateSearchQuery,
     clearSearch,
+    messageSearchResults,
+    isSearchingMessages,
+    hasMoreMessageResults,
+    isLoadingMoreMessages,
+    loadMoreMessageResults,
   } = useChats();
   const { getContact } = useContacts();
   const { loadCurrentChat, contact, chatId: currentChatId } = useCurrentChat();
@@ -42,7 +52,7 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
     const sentinel = loadMoreRef.current;
     const root = scrollContainerRef.current;
 
-    if (!sentinel || !root || !hasMoreThreads) {
+    if (!sentinel || !root || !hasMoreThreads || searchQuery.length > 0) {
       return;
     }
 
@@ -263,6 +273,63 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
     );
   };
 
+  const renderMessageResult = (result: MessageSearchResult) => {
+    const name = result.partnerName ?? result.threadName ?? "Unknown";
+    const threadId = String(result.threadId);
+    const formattedDate = result.messageTimestamp
+      ? dayjs(result.messageTimestamp * 1000).isSame(dayjs(), "day")
+        ? formatTime(result.messageTimestamp * 1000, locale)
+        : t("common.dateFormat", {
+            date: dayjs(result.messageTimestamp * 1000).format("MMM D, YYYY"),
+          })
+      : "";
+
+    return (
+      <button
+        key={`msg-${result.messageId}`}
+        onClick={() => {
+          loadCurrentChat({
+            chatId: threadId,
+            page: 0,
+            messages: [],
+            contact: null,
+            group: null,
+            threadName: result.threadName ?? null,
+            phoneNumber: result.phoneNumber ?? null,
+            backendId: result.backendId ?? null,
+            partnerId: result.partnerId ?? null,
+            partnerName: result.partnerName ?? null,
+            partnerAvatar: null,
+            targetMessageId: result.messageId,
+          });
+          if (isMobile) {
+            showActiveChat();
+          }
+        }}
+        className="outline-none grid grid-cols-6 w-full gap-4 p-3 md:p-2.5 hover:bg-[rgb(var(--bg-secondary)/var(--bg-secondary-opacity))] rounded-xl cursor-pointer active:bg-[rgb(var(--bg-secondary)/var(--bg-quaternary-opacity))] transition-colors"
+      >
+        <div className="col-span-1">
+          <Profile size="12" alt={name} seed={result.partnerId ?? undefined} />
+        </div>
+        <div className="col-span-4 flex flex-col justify-center items-start w-full min-w-0">
+          <p className="text-[rgb(var(--text-primary))] truncate w-full text-left">
+            {name}
+          </p>
+          <p className="text-sm text-[rgb(var(--text-secondary)/var(--text-secondary-opacity))] line-clamp-2 break-all text-left">
+            {result.messageBody}
+          </p>
+        </div>
+        <div className="col-span-1 flex flex-col justify-center items-end gap-1">
+          {formattedDate && (
+            <p className="text-xs font-semibold text-[rgb(var(--text-secondary)/var(--text-secondary-opacity))]">
+              {formattedDate}
+            </p>
+          )}
+        </div>
+      </button>
+    );
+  };
+
   const renderChats = () => {
     if (isLoading) {
       return (
@@ -272,13 +339,67 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
       );
     }
 
-    // Empty state for search with no results
-    if (filtered.length === 0 && searchQuery.length > 0) {
+    // When searching, show sectioned results
+    if (searchQuery.length > 0) {
+      const hasContacts = filtered.length > 0;
+      const hasMessages = messageSearchResults.length > 0;
+
+      if (!hasContacts && !hasMessages && !isSearchingMessages) {
+        return (
+          <div className="w-full h-full flex flex-col justify-center items-center text-[rgb(var(--text-secondary)/var(--text-secondary-opacity))] gap-2">
+            <p className="text-lg">{t("chat.noResults")}</p>
+            <p className="text-sm">{t("chat.noResultsHint")}</p>
+          </div>
+        );
+      }
+
       return (
-        <div className="w-full h-full flex flex-col justify-center items-center text-[rgb(var(--text-secondary)/var(--text-secondary-opacity))] gap-2">
-          <p className="text-lg">{t("chat.noResults")}</p>
-          <p className="text-sm">{t("chat.noResultsHint")}</p>
-        </div>
+        <>
+          {hasContacts && (
+            <>
+              <p className="text-xs font-semibold text-[rgb(var(--text-secondary)/var(--text-secondary-opacity))] uppercase tracking-wider px-1 pt-2 pb-1">
+                {t("chat.searchSectionContacts")}
+              </p>
+              {filtered.map(renderChat)}
+              {hasMoreThreads && (
+                <button
+                  onClick={loadMoreThreads}
+                  disabled={isLoadingMoreThreads}
+                  className="w-full py-2 text-sm text-[rgb(var(--accent-primary))] hover:underline disabled:opacity-50 disabled:cursor-wait"
+                >
+                  {isLoadingMoreThreads
+                    ? t("chat.loading")
+                    : t("chat.loadOlderThreads")}
+                </button>
+              )}
+            </>
+          )}
+          {hasMessages && (
+            <>
+              <p className="text-xs font-semibold text-[rgb(var(--text-secondary)/var(--text-secondary-opacity))] uppercase tracking-wider px-1 pt-2 pb-1">
+                {t("chat.searchSectionMessages")}
+              </p>
+              {messageSearchResults.map(renderMessageResult)}
+              {hasMoreMessageResults && (
+                <button
+                  onClick={loadMoreMessageResults}
+                  disabled={isLoadingMoreMessages}
+                  className="w-full py-2 text-sm text-[rgb(var(--accent-primary))] hover:underline disabled:opacity-50 disabled:cursor-wait"
+                >
+                  {isLoadingMoreMessages
+                    ? t("chat.loading")
+                    : t("chat.loadOlderThreads")}
+                </button>
+              )}
+            </>
+          )}
+
+          {isSearchingMessages && !hasMessages && (
+            <div className="flex justify-center py-2 text-sm text-[rgb(var(--text-secondary)/var(--text-secondary-opacity))]">
+              {t("chat.loading")}
+            </div>
+          )}
+        </>
       );
     }
 
@@ -354,7 +475,7 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
         className="w-full flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col gap-1 px-4 pb-4"
       >
         {renderChats()}
-        {hasMoreThreads && (
+        {hasMoreThreads && searchQuery.length === 0 && (
           <div
             ref={loadMoreRef}
             className="flex justify-center py-2 text-sm text-[rgb(var(--text-secondary)/var(--text-secondary-opacity))]"

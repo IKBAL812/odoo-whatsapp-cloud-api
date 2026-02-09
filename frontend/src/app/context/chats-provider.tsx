@@ -79,6 +79,18 @@ export type Chat = {
   messages: Message[];
 };
 
+export type MessageSearchResult = {
+  threadId: number;
+  threadName: string;
+  phoneNumber: string | null;
+  backendId: number | null;
+  partnerId: number | null;
+  partnerName: string | null;
+  messageId: number;
+  messageBody: string;
+  messageTimestamp: number;
+};
+
 export type Chats = {
   complete: Chat[];
   filtered: Chat[];
@@ -90,6 +102,11 @@ export const ChatsContext = createContext<
   | {
       filter: string;
       updateFilter: (filter: string) => void;
+      messageSearchResults: MessageSearchResult[];
+      isSearchingMessages: boolean;
+      hasMoreMessageResults: boolean;
+      isLoadingMoreMessages: boolean;
+      loadMoreMessageResults: () => void;
       chats: Chats;
       hasMoreThreads: boolean;
       isLoadingMoreThreads: boolean;
@@ -115,6 +132,8 @@ const NOTIFIED_MESSAGES_KEY = "whatsapp.notificationState.messages";
 const MESSAGE_NOTIFICATION_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
 const NOTIFICATION_PERMISSION_KEY = "whatsapp.notificationPermission.dismissed";
 const THREADS_PAGE_SIZE = 30;
+const MESSAGE_SEARCH_PAGE_SIZE = 20;
+const CONTACT_SEARCH_PAGE_SIZE = 5;
 
 // Helper to load notification state from localStorage
 function loadNotificationState(): Map<string, number> {
@@ -288,6 +307,14 @@ export default function ChatsProvider({
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState<string>("");
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const debouncedSearchQueryRef = useRef<string>("");
+  const [messageSearchResults, setMessageSearchResults] = useState<
+    MessageSearchResult[]
+  >([]);
+  const [isSearchingMessages, setIsSearchingMessages] = useState(false);
+  const [hasMoreMessageResults, setHasMoreMessageResults] = useState(false);
+  const [isLoadingMoreMessages, setIsLoadingMoreMessages] = useState(false);
+  const [nextMessageSearchOffset, setNextMessageSearchOffset] = useState(0);
   const { sessionId, backendId: authBackendId } = useAuth();
   const { reportApiError, reportConnectionRestored } = useConnection();
   const isFetchingRef = useRef(false);
@@ -295,6 +322,10 @@ export default function ChatsProvider({
   const lastNotifiedUnreadCountRef = useRef<Map<string, number>>(new Map()); // threadId -> last notified unread count
   const notifiedMessagesRef = useRef<Set<string>>(new Set()); // messageId-threadId-timestamp -> notified
   const [odooBaseUrl, setOdooBaseUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    debouncedSearchQueryRef.current = debouncedSearchQuery;
+  }, [debouncedSearchQuery]);
 
   // Initialize notification audio
   useEffect(() => {
@@ -503,10 +534,13 @@ export default function ChatsProvider({
           }
         });
 
-        // Sort by last message timestamp
-        const updatedComplete = Array.from(existingChatsMap.values()).sort(
-          (a, b) => (b.lastMessageAt || 0) - (a.lastMessageAt || 0)
-        );
+        // Sort by last message timestamp (only when not searching)
+        const updatedComplete = Array.from(existingChatsMap.values());
+        if (!debouncedSearchQueryRef.current.trim()) {
+          updatedComplete.sort(
+            (a, b) => (b.lastMessageAt || 0) - (a.lastMessageAt || 0)
+          );
+        }
 
         // Apply filter to get filtered list
         let filteredList = updatedComplete;
@@ -635,10 +669,13 @@ export default function ChatsProvider({
 
         existingChatsMap.set(threadId, updatedChat);
 
-        // Rebuild array and sort by lastMessageAt (most recent first)
-        const updatedChats = Array.from(existingChatsMap.values()).sort(
-          (a, b) => (b.lastMessageAt || 0) - (a.lastMessageAt || 0)
-        );
+        // Rebuild array and sort by lastMessageAt (only when not searching)
+        const updatedChats = Array.from(existingChatsMap.values());
+        if (!debouncedSearchQueryRef.current.trim()) {
+          updatedChats.sort(
+            (a, b) => (b.lastMessageAt || 0) - (a.lastMessageAt || 0)
+          );
+        }
 
         return {
           ...prev,
@@ -770,12 +807,64 @@ export default function ChatsProvider({
   const clearSearch = useCallback(() => {
     setSearchQuery("");
     setDebouncedSearchQuery("");
+    setMessageSearchResults([]);
+    setHasMoreMessageResults(false);
+    setIsLoadingMoreMessages(false);
+    setNextMessageSearchOffset(0);
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
     setNextThreadsOffset(0);
     setHasMoreThreads(true);
   }, []);
+
+  const loadMoreMessageResults = useCallback(() => {
+    if (
+      !sessionId ||
+      isLoadingMoreMessages ||
+      !hasMoreMessageResults ||
+      !debouncedSearchQuery.trim()
+    ) {
+      return;
+    }
+
+    setIsLoadingMoreMessages(true);
+    const url = `/api/messages/search?search=${encodeURIComponent(debouncedSearchQuery.trim())}&limit=${MESSAGE_SEARCH_PAGE_SIZE}&offset=${nextMessageSearchOffset}`;
+
+    fetch(url, {
+      headers: { "x-session-id": sessionId },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        const results = Array.isArray(data?.messages) ? data.messages : [];
+        const mapped = results.map((r: Record<string, unknown>) => ({
+          threadId: r.thread_id as number,
+          threadName: r.thread_name as string,
+          phoneNumber: (r.phone_number as string) ?? null,
+          backendId: (r.backend_id as number) ?? null,
+          partnerId: (r.partner_id as number) ?? null,
+          partnerName: (r.partner_name as string) ?? null,
+          messageId: r.message_id as number,
+          messageBody: r.message_body as string,
+          messageTimestamp: r.message_timestamp as number,
+        }));
+        setMessageSearchResults((prev) => [...prev, ...mapped]);
+        setNextMessageSearchOffset((prev) => prev + MESSAGE_SEARCH_PAGE_SIZE);
+        setHasMoreMessageResults(results.length >= MESSAGE_SEARCH_PAGE_SIZE);
+      })
+      .catch(() => {
+        setHasMoreMessageResults(false);
+      })
+      .finally(() => {
+        setIsLoadingMoreMessages(false);
+      });
+  }, [
+    sessionId,
+    isLoadingMoreMessages,
+    hasMoreMessageResults,
+    debouncedSearchQuery,
+    nextMessageSearchOffset,
+  ]);
 
   const updateThreadPreview = useCallback(
     (chatId: string, preview: string, timestamp: number) => {
@@ -792,9 +881,12 @@ export default function ChatsProvider({
         });
 
         // Sort by lastMessageAt to put the updated thread at the top
-        const sortedComplete = updatedComplete.sort(
-          (a, b) => (b.lastMessageAt || 0) - (a.lastMessageAt || 0)
-        );
+        // Sort by lastMessageAt to put the updated thread at the top (only when not searching)
+        const sortedComplete = debouncedSearchQueryRef.current.trim()
+          ? updatedComplete
+          : updatedComplete.sort(
+              (a, b) => (b.lastMessageAt || 0) - (a.lastMessageAt || 0)
+            );
 
         // Apply current filters to the updated complete list
         const filteredChats = applyFilter(sortedComplete);
@@ -950,7 +1042,11 @@ export default function ChatsProvider({
 
       try {
         // Build URL with optional includeThreadId and search parameters
-        let url = `/api/threads?limit=${THREADS_PAGE_SIZE}&offset=${offset}`;
+        const pageSize =
+          debouncedSearchQuery.trim().length > 0
+            ? CONTACT_SEARCH_PAGE_SIZE
+            : THREADS_PAGE_SIZE;
+        let url = `/api/threads?limit=${pageSize}&offset=${offset}`;
         if (includeThreadId && offset === 0) {
           url += `&includeThreadId=${encodeURIComponent(includeThreadId)}`;
         }
@@ -976,10 +1072,10 @@ export default function ChatsProvider({
           ? data.threads
           : [];
         const mappedChats = transformThreads(threads);
-        const hasMore = threads.length >= THREADS_PAGE_SIZE;
+        const hasMore = threads.length >= pageSize;
 
         setHasMoreThreads(hasMore);
-        setNextThreadsOffset(offset + THREADS_PAGE_SIZE);
+        setNextThreadsOffset(offset + pageSize);
 
         setChats((prev) => {
           if (!append) {
@@ -1089,8 +1185,48 @@ export default function ChatsProvider({
       return;
     }
 
-    // Fetch with new search query
-    fetchThreads({ showLoading: true, offset: 0 });
+    // Clear message results when search is empty
+    if (debouncedSearchQuery.trim().length === 0) {
+      setMessageSearchResults([]);
+      setIsSearchingMessages(false);
+      fetchThreads({ showLoading: true, offset: 0 });
+      return;
+    }
+
+    // Fetch both contact matches and message matches in parallel
+    setIsSearchingMessages(true);
+    const messageSearchUrl = `/api/messages/search?search=${encodeURIComponent(debouncedSearchQuery.trim())}&limit=20&offset=0`;
+
+    Promise.all([
+      fetchThreads({ showLoading: true, offset: 0 }),
+      fetch(messageSearchUrl, {
+        headers: { "x-session-id": sessionId },
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          const results = Array.isArray(data?.messages) ? data.messages : [];
+          setMessageSearchResults(
+            results.map((r: Record<string, unknown>) => ({
+              threadId: r.thread_id as number,
+              threadName: r.thread_name as string,
+              phoneNumber: (r.phone_number as string) ?? null,
+              backendId: (r.backend_id as number) ?? null,
+              partnerId: (r.partner_id as number) ?? null,
+              partnerName: (r.partner_name as string) ?? null,
+              messageId: r.message_id as number,
+              messageBody: r.message_body as string,
+              messageTimestamp: r.message_timestamp as number,
+            }))
+          );
+          setNextMessageSearchOffset(MESSAGE_SEARCH_PAGE_SIZE);
+          setHasMoreMessageResults(results.length >= MESSAGE_SEARCH_PAGE_SIZE);
+        })
+        .catch(() => {
+          setMessageSearchResults([]);
+        }),
+    ]).finally(() => {
+      setIsSearchingMessages(false);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearchQuery, sessionId]);
 
@@ -1116,6 +1252,11 @@ export default function ChatsProvider({
         searchQuery,
         updateSearchQuery,
         clearSearch,
+        messageSearchResults,
+        isSearchingMessages,
+        hasMoreMessageResults,
+        isLoadingMoreMessages,
+        loadMoreMessageResults,
       }}
     >
       {children}

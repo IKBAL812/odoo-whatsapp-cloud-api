@@ -352,6 +352,69 @@ class WhatsAppThread(models.Model):
 
         return {"marked_count": marked_count}
 
+    @api.model
+    def search_messages_by_content(self, query, limit=20, offset=0):
+        """Search message bodies and return the most recent match per thread."""
+        if not query or not query.strip():
+            return []
+
+        # Get backends the current user has access to
+        backend_ids = (
+            self.env["whatsapp.backend"]
+            .search([("user_ids", "in", self.env.user.id)])
+            .ids
+        )
+        if not backend_ids:
+            return []
+
+        Message = self.env["whatsapp.message"]
+        domain = [
+            ("body", "ilike", query.strip()),
+            ("thread_id.backend_id", "in", backend_ids),
+        ]
+
+        # Fetch messages ordered by timestamp desc, deduplicate by thread
+        needed = offset + limit
+        seen_threads = set()
+        unique_messages = []
+        batch_size = max(needed * 3, 100)
+        search_offset = 0
+
+        while len(unique_messages) < needed:
+            batch = Message.search(
+                domain,
+                order="timestamp desc",
+                limit=batch_size,
+                offset=search_offset,
+            )
+            if not batch:
+                break
+            for msg in batch:
+                if msg.thread_id.id not in seen_threads:
+                    seen_threads.add(msg.thread_id.id)
+                    unique_messages.append(msg)
+                    if len(unique_messages) >= needed:
+                        break
+            search_offset += batch_size
+
+        # Apply pagination
+        paginated = unique_messages[offset : offset + limit]
+
+        return [
+            {
+                "thread_id": msg.thread_id.id,
+                "thread_name": msg.thread_id.name,
+                "phone_number": msg.thread_id.phone_number,
+                "backend_id": msg.thread_id.backend_id.id,
+                "partner_id": msg.thread_id.partner_id.id or None,
+                "partner_name": msg.thread_id.partner_id.display_name or None,
+                "message_id": msg.id,
+                "message_body": (msg.body or "")[:200],
+                "message_timestamp": msg.timestamp,
+            }
+            for msg in paginated
+        ]
+
     # -------------------------------------------------------------------------
     # Sending API
     # -------------------------------------------------------------------------
