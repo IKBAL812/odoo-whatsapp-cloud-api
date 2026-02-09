@@ -89,6 +89,7 @@ export default function Chats({ selectedTab }: { selectedTab: string }) {
     isLoadingMoreThreads,
     loadMoreThreads,
     filtered.length,
+    searchQuery.length,
   ]);
 
   const getMetaMessage = (chat: Chat, message?: Message): string => {
