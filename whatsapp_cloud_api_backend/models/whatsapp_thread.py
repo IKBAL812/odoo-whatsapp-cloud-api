@@ -97,10 +97,14 @@ class WhatsAppThread(models.Model):
 
     @api.depends("partner_id", "partner_id.avatar_256")
     def _compute_has_avatar(self):
-        """Compute whether the partner has an actual avatar image"""
+        """Compute whether the partner has an actual avatar image.
+
+        Uses sudo() to bypass res.partner record rules, since WhatsApp
+        threads may reference partners the current user cannot access.
+        """
         for record in self:
             if record.partner_id:
-                commercial_partner = record.partner_id.commercial_partner_id
+                commercial_partner = record.sudo().partner_id.commercial_partner_id
                 # Check if partner has an actual avatar (not auto-generated)
                 partner = commercial_partner.with_context(whatsapp_connector=True)
                 record.has_avatar = bool(partner.avatar_256)
@@ -111,6 +115,38 @@ class WhatsAppThread(models.Model):
         """Compute unread count for each thread."""
         for thread in self:
             thread.unread_count = thread.get_unread_count()
+
+    def read(self, fields=None, load="_classic_read"):
+        """Override to bypass res.partner record rules when reading partner_id.
+
+        WhatsApp threads may reference partners that the current user
+        cannot access due to restrictive record rules on res.partner.
+        For verified WhatsApp backend users, partner_id is read with
+        elevated privileges so the thread list can display partner names.
+        """
+        if not fields or "partner_id" not in fields or load != "_classic_read":
+            return super().read(fields, load=load)
+
+        if not self.env.user.has_group(
+            "whatsapp_cloud_api_backend.group_whatsapp_backend_user"
+        ):
+            return super().read(fields, load=load)
+
+        # Read all fields except partner_id normally
+        other_fields = [f for f in fields if f != "partner_id"]
+        results = super().read(other_fields or ["id"], load=load)
+
+        # Read partner_id with sudo to bypass res.partner record rules
+        # Call super() explicitly to avoid re-entering this override
+        sudo_partner_data = super(WhatsAppThread, self.sudo()).read(
+            ["partner_id"], load=load
+        )
+        partner_map = {r["id"]: r["partner_id"] for r in sudo_partner_data}
+
+        for r in results:
+            r["partner_id"] = partner_map.get(r["id"], False)
+
+        return results
 
     @api.model
     def _generate_thread_name(self, partner_id=None, phone_number=None):
@@ -400,20 +436,25 @@ class WhatsAppThread(models.Model):
         # Apply pagination
         paginated = unique_messages[offset : offset + limit]
 
-        return [
-            {
-                "thread_id": msg.thread_id.id,
-                "thread_name": msg.thread_id.name,
-                "phone_number": msg.thread_id.phone_number,
-                "backend_id": msg.thread_id.backend_id.id,
-                "partner_id": msg.thread_id.partner_id.id or None,
-                "partner_name": msg.thread_id.partner_id.display_name or None,
-                "message_id": msg.id,
-                "message_body": (msg.body or "")[:200],
-                "message_timestamp": msg.timestamp,
-            }
-            for msg in paginated
-        ]
+        result = []
+        for msg in paginated:
+            thread = msg.thread_id
+            # Use sudo to bypass res.partner record rules
+            partner = thread.sudo().partner_id
+            result.append(
+                {
+                    "thread_id": thread.id,
+                    "thread_name": thread.name,
+                    "phone_number": thread.phone_number,
+                    "backend_id": thread.backend_id.id,
+                    "partner_id": partner.id or None,
+                    "partner_name": partner.display_name or None,
+                    "message_id": msg.id,
+                    "message_body": (msg.body or "")[:200],
+                    "message_timestamp": msg.timestamp,
+                }
+            )
+        return result
 
     # -------------------------------------------------------------------------
     # Sending API

@@ -28,7 +28,7 @@ export const useThreadsPoller = (
 ) => {
   const { enabled = true, interval = 600000 } = options; // 10 minutes
 
-  const { sessionId } = useAuth();
+  const { sessionId, isAuthenticating } = useAuth();
   const [isPolling, setIsPolling] = useState(false);
   const [lastPollTime, setLastPollTime] = useState<number | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -46,7 +46,8 @@ export const useThreadsPoller = (
       return;
     }
 
-    if (!enabled || !sessionId) {
+    // Wait for session validation to complete before polling
+    if (!enabled || !sessionId || isAuthenticating) {
       return;
     }
 
@@ -97,11 +98,11 @@ export const useThreadsPoller = (
       isPollingRef.current = false;
       setIsPolling(false);
     }
-  }, [enabled, sessionId]);
+  }, [enabled, sessionId, isAuthenticating]);
 
   // Start/stop polling based on dependencies
   useEffect(() => {
-    if (!enabled || !sessionId) {
+    if (!enabled || !sessionId || isAuthenticating) {
       // Clear interval if conditions not met
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -125,7 +126,7 @@ export const useThreadsPoller = (
         intervalRef.current = null;
       }
     };
-  }, [enabled, sessionId, interval, poll]);
+  }, [enabled, sessionId, isAuthenticating, interval, poll]);
 
   return {
     isPolling,

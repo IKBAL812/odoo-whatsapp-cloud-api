@@ -35,7 +35,7 @@ export const useMessagePoller = (
     lastMessageId = null,
   } = options;
 
-  const { sessionId } = useAuth();
+  const { sessionId, isAuthenticating } = useAuth();
   const [isPolling, setIsPolling] = useState(false);
   const [lastPollTime, setLastPollTime] = useState<number | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -59,7 +59,8 @@ export const useMessagePoller = (
       return;
     }
 
-    if (!enabled || !sessionId || !threadId) {
+    // Wait for session validation to complete before polling
+    if (!enabled || !sessionId || !threadId || isAuthenticating) {
       return;
     }
 
@@ -122,11 +123,11 @@ export const useMessagePoller = (
       isPollingRef.current = false;
       setIsPolling(false);
     }
-  }, [enabled, sessionId, threadId]);
+  }, [enabled, sessionId, threadId, isAuthenticating]);
 
   // Start/stop polling based on dependencies
   useEffect(() => {
-    if (!enabled || !sessionId || !threadId) {
+    if (!enabled || !sessionId || !threadId || isAuthenticating) {
       // Clear interval if conditions not met
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -150,7 +151,7 @@ export const useMessagePoller = (
         intervalRef.current = null;
       }
     };
-  }, [enabled, sessionId, threadId, interval, poll]);
+  }, [enabled, sessionId, threadId, isAuthenticating, interval, poll]);
 
   return {
     isPolling,
