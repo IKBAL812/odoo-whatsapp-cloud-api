@@ -886,6 +886,7 @@ export default function CurrentChat() {
                       }
                     }
                   }}
+                  maxLength={4000}
                   disabled={isSending || isTypingAnimation}
                   readOnly={isTypingAnimation}
                   rows={1}
