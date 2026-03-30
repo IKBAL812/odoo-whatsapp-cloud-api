@@ -72,6 +72,15 @@ export default function CurrentChat() {
     setTranslatingMessageId(null);
   }, [chatId]);
 
+  // Check if the 24-hour customer service window has expired
+  const isServiceWindowExpired = useMemo(() => {
+    if (isLoading || messages.length === 0) return false;
+    const lastIncoming = [...messages].reverse().find((m) => !m.isSentFromUser);
+    if (!lastIncoming) return false;
+    const twentyFourHours = 24 * 60 * 60 * 1000;
+    return Date.now() - lastIncoming.timestamp > twentyFourHours;
+  }, [messages, isLoading]);
+
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const isLoadingPaginationRef = useRef(false);
@@ -769,12 +778,21 @@ export default function CurrentChat() {
           </div>
 
           <section className="w-full z-50 p-4">
+            {isServiceWindowExpired && (
+              <div className="bg-[rgb(var(--status-info)/0.15)] border border-[rgb(var(--status-info)/0.3)] rounded-lg px-4 py-3 mb-2">
+                <p className="text-xs text-[rgb(var(--text-secondary))]">
+                  {t("chatInput.serviceWindowExpired")}
+                </p>
+              </div>
+            )}
             <SuggestionChips
               suggestions={suggestions}
               isLoading={isSuggestionsLoading}
               onSelect={handleSuggestionSelect}
               onRefresh={handleRefreshSuggestions}
-              disabled={isSending || isTypingAnimation}
+              disabled={
+                isSending || isTypingAnimation || isServiceWindowExpired
+              }
             />
             {replyTo && (
               <div className="bg-[rgb(var(--bg-input)/var(--bg-input-opacity))] border-l-2 border-[rgb(var(--accent-primary))] px-3 py-2 rounded-lg mb-2 flex justify-between items-start gap-3">
@@ -804,7 +822,7 @@ export default function CurrentChat() {
               <div className="bg-[rgb(var(--bg-input)/var(--bg-input-opacity))] rounded-3xl flex items-end gap-2 py-2">
                 <AttachmentPicker
                   onAttachmentSelect={handleAttachmentSelect}
-                  disabled={isSending}
+                  disabled={isSending || isServiceWindowExpired}
                   externalFile={droppedFile}
                   onExternalFileProcessed={handleDroppedFileProcessed}
                 />
@@ -815,6 +833,7 @@ export default function CurrentChat() {
                     isTranslating ||
                     isAiImproving ||
                     isSending ||
+                    isServiceWindowExpired ||
                     messageText.trim().length === 0
                   }
                   className={`text-[rgb(var(--text-secondary))] hover:text-[rgb(var(--accent-primary))] disabled:opacity-40 disabled:cursor-not-allowed transition-all p-2 mb-1 active:scale-95 ${
@@ -841,6 +860,7 @@ export default function CurrentChat() {
                     isAiImproving ||
                     isTranslating ||
                     isSending ||
+                    isServiceWindowExpired ||
                     messages.length === 0
                   }
                   className={`text-[rgb(var(--text-secondary))] hover:text-[rgb(var(--accent-primary))] disabled:opacity-40 disabled:cursor-not-allowed transition-all p-2 mb-1 active:scale-95 ${
@@ -887,13 +907,19 @@ export default function CurrentChat() {
                     }
                   }}
                   maxLength={4000}
-                  disabled={isSending || isTypingAnimation}
+                  disabled={
+                    isSending || isTypingAnimation || isServiceWindowExpired
+                  }
                   readOnly={isTypingAnimation}
                   rows={1}
                 />
                 <button
                   type="submit"
-                  disabled={isSending || messageText.trim().length === 0}
+                  disabled={
+                    isSending ||
+                    isServiceWindowExpired ||
+                    messageText.trim().length === 0
+                  }
                   className="text-sm font-semibold text-white bg-[rgb(var(--accent-primary))] hover:bg-[rgb(var(--status-success))] active:bg-[rgb(var(--accent-primary)/0.8)] disabled:opacity-60 disabled:cursor-not-allowed transition rounded-full px-5 py-2.5 md:px-4 mr-2 mb-1"
                 >
                   {isSending ? t("chatInput.sending") : t("chatInput.send")}

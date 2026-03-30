@@ -65,7 +65,8 @@
     "ragGenerateError": "Failed to generate AI response",
     "suggestionsLoading": "Generating suggestions...",
     "suggestionsError": "Failed to generate suggestions",
-    "refreshSuggestions": "Refresh suggestions"
+    "refreshSuggestions": "Refresh suggestions",
+    "serviceWindowExpired": "The 24-hour messaging window has expired. You can only send template messages to this customer."
   },
   "chatList": {
     "title": "Chats",

@@ -65,7 +65,8 @@
     "ragGenerateError": "Yapay zeka yanıtı oluşturulamadı",
     "suggestionsLoading": "Öneriler oluşturuluyor...",
     "suggestionsError": "Öneriler oluşturulamadı",
-    "refreshSuggestions": "Önerileri yenile"
+    "refreshSuggestions": "Önerileri yenile",
+    "serviceWindowExpired": "24 saatlik mesajlaşma penceresi sona erdi. Bu müşteriye yalnızca şablon mesajları gönderebilirsiniz."
   },
   "chatList": {
     "title": "Sohbetler",
