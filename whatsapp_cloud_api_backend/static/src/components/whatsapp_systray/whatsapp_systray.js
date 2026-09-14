@@ -35,7 +35,7 @@ export class WhatsAppSystray extends Component {
 
     async fetchUnreadCount() {
         try {
-            const result = await this.rpc("/whatsapp/unread_count", {});
+            const result = await this.rpc("/whatsapp/unread_count", { for_badge: true });
             this.state.unreadCount = result.unread_count || 0;
         } catch (error) {
             console.error("Failed to fetch WhatsApp unread count:", error);
