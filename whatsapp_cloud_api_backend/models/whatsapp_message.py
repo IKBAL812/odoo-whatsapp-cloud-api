@@ -1,6 +1,6 @@
 # Copyright (C) 2025 Ahmet Yiğit Budak
 # License LGPL-3.0 or later (http://www.gnu.org/licenses/lgpl-3.0.html)
-from odoo import api, fields, models
+from odoo import api, fields, models, tools
 
 from ..controllers.main import WP_ATTACHMENT_DOWNLOAD_PATH
 from .frontend_webhook import WebhookSender
@@ -246,3 +246,15 @@ class WhatsAppMessageReadStatus(models.Model):
         default=False,
     )
     read_timestamp = fields.Datetime()
+
+    def init(self):
+        """Index unread statuses for the per-user badge lookup."""
+        res = super().init()
+        tools.create_index(
+            self.env.cr,
+            "whatsapp_message_read_status_unread_user_idx",
+            self._table,
+            ["user_id"],
+            where="is_read IS NULL OR is_read = FALSE",
+        )
+        return res
