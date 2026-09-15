@@ -16,6 +16,7 @@ class TestWhatsAppWebhookHTTP(HttpCase):
             "active": True,
             "phone_number_id": "webhook-http-test",
             "app_secret": "webhook-http-secret",
+            "webhook_secret": "webhook-http-verify",
         }
         if backend:
             backend.write(values)
@@ -71,5 +72,29 @@ class TestWhatsAppWebhookHTTP(HttpCase):
             response = self.url_open("/whatsapp/webhook", data=raw, headers=headers)
         self.assertEqual(response.status_code, 500)
 
-        response = self.url_open("/whatsapp/webhook", data=b"[]", headers=headers)
-        self.assertEqual(response.status_code, 400)
+        payload["entry"][0]["changes"][0]["value"]["metadata"]["phone_number_id"] = (
+            "unknown-webhook-test"
+        )
+        for invalid in (b"[]", b"{not-json", json.dumps(payload).encode()):
+            signature = hmac.new(
+                backend.app_secret.encode(), invalid, hashlib.sha256
+            ).hexdigest()
+            with self.subTest(body=invalid):
+                response = self.url_open(
+                    "/whatsapp/webhook",
+                    data=invalid,
+                    headers=dict(
+                        headers, **{"X-Hub-Signature-256": f"sha256={signature}"}
+                    ),
+                )
+                self.assertEqual(response.status_code, 400)
+
+        response = self.url_open(
+            "/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=webhook-http-verify&hub.challenge=12345"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.text, "12345")
+        response = self.url_open(
+            "/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=wrong&hub.challenge=12345"
+        )
+        self.assertEqual(response.status_code, 403)

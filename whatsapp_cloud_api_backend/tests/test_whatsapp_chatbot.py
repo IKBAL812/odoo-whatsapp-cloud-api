@@ -199,26 +199,35 @@ class TestWhatsAppChatbotGreeting(TransactionCase):
 
     def test_api_error_keeps_meta_code_and_details(self):
         response = Mock(status_code=400)
-        response.json.return_value = {
-            "error": {
-                "message": "Message undeliverable",
-                "code": 131026,
-                "error_data": {"details": "Simulated delivery error detail"},
-            }
-        }
-        with (
-            patch.object(whatsapp_backend.requests, "post", return_value=response),
-            self.assertLogs(whatsapp_backend.__name__, level="ERROR"),
-            self.assertRaisesRegex(
-                UserError, r"131026.*Simulated delivery error detail"
+        cases = [
+            (
+                {
+                    "message": "Message undeliverable",
+                    "code": 131026,
+                    "error_data": {"details": "Simulated delivery error detail"},
+                },
+                r"131026.*Simulated delivery error detail",
             ),
-        ):
-            self.backend._call_whatsapp_api("messages", {})
+            ("Unexpected API response", "Unexpected API response"),
+            ({"message": "Undeliverable", "error_data": "unexpected"}, "Undeliverable"),
+        ]
+        for error, expected in cases:
+            response.json.return_value = {"error": error}
+            with (
+                self.subTest(error=error),
+                patch.object(whatsapp_backend.requests, "post", return_value=response),
+                self.assertLogs(whatsapp_backend.__name__, level="ERROR"),
+                self.assertRaisesRegex(UserError, expected),
+            ):
+                self.backend._call_whatsapp_api("messages", {})
 
     def test_missing_message_id_does_not_start_greeting_cooldown(self):
         controller = WhatsAppCloudAPIWebhookController()
         with (
             patch.object(type(self.backend), "_call_whatsapp_api", return_value={}),
+            self.assertLogs(
+                "odoo.addons.whatsapp_cloud_api_backend.models.whatsapp_thread", "ERROR"
+            ),
             self.assertRaisesRegex(UserError, "did not return a message ID"),
         ):
             controller._handle_greeting_only_chatbot(self.chatbot, self.thread)

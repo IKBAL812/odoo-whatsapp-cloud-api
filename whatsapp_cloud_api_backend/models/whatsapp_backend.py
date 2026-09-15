@@ -172,7 +172,9 @@ class WhatsAppBackend(models.Model):
                 error_content = response.text
 
             if isinstance(error_content, dict):
-                error = error_content.get("error") or {}
+                error = error_content.get("error")
+                if not isinstance(error, dict):
+                    error = {}
                 error_message = (
                     error.get("message")
                     or error_content.get("message")
@@ -180,7 +182,10 @@ class WhatsAppBackend(models.Model):
                 )
                 if error.get("code") is not None:
                     error_message = f"[{error['code']}] {error_message}"
-                details = (error.get("error_data") or {}).get("details")
+                error_data = error.get("error_data")
+                details = (
+                    error_data.get("details") if isinstance(error_data, dict) else None
+                )
                 if details:
                     error_message = f"{error_message}: {details}"
             else:
