@@ -284,6 +284,8 @@ class WhatsAppThread(models.Model):
         stored_request = json.loads(json.dumps(base_payload))
         response = backend._call_whatsapp_api("messages", base_payload)
         message_info = (response.get("messages") or [{}])[0]
+        if message_type != "reaction" and not message_info.get("id"):
+            raise UserError(_("WhatsApp API did not return a message ID."))
         raw_status = message_info.get("message_status")
         status = self._map_outgoing_status(raw_status)
         if not raw_status and message_info.get("id"):
