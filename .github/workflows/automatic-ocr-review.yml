@@ -1,9 +1,16 @@
 name: Automatic OCR review
 on:
   pull_request_target:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, edited, closed]
+  workflow_dispatch:
+    inputs:
+      pull_request_number:
+        description: Pull request number to review
+        required: true
+        type: string
 permissions:
   contents: read
+  checks: write
 jobs:
   review:
     uses: altinkaya-opensource/altinkaya-open-code-review/.github/workflows/ocr-review.yml@latest
